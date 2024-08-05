@@ -90,7 +90,7 @@ void midi_send(void);  // creates midi_cue data
 void flash_write(void);
 void flash_read(void);
 void panic_delete(void);
-
+void stop_start(void);
 
 
 /* USER CODE END PFP */
@@ -153,6 +153,7 @@ int main(void)
 //	flash_write();
 	//  get flash data
 	flash_read();
+	other_buttons=1;
 	// panic_delete();
   /* USER CODE END 2 */
 
@@ -162,53 +163,66 @@ int main(void)
   {
 
 
- 			if (seq_enable) {
-
- 		//	if ((s_temp / 6) != (seq_pos / 6)) {    //send every 6, not good
 
 
- 				//if (((s_temp+6) <= seq_pos) | ((s_temp==186)&(seq_pos<=0))) {
- 						if ((s_temp>>3) != (seq_pos>>3)) {
+	  if (seq_enable) {
 
- 							uint8_t seq_step_mod=seq_step;
- 							if((bar_looping) && (scene_buttons[0]==(bar_looping-1)))  seq_step_mod=((seq_step&7)+(pot_states[3]>>4))&31;  // looper visual
-
- 				send_buffer[1] = square_buttons_list[seq_step_mod];   // for displaying 0-32 , reset previous light
- 			//	if (button_states[send_buffer[1] ]) send_buffer[2]=5; else send_buffer[2]=0; // reset to previous state or 0
- 				send_buffer[2]=button_states[send_buffer[1]]; // tis has to be 0 or 5
- 				send_buffer[4] = square_buttons_list[((seq_step_mod + 1) & 31)] ;  // set new light on
- 				send_buffer[5] = 1;
- 			//	send_buffer[10]=drum_list[scene_buttons[0]];  // pitch
+		  //	if ((s_temp / 6) != (seq_pos / 6)) {    //send every 6, not good
 
 
- 			//	if(button_states[send_buffer[1]])	send_buffer[11]=scene_velocity[seq_step+(32*scene_buttons[0])]; else send_buffer[11]=0;  // velocity from scene
+		  //if (((s_temp+6) <= seq_pos) | ((s_temp==186)&(seq_pos<=0))) {
+		  if ((s_temp>>3) != (seq_pos>>3)) {
 
- 				if(all_update){   // update all square scene lights
- 					for (i=0;i<40;i++)  { send_all[i*3]=144;
- 					send_all[(i*3)+1]=i;
+			  uint8_t seq_step_mod=seq_step;
+			  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)))  seq_step_mod=((seq_step&7)+(pot_states[3]>>4))&31;  // looper visual
 
- 					send_all[(i*3)+2]=button_states[i];
- 					
- 					
- 					}
-
- 					CDC_Transmit_FS(send_all, 120); // send apc data , bit heavy
- 					all_update=0;}
+			  send_buffer[1] = square_buttons_list[seq_step_mod];   // for displaying 0-32 , reset previous light
+			  //	if (button_states[send_buffer[1] ]) send_buffer[2]=5; else send_buffer[2]=0; // reset to previous state or 0
+			  send_buffer[2]=button_states[send_buffer[1]]; // tis has to be 0 or 5
+			  send_buffer[4] = square_buttons_list[((seq_step_mod + 1) & 31)] ;  // set new light on
+			  send_buffer[5] = 1;
+			  //	send_buffer[10]=drum_list[scene_buttons[0]];  // pitch
 
 
- 				if ((button_states[64])& (!bar_looping)) {bar_looping=scene_buttons[0]+1;bar_count=seq_pos>>3;}
+			  //	if(button_states[send_buffer[1]])	send_buffer[11]=scene_velocity[seq_step+(32*scene_buttons[0])]; else send_buffer[11]=0;  // velocity from scene
+
+
+
+ 				if ((button_states[64])& (!bar_looping)) {bar_looping=scene_buttons[0]+1;}
  			 			if (!button_states[64]) bar_looping=0;
 
+ 			 			if (other_buttons){
+ 			 				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
+ 			 				for (i=0;i<17;i++)  { send_all[i*3]=144;
+ 			 		 					send_all[(i*3)+1]=buttons_list[i];
 
- 			midi_send();
+ 			 		 					send_all[(i*3)+2]=button_states[buttons_list[i]];
 
- 				uint8_t len=midi_cue[25];
- 				uint8_t send_temp[35];
- 				memcpy(send_temp,midi_cue,len);
- 				memcpy(send_temp+len,send_buffer,9);  // midi first
- 				len=len+9;
- 			//	if (send_buffer[8]) len=len+9; else len=len+6;
- 				CDC_Transmit_FS(send_temp, len); //send all if possible , after each step
+
+ 			 		 					}
+
+ 			 		 					CDC_Transmit_FS(send_all, 51); // send apc data , bit heavy
+ 			 		 					other_buttons=0;
+
+ 			 			}
+
+
+ 			 			if (!button_states[91])	midi_send(); else midi_cue[25]=0;
+ 			 			uint8_t len=midi_cue[25];
+ 			 			uint8_t send_temp[160];
+ 			 			memcpy(send_temp,midi_cue,len);
+ 			 			memcpy(send_temp+len,send_buffer,9);  // midi first
+ 			 			len=len+9;
+
+ 			 			if (all_update==2){
+
+ 			 				memcpy(send_temp+len,send_all,120);
+ 			 				len=len+120;
+ 			 				all_update=0;
+
+ 			 			}
+
+ 			 			CDC_Transmit_FS(send_temp, len); //send all if possible , after each step
 
 
 
@@ -224,18 +238,24 @@ int main(void)
 
  				  flash_write(); // works only if button pressed
 
- 				//  panic_delete();   // this will freeze if getting bad data constantly
- 				 // printf(" %d \n", sys_cnt[3]);
 
-
-
- 				//	send_buffer[13]=0; send_buffer[14]=0; // these are cleared each time
- 				seq_step = (seq_step + 1) & 31;
+ 				  if (!button_states[91]) seq_step = (seq_step + 1) & 31; else seq_step=seq_step;
  				s_temp = seq_pos;
 
  			}   // blink steps
 
- 		}
+ 		}  // end of seq_enable
+
+	  if(all_update==1){   // update all square scene lights
+		  for (i=0;i<40;i++)  { send_all[i*3]=144;
+		  send_all[(i*3)+1]=i;
+		  send_all[(i*3)+2]=button_states[i];
+		  }
+
+		  all_update=2;}
+
+
+
 
 
  	  if ((seq_pos == 64) &&(mtc_tick)) {    // only if mtc is incoming
@@ -553,7 +573,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)    // unreliable
 	{
 		if(TIM10==htim->Instance){     // send spi to display , ok
 
-			 if (seq_pos==191) seq_pos=0;  else seq_pos++;
+			 if (seq_pos==255) seq_pos=0;  else seq_pos++;
 			 TIM10->ARR=timer_value;
 		}
 	}
@@ -576,6 +596,12 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef * hspi)   // when finished sendi
 	   }
 	}
 
+void stop_start(void)             {
+  //  if (TIM10==htim ->Instance)
+    if  (stop_toggle ==1) {HAL_TIM_Base_Stop_IT(&htim10);stop_toggle =2;}
+    if  (stop_toggle ==4) {HAL_TIM_Base_Start_IT(&htim10);stop_toggle=0;}
+
+}
 
 
 

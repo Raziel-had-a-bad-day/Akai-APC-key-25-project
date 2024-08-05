@@ -34,7 +34,7 @@ uint32_t Len;
 // round horizontal 64-71
 // velocity  1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
 uint8_t square_buttons_list [33]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15}; // just reads buttons in top.down order
-
+uint8_t button_convert[41]=	{32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
 uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 3 bits 7-5 , pitch 5 bits LSB 0-4
 uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , channel 1, only for display
@@ -50,7 +50,7 @@ uint32_t sys_cnt[3];
 // SPI stuff
 uint8_t spi_send[10];
 uint8_t status_reg[2];
-uint8_t stop_toggle;
+
 uint8_t flash_flag=0;
 uint8_t flash_read_block2[260] ={1,1,1,1,1,1,1,0}; // this should clearif flash read works
 uint8_t send_spi2[260];
@@ -58,7 +58,7 @@ uint8_t write_once; // allow only a single flash write for now
 uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0};
 uint8_t spi_hold[260]={0,10,0,0};
 uint8_t all_settings[100];  // store all extra settings:  transpose , pots
-
+uint8_t other_buttons; // update control button lights
 //notes
 uint8_t scene_transpose[9];
 uint8_t last_button;
@@ -66,3 +66,5 @@ uint8_t bar_looping; // loop 8 notes on cueent scene if enabled
 uint8_t bar_count; // relates to looping
 uint8_t scene_mute; // muting
 uint8_t last_incoming;
+uint8_t scene_solo; //enable solo mode
+uint8_t stop_toggle=0; // use it for pause

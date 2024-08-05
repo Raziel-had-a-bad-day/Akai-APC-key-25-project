@@ -15,9 +15,12 @@ void buttons_store(void){
 	if (status == 128) // note on
 		{note_off_flag[0]=0;
 
+
+
+
 		if ((incoming_data1 >7)&(incoming_data1 <40)){
 
-				last_button=square_buttons_list[incoming_data1 -8]+(scene_buttons[0]*32)-8;  // stare last note pressed
+				last_button= square_buttons_list[incoming_data1-8]+(scene_buttons[0]*32)-8;  // stare last note pressed
 
 					scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;  // writes on note off ,needs -8 after square buttons 16-112 values, 3bit
 					scene_pitch[last_button]=  pot_states[0]>>2; // 0-32 pitch
@@ -44,9 +47,9 @@ void buttons_store(void){
 		 if (incoming_data1>7){
 		//{if (button_selection)button_states[incoming_data1 ] = 0; else button_states[incoming_data1 ] = 5;}
 		 switch(button_selection){    // blank , r
-		 case 0 :button_states[incoming_data1 ] = 3;break;
-		 case 3 :button_states[incoming_data1 ] = 0;break;
-		 case 5 :button_states[incoming_data1 ] = 3;break;
+		 case 0 :button_states[incoming_data1 ] = 5;break;
+		 case 5 :button_states[incoming_data1 ] = 0;  ;break;
+		 //case 5 :button_states[incoming_data1 ] = 3;break;
 
 
 		 }
@@ -56,8 +59,10 @@ void buttons_store(void){
 		}
 
 		if (button_states[65]) scene_mute=1; else scene_mute=0;  //enable muting on scene select
-
+		if (button_states[66]) {scene_solo=1;button_states[65]=0;} else scene_solo=0;  //enable muting on scene select
 		button_pressed=incoming_data1; // important  , only after note on
+
+
 	} // change button state
 
 	if (status == 176) {
@@ -65,8 +70,8 @@ void buttons_store(void){
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
 		if (incoming_data1==50)  scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base
 		if (incoming_data1==48)	scene_pitch[last_button]=  pot_states[0]>>2; // 0-32 pitch   update last pressed button
-		if (incoming_data1==50) pot_states[3]=pot_states[3]/3;
-
+		if (incoming_data1==51) pot_states[3]=pot_states[3]/3;
+		if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_pos+(scene_buttons[0]*32)]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
 
 	}
 
@@ -136,6 +141,7 @@ void buttons_store(void){
 				velocity=(scene_velocity[seq_step+(i*32)])&127;   // use only 3 bit msb
 				if (!velocity) velocity=64; //missing velocity info still
 				if (scene_mute & ((button_states[i])==3)) velocity=0;
+				if ((scene_solo) & (scene_buttons[0]!=i)) velocity=0;   // mute everything but solo
 				midi_cue[(cue_counter*3)+2]=velocity;
 				cue_counter++;
 			}
@@ -145,11 +151,15 @@ void buttons_store(void){
 		//	if((bar_looping) && (i==(bar_looping-1)))  seq_step_mod=(seq_step&7)+(bar_count<<3); else seq_step_mod=seq_step;
 			if((bar_looping) && (i==(bar_looping-1)))  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=seq_step;
 					if (scene_memory[seq_step_mod+(i*32)]>>5){
-				midi_cue[cue_counter*3]=147+(i-4);  // channel 4
+
+
+						midi_cue[cue_counter*3]=147+(i-4);  // channel 4
 				midi_cue[(cue_counter*3)+1]=((scene_pitch[seq_step_mod+(i*32)])+scene_transpose[i])& 127;;  //  pitch info
 				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
 				if (!velocity) velocity=127; //missing velocity info still
 				if ((scene_mute) & ((button_states[i])==3)) velocity=0;
+				if ((scene_solo) & (scene_buttons[0]!=i)) velocity=0;   // mute everything but solo
+
 				midi_cue[(cue_counter*3)+2]=velocity;
 				cue_counter++;
 			}
@@ -237,7 +247,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 
 		  test_data3[0]=0x06;
-		  test_data3[3]=0x04; //page 4
+		  test_data3[2]=0x01; //page 4
 		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
 		  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
 		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
@@ -259,11 +269,11 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 
 		  HAL_Delay(200);
-		  write_once=1;
+		//  write_once=1;
 
 
-
-
+		  button_states[70]=0;
+		  other_buttons=1;
 	  }
 
 
@@ -288,7 +298,7 @@ void flash_read(void){
 
 	memcpy(scene_memory,test_data3+4,256);
 
-	test_data2[3]=4;
+	test_data2[2]=1;
 	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);  // when readin low till the end
 	HAL_SPI_TransmitReceive (&hspi1,test_data2, test_data3,  104, 100); // request data , works
 	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
@@ -433,6 +443,9 @@ void note_replace(uint8_t note_replace) {    // replace first note
 	}
 
 }
+
+
+
 /*
 void flash_command(uint8_t command,uint32_t address,  uint8_t* pointer,uint16_t len ,uint16_t delay){  // use to operate sd
 
