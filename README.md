@@ -1,0 +1,3 @@
+Akai APC key 25 sequencer project with STM32F411+flash , uses usb cdc to talk to pc then a serial to midi converter handles the rest (including lighting the buttons) .
+Basic parts working 32 steps 8 parts pitch and velocity added using pot 1 and 2  , pot 3 is transpose , pot 4 is for looping which is enabled with up button , down button 
+enables muting part. Plays non stop for now. Drum part 0-3 on channel 3 then 4-8 is channel 4-8 for notes.  Saves everything when pressing Send then reloads on reset. Left arrow will solo current part. Pressing volume and wiggling pot 1, inputs velocity in real time ,to selected part.
