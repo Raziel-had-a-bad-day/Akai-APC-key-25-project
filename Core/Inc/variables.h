@@ -45,7 +45,7 @@ uint8_t note_off_flag[3]; // use this to detect held buttons 0 is on off ,1 is l
 uint8_t all_update=1; // update all buttons from button_states , 40 for now
 uint8_t keyboard[3];  // store keys
 uint8_t drum_list[8] ={20,21,22,23,24,25,26,27}; // notes played for drum scenes
-uint8_t midi_cue[26];  // data cue for midi max 8 notes [25] = message length
+uint8_t midi_cue[50];  // data cue for midi max 8 notes [25] = message length
 uint32_t sys_cnt[3];
 // SPI stuff
 uint8_t spi_send[10];
@@ -59,6 +59,10 @@ uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1
 uint8_t spi_hold[260]={0,10,0,0};
 uint8_t all_settings[100];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
+uint8_t pause; // enable pause mode
+uint8_t seq_step_mem;  // mem for looper
+uint8_t shift; // track shift button
+uint8_t pot_tracking[32] ; // record pot movements , maybe after 1 bar ,only transpose for now
 //notes
 uint8_t scene_transpose[9];
 uint8_t last_button;
@@ -68,3 +72,8 @@ uint8_t scene_mute; // muting
 uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
+uint8_t loop_selector;  //steps through loop
+uint8_t play_speed[20]={8,8,8,8,8,1,8,8,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
+
+uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
+

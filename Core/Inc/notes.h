@@ -11,67 +11,90 @@ void buttons_store(void){
 	uint8_t buffer_clear = 0;
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
-
-	if (status == 128) // note on
+	uint8_t seq_step_pointer= seq_step+(scene_buttons[0]*32); // scene memory address point
+	if (status == 128) // note off
 		{note_off_flag[0]=0;
+		if (incoming_data1==98) shift=0;
 
 
 
+			}
 
-		if ((incoming_data1 >7)&(incoming_data1 <40)){
-
-				last_button= square_buttons_list[incoming_data1-8]+(scene_buttons[0]*32)-8;  // stare last note pressed
-
-					scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;  // writes on note off ,needs -8 after square buttons 16-112 values, 3bit
-					scene_pitch[last_button]=  pot_states[0]>>2; // 0-32 pitch
-					if (keyboard[0]) scene_pitch[last_button]= keyboard[0];  // overwrite if keyboard held
-
-
-					{if ((button_states[last_incoming ]==3)& (last_incoming!=incoming_data1)) button_states[last_incoming ] = 5;	button_pressed=last_incoming;}
-							 last_incoming=incoming_data1; // switch previous key from red to yellow
-
-		}  // pitch for 4-8 scenes
-
-		}  // skip for now
+		  // skip for now
 
 	if ((incoming_data1 <8)&& (status==144)) {   // scene buttons
 									scene_select=incoming_data1 +1;}  //enable scene_select section
 
-	if (status == 145)  { keyboard[0]=(incoming_data1 -48);send_buffer[6]=147;send_buffer[7]=incoming_data1;send_buffer[8]=127;}  // store last key pressed mainly , 48-72 default setting(24)
-	if ((status==129))  { keyboard[0]=0;send_buffer[6]=147;send_buffer[7]=incoming_data1;send_buffer[8]=0;}  // store last key pressed mainly
+	if (status == 145)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47);}  // store last key pressed mainly , 48-72 default setting(24)
+	if ((status==129))  { keyboard[0]=0;}  // store last key pressed mainly
 
 	if (status == 144){
 
-		{note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
-
-		 if (incoming_data1>7){
-		//{if (button_selection)button_states[incoming_data1 ] = 0; else button_states[incoming_data1 ] = 5;}
-		 switch(button_selection){    // blank , r
-		 case 0 :button_states[incoming_data1 ] = 5;break;
-		 case 5 :button_states[incoming_data1 ] = 0;  ;break;
-		 //case 5 :button_states[incoming_data1 ] = 3;break;
+		note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
+		if (incoming_data1==98) shift=1;
 
 
-		 }
+		if (incoming_data1==64){			// looping select , pot base or bars 1-4 from start
+			switch(loop_selector){
+			case 0 :loop_selector++;break;
+			case 5 : loop_selector=0;break;
 
-		 }
+
+			default: loop_selector++;incoming_data1=255;break;
+
+			}
 
 		}
+
+
+		 if ((incoming_data1>7)&(incoming_data1 <99)){				// button lights
+
+		 switch(button_selection){    // blank , r
+		 case 0 :button_states[incoming_data1 ] = 5;break;
+		 case 5 :button_states[incoming_data1 ] = 0;  ;break;}
+		 //case 5 :button_states[incoming_data1 ] = 3;break; }
+		 }
+
 
 		if (button_states[65]) scene_mute=1; else scene_mute=0;  //enable muting on scene select
 		if (button_states[66]) {scene_solo=1;button_states[65]=0;} else scene_solo=0;  //enable muting on scene select
 		button_pressed=incoming_data1; // important  , only after note on
 
 
+		if ((incoming_data1 >7)&(incoming_data1 <40)&& (button_states[incoming_data1])){     // midi stuff   , only if enabled though
+
+						last_button= square_buttons_list[incoming_data1-8]+(scene_buttons[0]*32)-8;   // memory location 0-256
+
+						scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;
+
+
+						if (keyboard[0]) {scene_pitch[last_button]= keyboard[0];
+
+
+
+
+						pot_tracking[((last_button&31)>>3)+((scene_buttons[0]-4)*4)]=pot_states[2]>>1; }  // overwrite if keyboard held
+
+
+
+
+
+	}
+
 	} // change button state
 
 	if (status == 176) {
 		pot_states[incoming_data1  - 48] = incoming_message[2]; // store pot
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
-		if (incoming_data1==50)  scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base
-		if (incoming_data1==48)	scene_pitch[last_button]=  pot_states[0]>>2; // 0-32 pitch   update last pressed button
-		if (incoming_data1==51) pot_states[3]=pot_states[3]/3;
-		if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_pos+(scene_buttons[0]*32)]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
+		if ((incoming_data1==50) && (!keyboard[0]))
+
+		{
+
+			scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base , only with shift off
+		 pot_tracking[(seq_step>>3)+((scene_buttons[0]-4)*4)]=pot_states[2]>>1;  // keep writing per bar
+		}
+
+		if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_step_pointer]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
 
 	}
 
@@ -127,223 +150,7 @@ void buttons_store(void){
 
 }
 
-	void midi_send(void){  // only for midi music no info return
 
-		uint8_t cue_counter=0;
-		uint8_t velocity=0;
-		uint8_t seq_step_mod=seq_step;
-
-		for (i=0;i<4;i++){    // drums
-
-			if (scene_memory[seq_step+(i*32)]>>5){
-				midi_cue[cue_counter*3]=146;  // channel 3
-				midi_cue[(cue_counter*3)+1]=drum_list[i];  // or pitch info
-				velocity=(scene_velocity[seq_step+(i*32)])&127;   // use only 3 bit msb
-				if (!velocity) velocity=64; //missing velocity info still
-				if (scene_mute & ((button_states[i])==3)) velocity=0;
-				if ((scene_solo) & (scene_buttons[0]!=i)) velocity=0;   // mute everything but solo
-				midi_cue[(cue_counter*3)+2]=velocity;
-				cue_counter++;
-			}
-		}
-		for (i=4;i<8;i++){   // notes
-
-		//	if((bar_looping) && (i==(bar_looping-1)))  seq_step_mod=(seq_step&7)+(bar_count<<3); else seq_step_mod=seq_step;
-			if((bar_looping) && (i==(bar_looping-1)))  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=seq_step;
-					if (scene_memory[seq_step_mod+(i*32)]>>5){
-
-
-						midi_cue[cue_counter*3]=147+(i-4);  // channel 4
-				midi_cue[(cue_counter*3)+1]=((scene_pitch[seq_step_mod+(i*32)])+scene_transpose[i])& 127;;  //  pitch info
-				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
-				if (!velocity) velocity=127; //missing velocity info still
-				if ((scene_mute) & ((button_states[i])==3)) velocity=0;
-				if ((scene_solo) & (scene_buttons[0]!=i)) velocity=0;   // mute everything but solo
-
-				midi_cue[(cue_counter*3)+2]=velocity;
-				cue_counter++;
-			}
-
-
-
-
-			midi_cue[25]=cue_counter*3;
-
-
-		}
-
-
-	}
-
-
-void flash_write(void){					// too much crap needs to simplify , easy mistakes
-	  if ((button_states[70]) & (write_once==0)){
-		// flash_sector_erase(10 );
-		  uint8_t spi_test3[5]={0,10,0,0};
-		 		  uint8_t test_data3[270]={0,10,0,0};
-		 		//  uint8_t temp_data;
-/*
-			for (i=0;i<256;i++){
-				temp_data=	(scene_velocity [i]<<1)&224;    //merge into scene memory
-				test_data3[i+4]=	(scene_pitch [i]&31)+temp_data;   // pitch
-
-			}
-*/
-			memcpy  (test_data3+4 ,scene_memory,  256);
-
-
-		  spi_test3[0]=0x06; //enable write each time
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
-		  HAL_SPI_Transmit(&hspi1, spi_test3, 1, 1000);
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
-		  HAL_Delay(5);
-
-		  //----formAT SECTION
-
-		  spi_test3[0]=0x20; //sector erase 4k (block is 0x52)
-
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);         // enable for sector erase   , stays empty when enabled
-		  HAL_SPI_Transmit(&hspi1, spi_test3, 4, 1000);   //erase sector ,works       4kbytes   (block erase=32kbytes)
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
-		  HAL_Delay(150);  // S
-		  // test write
-
-		  spi_test3[0]=0x04; //disable write
-
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0); // low
-		  HAL_SPI_Transmit(&hspi1, spi_test3, 1, 100);
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
-		  HAL_Delay(20);
-
-
-		  //sector erase works
-
-		//  memcpy  (test_data3+4 ,scene_memory,  256);
-
-		  test_data3[0]=0x06;
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
-		  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
-		  HAL_Delay(20);
-
-
-		  test_data3[0]=0x02; //write ,page program
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);   // low
-		  HAL_SPI_Transmit(&hspi1, test_data3 ,260, 1000);  //address,then data
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
-		  HAL_Delay(200);
-
-		  test_data3[0]=0x04; //disable write
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0); // low
-		  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
-		  HAL_Delay(20);
-
-
-
-			memcpy(all_settings,scene_transpose,9); // copy settings
-			memcpy(all_settings+9,pot_states,8);
-		  memcpy  (test_data3+4 ,all_settings,  100); // copy
-
-
-		  test_data3[0]=0x06;
-		  test_data3[2]=0x01; //page 4
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
-		  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
-		  HAL_Delay(20);
-
-
-		  test_data3[0]=0x02; //write ,page program
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);   // low
-		  HAL_SPI_Transmit(&hspi1, test_data3 ,104, 1000);  //address,then data
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
-		  HAL_Delay(200);
-
-		  test_data3[0]=0x04; //disable write
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0); // low
-		  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
-		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
-		  HAL_Delay(20);
-
-
-
-		  HAL_Delay(200);
-		//  write_once=1;
-
-
-		  button_states[70]=0;
-		  other_buttons=1;
-	  }
-
-
-
-
-
-}
-
-void flash_read(void){
-	HAL_Delay(100);
-
-	uint8_t test_data2[260]={0,10,0,0};
-	uint8_t test_data3[260]={0,10,0,0};
-
-
-	test_data2[0]=0x03; //read ok
-
-	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);  // when readin low till the end
-	HAL_SPI_TransmitReceive (&hspi1,test_data2, test_data3,  256, 100); // request data , works
-	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
-	HAL_Delay(100);
-
-	memcpy(scene_memory,test_data3+4,256);
-
-	test_data2[2]=1;
-	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);  // when readin low till the end
-	HAL_SPI_TransmitReceive (&hspi1,test_data2, test_data3,  104, 100); // request data , works
-	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
-	HAL_Delay(100);
-
-	memcpy(all_settings,test_data3+4,100); // copy back
-	memcpy(scene_transpose,all_settings,9);
-	memcpy(pot_states,all_settings+9,8);
-
-
-	for (i=0;i<32;i++)
-
-
-	{if (scene_memory[i]>>5) button_states[square_buttons_list[i]]=5; // needs this to run first so first page loads
-
-	}
-	for (i=0;i<255;i++){
-		scene_velocity [i]=(scene_memory[i]>>1)&112;    //needs to update velocities or lost , shifted
-		scene_pitch [i]=(scene_memory[i])&31;   // pitch
-
-	}
-
-	//memcpy(scene_velocity,scene_memory,256);
-
-
-}
-void panic_delete(void){
-
-	HAL_Delay(100);
-
-
-	uint8_t temp_hold=0;
-
-	for (n=0;n<32;n++){ // delete all if most notes are on
-	{if (scene_memory[n+32]) temp_hold++;}
-
-	}
-
-	if (temp_hold > 29) {for (n=0;n<255;n++){scene_memory[n]=0;}}
-
-}
-
-
-
-// note bank search and replace
 
 
 

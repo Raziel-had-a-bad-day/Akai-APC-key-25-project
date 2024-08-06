@@ -29,6 +29,9 @@
 #include "variables.h"
 #include "usbd_cdc.h"
 #include "usbd_cdc_if.h"
+#include "midi.h"
+#include "notes.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,8 +60,8 @@ UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
-#include "notes.h"
 
+#include "flash.h"
 
 
 
@@ -153,7 +156,7 @@ int main(void)
 //	flash_write();
 	//  get flash data
 	flash_read();
-	other_buttons=1;
+	other_buttons=1; // nothing
 	// panic_delete();
   /* USER CODE END 2 */
 
@@ -162,73 +165,98 @@ int main(void)
   while (1)
   {
 
+	  if (other_buttons){
+	   			 				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
+	   			 				for (i=0;i<17;i++)  { send_all[i*3]=144;
+	   			 		 					send_all[(i*3)+1]=buttons_list[i];
+
+	   			 		 					send_all[(i*3)+2]=button_states[buttons_list[i]];
+	   			 		 				send_all[(i*3)+2]=0;
+
+	   			 		 					}
+
+	   			 		 					CDC_Transmit_FS(send_all, 51); // send apc data , bit heavy
+	   			 		 					other_buttons=0;
+
+	   			 			}
 
 
 
 	  if (seq_enable) {
 
-		  //	if ((s_temp / 6) != (seq_pos / 6)) {    //send every 6, not good
 
 
-		  //if (((s_temp+6) <= seq_pos) | ((s_temp==186)&(seq_pos<=0))) {
+
+
 		  if ((s_temp>>3) != (seq_pos>>3)) {
 
-			  uint8_t seq_step_mod=seq_step;
-			  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)))  seq_step_mod=((seq_step&7)+(pot_states[3]>>4))&31;  // looper visual
 
-			  send_buffer[1] = square_buttons_list[seq_step_mod];   // for displaying 0-32 , reset previous light
-			  //	if (button_states[send_buffer[1] ]) send_buffer[2]=5; else send_buffer[2]=0; // reset to previous state or 0
-			  send_buffer[2]=button_states[send_buffer[1]]; // tis has to be 0 or 5
-			  send_buffer[4] = square_buttons_list[((seq_step_mod + 1) & 31)] ;  // set new light on
+			  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]];
+
+
+
+			  for (i=0;i<8;i++){ seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change playback speed count up
+
+
+
+			 // if (play_speed[i+8]==1)    seq_step_list[i+8]=(seq_step_list[i+8]+1)+ ((seq_step_list[i+8]>>5)*9)&127;
+
+			  if (play_speed[i]==1)   seq_step_list[i] =  ((seq_step_list[i+8]&7) +((seq_step_list[i+8]>>6)<<3))&31;  else  seq_step_list[i] =( seq_step_list[i+8]>>3)&31;
+
+
+
+
+
+			  }
+
+
+
+
+
+			  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)) )
+			  {
+
+				  if (loop_selector<2) seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
+			  }
+
+
+			  // looper visual only when in scene though
+
+			  send_buffer[1] = square_buttons_list[seq_step_mem];   // for displaying 0-32 , reset previous light then new on , should be based on memory
+			  send_buffer[2]=button_states[send_buffer[1]]; // last state
+			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on
 			  send_buffer[5] = 1;
-			  //	send_buffer[10]=drum_list[scene_buttons[0]];  // pitch
+			  seq_step_mem=seq_step_mod;
 
+			  if ((button_states[64])& (!bar_looping)) {bar_looping=scene_buttons[0]+1;}
 
-			  //	if(button_states[send_buffer[1]])	send_buffer[11]=scene_velocity[seq_step+(32*scene_buttons[0])]; else send_buffer[11]=0;  // velocity from scene
+			  if (!button_states[64]) {bar_looping=0; }
 
+			  if (!pause)	midi_send();
 
+			  if(pause) {  // triger notes slower during pause and keyboard pressed
+				  if (((s_temp>>3)&1)&&keyboard[0])   midi_cue[50]=3; else  midi_cue[50]=0;
+			  }
 
- 				if ((button_states[64])& (!bar_looping)) {bar_looping=scene_buttons[0]+1;}
- 			 			if (!button_states[64]) bar_looping=0;
+			  uint8_t len=midi_cue[50];
+			  uint8_t send_temp[180];
+			  memcpy(send_temp,midi_cue,len);
+			  memcpy(send_temp+len,send_buffer,9);  // midi first
+			  len=len+9;
 
- 			 			if (other_buttons){
- 			 				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
- 			 				for (i=0;i<17;i++)  { send_all[i*3]=144;
- 			 		 					send_all[(i*3)+1]=buttons_list[i];
+			  if (all_update==2){
 
- 			 		 					send_all[(i*3)+2]=button_states[buttons_list[i]];
+				  memcpy(send_temp+len,send_all,120);
+				  len=len+120;
+				  all_update=0;
 
+			  }
 
- 			 		 					}
-
- 			 		 					CDC_Transmit_FS(send_all, 51); // send apc data , bit heavy
- 			 		 					other_buttons=0;
-
- 			 			}
-
-
- 			 			if (!button_states[91])	midi_send(); else midi_cue[25]=0;
- 			 			uint8_t len=midi_cue[25];
- 			 			uint8_t send_temp[160];
- 			 			memcpy(send_temp,midi_cue,len);
- 			 			memcpy(send_temp+len,send_buffer,9);  // midi first
- 			 			len=len+9;
-
- 			 			if (all_update==2){
-
- 			 				memcpy(send_temp+len,send_all,120);
- 			 				len=len+120;
- 			 				all_update=0;
-
- 			 			}
-
- 			 			CDC_Transmit_FS(send_temp, len); //send all if possible , after each step
+			  CDC_Transmit_FS(send_temp, len); //send all if possible , after each step midi notes first  // might change
 
 
 
-
-
- 				printf(" %d\n ", seq_pos);
+ 				printf(" %d ",seq_step_list[5]);printf(" %d ", seq_step_list[6]);printf(" %d ", pot_tracking[6]);printf(" %d ", pot_tracking[7]);printf(" %d ", last_button);printf(" %d\n ", seq_pos);
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);
@@ -239,8 +267,19 @@ int main(void)
  				  flash_write(); // works only if button pressed
 
 
- 				  if (!button_states[91]) seq_step = (seq_step + 1) & 31; else seq_step=seq_step;
- 				s_temp = seq_pos;
+ 				  if (!pause) seq_step = seq_pos>> 3; else seq_step=seq_step;
+
+ 				  if(pause) {// keyboard midi send during pause
+ 					  { if (keyboard[0]&&(scene_buttons[0]>3))  {;midi_cue[0]=143+scene_buttons[0];
+ 					  midi_cue[1]=(keyboard[0])+scene_transpose[scene_buttons[0]];midi_cue[2]=127;}
+ 					  midi_cue[50]=3;}
+ 					// midi_cue[50]=0;
+
+
+ 				  }
+
+
+ 				  s_temp = seq_pos;
 
  			}   // blink steps
 
@@ -255,7 +294,7 @@ int main(void)
 		  all_update=2;}
 
 
-
+/*
 
 
  	  if ((seq_pos == 64) &&(mtc_tick)) {    // only if mtc is incoming
@@ -273,8 +312,6 @@ int main(void)
 
  		} else seq_enable=1;  // if no mtc then just run sequencer
 
-     // if ((seq_enable)&& (button_states[90])) {seq_enable=0;button_states[90]=0;}
-    //  if ((!seq_enable)&& (button_states[90])) {seq_enable=1;button_states[90]=0;}
 
  	  if (serial1_hold[5])	{//printf("%d",timer_value);printf(" %d ",seq_pos);printf(" %d \n",mtc_tick);
 
@@ -307,9 +344,13 @@ int main(void)
 
 
  	  }  // end of midi in
+*/
+
+
+
 
  	  if (cdc_buffer[0]) {      //  when cdc buffer incoming
-
+ 		  seq_enable=1; // wont start till midi in
  			for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
  				uint8_t data_temp=i+(scene_buttons[0]*32);
 
@@ -322,7 +363,7 @@ int main(void)
 
 
  			buttons_store();   // only runs after receive
-
+ 			if (button_states[91] ) {pause=1; } else pause=0;
 
 
  	  }
