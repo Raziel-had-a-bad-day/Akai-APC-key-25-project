@@ -94,7 +94,8 @@ void flash_write(void);
 void flash_read(void);
 void panic_delete(void);
 void stop_start(void);
-
+void note_off(void);
+void arrows(void);
 
 /* USER CODE END PFP */
 
@@ -165,6 +166,13 @@ int main(void)
   while (1)
   {
 
+
+
+
+
+
+
+/*
 	  if (other_buttons){
 	   			 				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
 	   			 				for (i=0;i<17;i++)  { send_all[i*3]=144;
@@ -179,11 +187,10 @@ int main(void)
 	   			 		 					other_buttons=0;
 
 	   			 			}
-
+*/
 
 
 	  if (seq_enable) {
-
 
 
 
@@ -193,21 +200,12 @@ int main(void)
 
 			  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]];
 
-
+			  if(!pause) {
 
 			  for (i=0;i<8;i++){ seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change playback speed count up
-
-
-
-			 // if (play_speed[i+8]==1)    seq_step_list[i+8]=(seq_step_list[i+8]+1)+ ((seq_step_list[i+8]>>5)*9)&127;
-
 			  if (play_speed[i]==1)   seq_step_list[i] =  ((seq_step_list[i+8]&7) +((seq_step_list[i+8]>>6)<<3))&31;  else  seq_step_list[i] =( seq_step_list[i+8]>>3)&31;
 
-
-
-
-
-			  }
+			  }}
 
 
 
@@ -219,32 +217,48 @@ int main(void)
 				  if (loop_selector<2) seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
 			  }
 
-
+				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
 			  // looper visual only when in scene though
 
 			  send_buffer[1] = square_buttons_list[seq_step_mem];   // for displaying 0-32 , reset previous light then new on , should be based on memory
 			  send_buffer[2]=button_states[send_buffer[1]]; // last state
 			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on
 			  send_buffer[5] = 1;
+			  send_buffer[9] = 144;
+			  send_buffer[10] = buttons_list[counter_a];
+			  send_buffer[11] = button_states[buttons_list[counter_a]];
+			  if(counter_a>18) counter_a=0; else counter_a++; // keep updating extra buttons from button states
+
+
 			  seq_step_mem=seq_step_mod;
 
 			  if ((button_states[64])& (!bar_looping)) {bar_looping=scene_buttons[0]+1;}
 
 			  if (!button_states[64]) {bar_looping=0; }
 
-			  if (!pause)	midi_send();
+
+
+
+			  if (!pause)		 {note_off();midi_send();}
+			//  memcpy(midi_cue_noteoff,midi_cue,50);
+
 
 			  if(pause) {  // triger notes slower during pause and keyboard pressed
 				  if (((s_temp>>3)&1)&&keyboard[0])   midi_cue[50]=3; else  midi_cue[50]=0;
 			  }
 
 			  uint8_t len=midi_cue[50];
-			  uint8_t send_temp[180];
-			  memcpy(send_temp,midi_cue,len);
-			  memcpy(send_temp+len,send_buffer,9);  // midi first
-			  len=len+9;
+			  uint8_t send_temp[256];
+			  uint8_t len1=midi_cue_noteoff[50];
 
-			  if (all_update==2){
+			  memcpy(send_temp,midi_cue_noteoff,len1); // from last send
+			  len=len+len1;
+
+			  memcpy(send_temp+len1,midi_cue,len);
+			  memcpy(send_temp+len,send_buffer,12);  // midi first then lights
+			  len=len+12;
+
+			  if (all_update==2){  // send on note off
 
 				  memcpy(send_temp+len,send_all,120);
 				  len=len+120;
@@ -252,11 +266,13 @@ int main(void)
 
 			  }
 
+
 			  CDC_Transmit_FS(send_temp, len); //send all if possible , after each step midi notes first  // might change
 
 
 
- 				printf(" %d ",seq_step_list[5]);printf(" %d ", seq_step_list[6]);printf(" %d ", pot_tracking[6]);printf(" %d ", pot_tracking[7]);printf(" %d ", last_button);printf(" %d\n ", seq_pos);
+ 				printf(" %d ",midi_cue_noteoff[50]);printf(" %d ", midi_cue_noteoff[0]);printf(" %d ", midi_cue_noteoff[1]);printf(" %d ", midi_cue_noteoff[2]);
+ 				printf("   %d ", midi_cue_noteoff[3]);printf(" %d ", midi_cue_noteoff[4]);printf(" %d ", midi_cue_noteoff[5]);printf("  %d\n ", seq_pos);
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);
@@ -265,8 +281,8 @@ int main(void)
  				  led_blink=!led_blink;
 
  				  flash_write(); // works only if button pressed
-
-
+ 				  note_off_enable=1;
+ 				  arrows();
  				  if (!pause) seq_step = seq_pos>> 3; else seq_step=seq_step;
 
  				  if(pause) {// keyboard midi send during pause

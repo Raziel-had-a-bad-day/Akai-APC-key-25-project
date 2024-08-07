@@ -74,7 +74,8 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 			memcpy(all_settings,scene_transpose,9); // copy settings
 			memcpy(all_settings+9,pot_states,8);
 			memcpy(all_settings+17,pot_tracking,16);
-		  memcpy  (test_data3+4 ,all_settings,  100); // copy
+			memcpy(all_settings+25,mute_list,8);
+			memcpy  (test_data3+4 ,all_settings,  100); // copy
 
 
 		  test_data3[0]=0x06;
@@ -139,7 +140,7 @@ void flash_read(void){
 	memcpy(scene_transpose,all_settings,9);
 	memcpy(pot_states,all_settings+9,8);
 	memcpy(pot_tracking,all_settings+17,16);
-
+	memcpy(mute_list,all_settings+25,8);
 
 	for (i=0;i<32;i++)
 		//pot_tracking[i>>1] =scene_transpose[3+(i>>3)];

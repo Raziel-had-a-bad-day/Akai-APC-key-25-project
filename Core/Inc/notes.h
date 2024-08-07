@@ -2,7 +2,7 @@
 
 void buttons_store(void){
 
-	uint8_t vel=pot_states[0]>>3;  // testing
+	//uint8_t vel=pot_states[0]>>3;  // testing
 	uint8_t scene_select=0;
 	uint8_t button_pressed=255; // sends out changed button ,255 is none
 	uint8_t incoming_message[3];
@@ -11,7 +11,7 @@ void buttons_store(void){
 	uint8_t buffer_clear = 0;
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
-	uint8_t seq_step_pointer= seq_step+(scene_buttons[0]*32); // scene memory address point
+	//uint8_t seq_step_pointer= seq_step+(scene_buttons[0]*32); // scene memory address point
 	if (status == 128) // note off
 		{note_off_flag[0]=0;
 		if (incoming_data1==98) shift=0;
@@ -56,9 +56,19 @@ void buttons_store(void){
 		 }
 
 
-		if (button_states[65]) scene_mute=1; else scene_mute=0;  //enable muting on scene select
-		if (button_states[66]) {scene_solo=1;button_states[65]=0;} else scene_solo=0;  //enable muting on scene select
+	//	if (button_states[85]) scene_mute=1; else scene_mute=0;  //enable muting on scene select
+		if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
+		if (button_states[67])  {right_arrow=1;                                               }  //shift notes right
+		if (button_states[85]) {
+
+			{if (mute_list[scene_buttons[0]]==1)   mute_list[scene_buttons[0]]=0; else mute_list[scene_buttons[0]]=1; } // toggle mute
+			button_states[85]=0; button_states[scene_buttons[0]]=3;// leave on
+		}
+
+
 		button_pressed=incoming_data1; // important  , only after note on
+
+
 
 
 		if ((incoming_data1 >7)&(incoming_data1 <40)&& (button_states[incoming_data1])){     // midi stuff   , only if enabled though
@@ -94,7 +104,7 @@ void buttons_store(void){
 		 pot_tracking[(seq_step>>3)+((scene_buttons[0]-4)*4)]=pot_states[2]>>1;  // keep writing per bar
 		}
 
-		if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_step_pointer]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
+		//if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_step_pointer]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
 
 	}
 
@@ -111,7 +121,10 @@ void buttons_store(void){
 		else {    // mormal
 			if ((scene_select-1)==scene_buttons[0])  {  if ((button_states[scene_buttons[0]])==5)  {button_states[scene_select-1]=4;}  else {button_states[scene_select-1]=5;} }
 			if ((scene_select-1)!=scene_buttons[0]){ button_states[scene_buttons[0]]=1; // leave green unless muting
-					{if (((button_states[scene_select-1])==0) |((button_states[scene_select-1])==1))   button_states[scene_select-1]=5;  else button_states[scene_select-1]=4; }
+
+		//	if (mute_list[scene_select]==1) button_states[85]=5;	else button_states[85]=0; // switch mute on if already on
+
+			{if (((button_states[scene_select-1])==0) |((button_states[scene_select-1])==1))   button_states[scene_select-1]=5;  else button_states[scene_select-1]=4; }
 
 					}
 
@@ -250,6 +263,68 @@ void note_replace(uint8_t note_replace) {    // replace first note
 	}
 
 }
+
+
+
+
+void arrows(void){
+
+	if (right_arrow)
+	{
+		uint8_t scene=scene_buttons[0];
+		uint8_t temp_hold;
+		uint8_t temp[33];
+		uint8_t point=scene*32;
+		temp_hold= scene_memory[(point)+31];
+		memcpy(temp+1,scene_memory+point,31);
+		temp[0]=temp_hold;
+		memcpy(scene_memory+point,temp,32);
+
+				temp_hold= scene_velocity[(point)+31];
+				memcpy(temp+1,scene_velocity+point,31);
+				temp[0]=temp_hold;
+				memcpy(scene_velocity+point,temp,32);
+
+				temp_hold= scene_pitch[(point)+31];
+								memcpy(temp+1,scene_pitch+point,31);
+								temp[0]=temp_hold;
+								memcpy(scene_pitch+point,temp,32);
+
+								temp_hold= button_states[39];
+																memcpy(temp+1,button_states+8,31);
+																temp[0]=temp_hold;
+																memcpy(button_states+8,temp,32);
+
+
+			button_states[67]=0;
+		right_arrow=0;
+		all_update=1;
+
+
+
+
+
+
+
+	}
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 

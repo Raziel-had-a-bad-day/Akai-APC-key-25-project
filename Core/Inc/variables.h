@@ -46,7 +46,12 @@ uint8_t all_update=1; // update all buttons from button_states , 40 for now
 uint8_t keyboard[3];  // store keys
 uint8_t drum_list[8] ={20,21,22,23,24,25,26,27}; // notes played for drum scenes
 uint8_t midi_cue[50];  // data cue for midi max 8 notes [25] = message length
+uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length
 uint32_t sys_cnt[3];
+uint8_t note_off_enable;
+uint8_t right_arrow;
+uint8_t left_arrow;
+uint8_t counter_a;
 // SPI stuff
 uint8_t spi_send[10];
 uint8_t status_reg[2];
@@ -63,6 +68,7 @@ uint8_t pause; // enable pause mode
 uint8_t seq_step_mem;  // mem for looper
 uint8_t shift; // track shift button
 uint8_t pot_tracking[32] ; // record pot movements , maybe after 1 bar ,only transpose for now
+uint8_t mute_list[9]; //track scene mutes
 //notes
 uint8_t scene_transpose[9];
 uint8_t last_button;
