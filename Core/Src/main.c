@@ -244,7 +244,7 @@ int main(void)
 
 
 			  if(pause) {  // triger notes slower during pause and keyboard pressed
-				  if (((s_temp>>3)&1)&&keyboard[0])   midi_cue[50]=3; else  midi_cue[50]=0;
+				  if (((s_temp>>3)&1)&&keyboard[0])   {midi_cue[50]=3; midi_cue_noteoff[50]=0;}else  {midi_cue[50]=0; midi_cue_noteoff[50]=0;}
 			  }
 
 			  uint8_t len=midi_cue[50];
@@ -271,8 +271,8 @@ int main(void)
 
 
 
- 				printf(" %d ",midi_cue_noteoff[50]);printf(" %d ", midi_cue_noteoff[0]);printf(" %d ", midi_cue_noteoff[1]);printf(" %d ", midi_cue_noteoff[2]);
- 				printf("   %d ", midi_cue_noteoff[3]);printf(" %d ", midi_cue_noteoff[4]);printf(" %d ", midi_cue_noteoff[5]);printf("  %d\n ", seq_pos);
+ 				printf(" %d ",scene_pitch[160]);printf(" %d ", scene_pitch[161]);printf(" %d ", scene_pitch[162]);printf(" %d ", scene_pitch[163]);
+ 				printf("   %d ", midi_cue_noteoff[3]);printf(" %d ", midi_cue_noteoff[4]);printf(" %d ", midi_cue_noteoff[5]);printf("  %d\n ", timer_value );
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);

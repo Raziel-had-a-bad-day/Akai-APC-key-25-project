@@ -70,11 +70,11 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		  HAL_Delay(20);
 
 
-
+		  	  all_settings[90]=tempo;
 			memcpy(all_settings,scene_transpose,9); // copy settings
 			memcpy(all_settings+9,pot_states,8);
-			memcpy(all_settings+17,pot_tracking,16);
-			memcpy(all_settings+25,mute_list,8);
+			memcpy(all_settings+17,pot_tracking,32);
+			memcpy(all_settings+49,mute_list,8);
 			memcpy  (test_data3+4 ,all_settings,  100); // copy
 
 
@@ -139,8 +139,9 @@ void flash_read(void){
 	memcpy(all_settings,test_data3+4,100); // copy back
 	memcpy(scene_transpose,all_settings,9);
 	memcpy(pot_states,all_settings+9,8);
-	memcpy(pot_tracking,all_settings+17,16);
-	memcpy(mute_list,all_settings+25,8);
+	memcpy(pot_tracking,all_settings+17,32);
+	memcpy(mute_list,all_settings+49,8);
+	tempo=all_settings[90];
 
 	for (i=0;i<32;i++)
 		//pot_tracking[i>>1] =scene_transpose[3+(i>>3)];
@@ -148,17 +149,30 @@ void flash_read(void){
 	{if (scene_memory[i]>>5) button_states[square_buttons_list[i]]=5; // needs this to run first so first page loads
 
 	}
+	if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting
+
+
 	for (i=0;i<255;i++){
 		scene_velocity [i]=(scene_memory[i]>>1)&112;    //needs to update velocities or lost , shifted
 		scene_pitch [i]=(scene_memory[i])&31;   // pitch
 
 	}
+	if (tempo==255)  tempo= 120;  //sets it for tempo 120 in case missing
 
+	float tempo_hold=1;  // calculate tempo look up
+	uint16_t counter;
+	 float period= cpu_clock/prescaler; //  24584 hz 1/120   /128
+	 float d;
 
+		  	for (d=1;d<250;d++) {     // calculate ARR vales for TIM10
+		  		tempo_hold=0.533333*d; // hz
+		  		tempo_hold=period/tempo_hold; //
+		  		counter=d;
+		  	bpm_table[counter]=tempo_hold;
+		  	}
+		  	timer_value=bpm_table[tempo];  // starting bpm
+		  //	timer_value=511;
 
-
-
-	//memcpy(scene_velocity,scene_memory,256);
 
 
 }

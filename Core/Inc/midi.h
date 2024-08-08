@@ -40,7 +40,9 @@ void midi_send(void){  // only for midi music no info return
 
 
 						midi_cue[cue_counter*3]=147+(i-4);  // channel 4
-				midi_cue[(cue_counter*3)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step>>3)+((i-4)*4)])& 127;;  //  pitch info ,pot tracking  ?
+				midi_cue[(cue_counter*3)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step>>3)+((i)*4)])& 127;;  //  pitch info ,pot tracking  ?
+				//midi_cue[(cue_counter*3)+1]=((scene_pitch[seq_step_mod+(i*32)])+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
+
 				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
 				if (!velocity) velocity=127; //missing velocity info still
 				if(mute_list[i]) velocity=0;
@@ -52,8 +54,8 @@ void midi_send(void){  // only for midi music no info return
 			}
 
 
-		if (keyboard[0]&&(seq_step&1)&&(scene>3))  {cue_counter++;midi_cue[cue_counter*3]=143+scene;
-		midi_cue[(cue_counter*3)+1]=(keyboard[0])+pot_tracking[(seq_step>>3)+((scene-4)*4)];midi_cue[(cue_counter*3)+2]=127;}  // keyboard midi send with transpose
+		if (keyboard[0]&&(seq_step_mod&1)&&(scene>3))  {cue_counter++;midi_cue[cue_counter*3]=143+scene;
+		midi_cue[(cue_counter*3)+1]=(keyboard[0])+pot_tracking[(seq_step_mod>>3)+((scene)*4)];midi_cue[(cue_counter*3)+2]=127;}  // keyboard midi send with transpose
 
 			midi_cue[50]=cue_counter*3;
 

@@ -1,4 +1,16 @@
+
+#define cpu_clock    96000000
+#define prescaler 3905    // TIM10 values
+
+uint16_t bpm_table[256];  // lut values for temp TIM10 ARR
+uint8_t tempo; // tempo value
+uint8_t volume; // volume button
+uint8_t pan;
+
+
 uint8_t serial1_temp;
+
+
 uint8_t serial1_hold[10];
 uint8_t serial1_hold2[10];
 uint8_t serial1_counter;
@@ -23,7 +35,7 @@ uint8_t seq_step; // 0-32 steps
 uint8_t realtime;
 uint8_t message_cue[10];
 uint8_t message_counter;// points to select byte in midi
-uint16_t timer_value=512; // sets timer ccr  def is 1100 for now
+volatile uint16_t timer_value=512; // sets timer ccr  def is 1100 for now
 uint16_t seq_tmp;
 uint8_t cdc_buffer[12];  // receive buffer on sub , check usbd_cdc_if.c and h for more
 uint32_t Len;
@@ -55,6 +67,7 @@ uint8_t counter_a;
 // SPI stuff
 uint8_t spi_send[10];
 uint8_t status_reg[2];
+uint8_t select; //select button
 
 uint8_t flash_flag=0;
 uint8_t flash_read_block2[260] ={1,1,1,1,1,1,1,0}; // this should clearif flash read works
@@ -67,7 +80,7 @@ uint8_t other_buttons; // update control button lights
 uint8_t pause; // enable pause mode
 uint8_t seq_step_mem;  // mem for looper
 uint8_t shift; // track shift button
-uint8_t pot_tracking[32] ; // record pot movements , maybe after 1 bar ,only transpose for now
+uint8_t pot_tracking[33] ; // record pot movements , maybe after 1 bar ,only transpose for now
 uint8_t mute_list[9]; //track scene mutes
 //notes
 uint8_t scene_transpose[9];

@@ -11,6 +11,9 @@ void buttons_store(void){
 	uint8_t buffer_clear = 0;
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
+	uint8_t current_scene=((scene_buttons[0])*32);
+
+
 	//uint8_t seq_step_pointer= seq_step+(scene_buttons[0]*32); // scene memory address point
 	if (status == 128) // note off
 		{note_off_flag[0]=0;
@@ -26,9 +29,14 @@ void buttons_store(void){
 									scene_select=incoming_data1 +1;}  //enable scene_select section
 
 	if (status == 145)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47);}  // store last key pressed mainly , 48-72 default setting(24)
+
+
+
+
+
 	if ((status==129))  { keyboard[0]=0;}  // store last key pressed mainly
 
-	if (status == 144){
+	if (status == 144){  // Note on
 
 		note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
 		if (incoming_data1==98) shift=1;
@@ -56,14 +64,14 @@ void buttons_store(void){
 		 }
 
 
-	//	if (button_states[85]) scene_mute=1; else scene_mute=0;  //enable muting on scene select
-		if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
-		if (button_states[67])  {right_arrow=1;                                               }  //shift notes right
-		if (button_states[85]) {
 
-			{if (mute_list[scene_buttons[0]]==1)   mute_list[scene_buttons[0]]=0; else mute_list[scene_buttons[0]]=1; } // toggle mute
-			button_states[85]=0; button_states[scene_buttons[0]]=3;// leave on
-		}
+		if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
+		if (button_states[67])  {right_arrow=1;     }  //shift notes right
+		if (button_states[86])  select=1; else select=0;  // select enable
+		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
+		if (button_states[68])  volume=1; else volume=0;
+		if (button_states[69])  pan=1; else pan=0;
+
 
 
 		button_pressed=incoming_data1; // important  , only after note on
@@ -71,68 +79,80 @@ void buttons_store(void){
 
 
 
-		if ((incoming_data1 >7)&(incoming_data1 <40)&& (button_states[incoming_data1])){     // midi stuff   , only if enabled though
+		if ((incoming_data1 >7)&&(incoming_data1 <40)&& (button_states[incoming_data1])){     // midi stuff   , only if enabled though
 
-						last_button= square_buttons_list[incoming_data1-8]+(scene_buttons[0]*32)-8;   // memory location 0-256
+						last_button= square_buttons_list[incoming_data1-8]+(current_scene)-8;   // memory location 0-256
 
 						scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;
 
 
-						if (keyboard[0]) {scene_pitch[last_button]= keyboard[0];
+						if (keyboard[0]) scene_pitch[last_button]= keyboard[0]; else scene_pitch[last_button]= pot_states[0]>>2;
+		}
 
 
-
-
-						pot_tracking[((last_button&31)>>3)+((scene_buttons[0]-4)*4)]=pot_states[2]>>1; }  // overwrite if keyboard held
-
-
-
-
-
-	}
 
 	} // change button state
 
 	if (status == 176) {
 		pot_states[incoming_data1  - 48] = incoming_message[2]; // store pot
+		if ((incoming_data1==55) &&(shift)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
+
+
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
 		if ((incoming_data1==50) && (!keyboard[0]))
 
 		{
 
 			scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base , only with shift off
-		 pot_tracking[(seq_step>>3)+((scene_buttons[0]-4)*4)]=pot_states[2]>>1;  // keep writing per bar
+		// pot_tracking[(seq_step>>3)+(current_scene>>3)]=pot_states[2]>>1;  // keep writing per bar
+
+
+
 		}
 
 		//if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_step_pointer]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
 
 	}
 
+
+	if(keyboard[0] && shift)  {pot_tracking[(seq_step>>3)+(current_scene>>3)]=(keyboard[0]+scene_transpose[scene_buttons[0]]);keyboard[0]=0; }  // use keyboard to enter transpose info , also mute
+
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
+		scene_select=scene_select-1;
+
+
+			if (((scene_select)==scene_buttons[0])&& (!scene_mute))  {  if ((button_states[scene_buttons[0]])!=5)  {button_states[scene_select]=5;}
+			 }
+
+			if (((scene_select)==scene_buttons[0])&& (scene_mute))  {  if ((button_states[scene_select])==5)  {button_states[scene_select]=3;mute_list[scene_select]=1;}
+						else {button_states[scene_select]=5;mute_list[scene_select]=0;} }
 
 
 
-		if(scene_mute) { // muted
 
-		 if ((button_states[scene_select-1])!=3)  {button_states[scene_select-1]=3;}  else {button_states[scene_select-1]=1;}  // simple on off red buttons , no yellow
+			if ((scene_select)!=scene_buttons[0]){
+				if (!scene_mute)
 
-		}
 
-		else {    // mormal
-			if ((scene_select-1)==scene_buttons[0])  {  if ((button_states[scene_buttons[0]])==5)  {button_states[scene_select-1]=4;}  else {button_states[scene_select-1]=5;} }
-			if ((scene_select-1)!=scene_buttons[0]){ button_states[scene_buttons[0]]=1; // leave green unless muting
-
-		//	if (mute_list[scene_select]==1) button_states[85]=5;	else button_states[85]=0; // switch mute on if already on
-
-			{if (((button_states[scene_select-1])==0) |((button_states[scene_select-1])==1))   button_states[scene_select-1]=5;  else button_states[scene_select-1]=4; }
+					{
+					if (mute_list[scene_buttons[0]]) button_states[scene_buttons[0]]=3;  else  button_states[scene_buttons[0]]=1;  // leave previous button on red if muted
+					if ((button_states[scene_select])!=5) button_states[scene_select]=5; else button_states[scene_select]=1;
 
 					}
 
-			scene_buttons[0]=scene_select-1;
+			if (scene_mute ){
+
+					if (button_states[scene_select]==3)  {button_states[scene_select]=1;mute_list[scene_select]=0;} else {button_states[scene_select]=3;mute_list[scene_select]=1;}
+			}
+
+
+
+
+			scene_buttons[0]=scene_select;
 			all_update=1;
 			for (i=0;i<32;i++){
 
-					{if (scene_memory[i+((scene_select-1)*32)]>>5) button_states[square_buttons_list[i]]=5; else button_states[square_buttons_list[i]]=0;}
+					{if (scene_memory[i+((scene_select)*32)]>>5) button_states[square_buttons_list[i]]=5; else button_states[square_buttons_list[i]]=0;}
 
 
 		}
