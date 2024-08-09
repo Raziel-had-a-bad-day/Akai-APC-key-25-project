@@ -82,8 +82,10 @@ uint8_t seq_step_mem;  // mem for looper
 uint8_t shift; // track shift button
 uint8_t pot_tracking[33] ; // record pot movements , maybe after 1 bar ,only transpose for now
 uint8_t mute_list[9]; //track scene mutes
+uint8_t noteoff_list[25]; //track note offs sorted 0-7 , empty when not in use
 //notes
 uint8_t scene_transpose[9];
+uint8_t scene_volume[9];  // use it to control velocity only on midi out
 uint8_t last_button;
 uint8_t bar_looping; // loop 8 notes on cueent scene if enabled
 uint8_t bar_count; // relates to looping
@@ -95,4 +97,6 @@ uint8_t loop_selector;  //steps through loop
 uint8_t play_speed[20]={8,8,8,8,8,1,8,8,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
 
 uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
-
+uint8_t midi_cc; // enabled if sending midi cc
+uint8_t midi_cc_list[13];  // keep cc to be sent here [12] is len
+uint8_t serial_out[30];

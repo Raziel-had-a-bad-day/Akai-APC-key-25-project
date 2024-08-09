@@ -59,6 +59,7 @@ void buttons_store(void){
 
 		 switch(button_selection){    // blank , r
 		 case 0 :button_states[incoming_data1 ] = 5;break;
+		 case 3 :button_states[incoming_data1 ] = 0;break;
 		 case 5 :button_states[incoming_data1 ] = 0;  ;break;}
 		 //case 5 :button_states[incoming_data1 ] = 3;break; }
 		 }
@@ -84,6 +85,7 @@ void buttons_store(void){
 						last_button= square_buttons_list[incoming_data1-8]+(current_scene)-8;   // memory location 0-256
 
 						scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;
+						if (scene_velocity[last_button]==0) button_states[incoming_data1 ] = 3;  // change to red if 0 velocity
 
 
 						if (keyboard[0]) scene_pitch[last_button]= keyboard[0]; else scene_pitch[last_button]= pot_states[0]>>2;
@@ -94,8 +96,20 @@ void buttons_store(void){
 	} // change button state
 
 	if (status == 176) {
-		pot_states[incoming_data1  - 48] = incoming_message[2]; // store pot
+		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot
 		if ((incoming_data1==55) &&(shift)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
+
+
+		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift))  {
+		//	midi_cc=1;   // volume cc message enable   , for now disabled
+		midi_cc_list[0]=176+scene_buttons[0];
+		midi_cc_list[1]=7; //volume control
+		midi_cc_list[2]=incoming_message[2]&127;
+		midi_cc_list[12]=3;
+		if (scene_buttons[0]>3) scene_volume[scene_buttons[0]]= pot_states [scene_buttons[0]]; else scene_volume[scene_buttons[0]]= pot_states [scene_buttons[0]+4]; // velocity mod on midi out
+
+		}
+
 
 
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
@@ -104,7 +118,7 @@ void buttons_store(void){
 		{
 
 			scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base , only with shift off
-		// pot_tracking[(seq_step>>3)+(current_scene>>3)]=pot_states[2]>>1;  // keep writing per bar
+
 
 
 
@@ -115,7 +129,7 @@ void buttons_store(void){
 	}
 
 
-	if(keyboard[0] && shift)  {pot_tracking[(seq_step>>3)+(current_scene>>3)]=(keyboard[0]+scene_transpose[scene_buttons[0]]);keyboard[0]=0; }  // use keyboard to enter transpose info , also mute
+	if(keyboard[0] && shift)  {pot_tracking[(seq_step>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard to enter transpose info , also mute
 
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
 		scene_select=scene_select-1;

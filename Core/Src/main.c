@@ -57,7 +57,6 @@ DMA_HandleTypeDef hdma_spi1_tx;
 TIM_HandleTypeDef htim10;
 
 UART_HandleTypeDef huart1;
-DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 
@@ -96,6 +95,7 @@ void panic_delete(void);
 void stop_start(void);
 void note_off(void);
 void arrows(void);
+void cdc_send(void);
 
 /* USER CODE END PFP */
 
@@ -247,32 +247,13 @@ int main(void)
 				  if (((s_temp>>3)&1)&&keyboard[0])   {midi_cue[50]=3; midi_cue_noteoff[50]=0;}else  {midi_cue[50]=0; midi_cue_noteoff[50]=0;}
 			  }
 
-			  uint8_t len=midi_cue[50];
-			  uint8_t send_temp[256];
-			  uint8_t len1=midi_cue_noteoff[50];
-
-			  memcpy(send_temp,midi_cue_noteoff,len1); // from last send
-			  len=len+len1;
-
-			  memcpy(send_temp+len1,midi_cue,len);
-			  memcpy(send_temp+len,send_buffer,12);  // midi first then lights
-			  len=len+12;
-
-			  if (all_update==2){  // send on note off
-
-				  memcpy(send_temp+len,send_all,120);
-				  len=len+120;
-				  all_update=0;
-
-			  }
+			  serial_out[0]=145;serial_out[1]=64;serial_out[2]=127;
+			 			  HAL_UART_Transmit(&huart1,serial_out,3,100);
+			  cdc_send();
 
 
-			  CDC_Transmit_FS(send_temp, len); //send all if possible , after each step midi notes first  // might change
-
-
-
- 				printf(" %d ",scene_pitch[160]);printf(" %d ", scene_pitch[161]);printf(" %d ", scene_pitch[162]);printf(" %d ", scene_pitch[163]);
- 				printf("   %d ", midi_cue_noteoff[3]);printf(" %d ", midi_cue_noteoff[4]);printf(" %d ", midi_cue_noteoff[5]);printf("  %d\n ", timer_value );
+ 				printf(" %d ",noteoff_list[15]);printf(" %d ", noteoff_list[16]);printf(" %d ", noteoff_list[17]);printf(" %d ", noteoff_list[18]);
+ 				printf("   %d ", midi_cue_noteoff[15]);printf(" %d ", midi_cue_noteoff[16]);printf(" %d ", midi_cue_noteoff[17]);printf("  %d\n ", timer_value );
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);
@@ -522,7 +503,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 31250;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -552,9 +533,6 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-  /* DMA2_Stream2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
   /* DMA2_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
