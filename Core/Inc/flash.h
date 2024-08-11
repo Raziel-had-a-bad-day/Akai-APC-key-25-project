@@ -76,7 +76,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 			memcpy(all_settings+17,pot_tracking,32);
 			memcpy(all_settings+49,mute_list,8);
 			memcpy(all_settings+57,scene_volume,8);
-
+			memcpy(all_settings+65,midi_channel_list,8);
 
 			memcpy  (test_data3+4 ,all_settings,  100); // copy
 
@@ -145,6 +145,7 @@ void flash_read(void){
 	memcpy(pot_tracking,all_settings+17,32);
 	memcpy(mute_list,all_settings+49,8);
 	memcpy(scene_volume,all_settings+57,8);
+	memcpy(midi_channel_list,all_settings+65,8);
 
 
 

@@ -21,7 +21,7 @@ void midi_send(void){  // only for midi music no info return
 
 			if ((scene_memory[seq_step_mod+(i*32)]>>5) && (!mute_list[i]) )     {    // only on note on
 
-				midi_cue[cue_counter]=146;  // channel 3
+				midi_cue[cue_counter]=midi_channel_list[i]+144;  // channel 3
 
 				midi_cue[(cue_counter)+1]=drum_list[i];  // or pitch info
 				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
@@ -43,10 +43,10 @@ void midi_send(void){  // only for midi music no info return
 			if ((scene_memory[seq_step_mod+(i*32)]>>5) && (!mute_list[i]))  {
 
 
-						midi_cue[cue_counter]=147+(i-4);  // channel 4
+						midi_cue[cue_counter]=144+midi_channel_list[i];  // channel 4
 						if(mute_list[i]) midi_cue[cue_counter]=0;    //send nothing
 
-						midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
+						midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
 
 
 				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
@@ -60,7 +60,7 @@ void midi_send(void){  // only for midi music no info return
 			} else  midi_cue[cue_counter]=0;
 
 
-		if (keyboard[0]&&(seq_step_mod&1)&&(scene>3))  {cue_counter=cue_counter+3;midi_cue[cue_counter]=143+scene;
+		if (keyboard[0]&&(seq_step_mod&1)&&(scene>3))  {cue_counter=cue_counter+3;midi_cue[cue_counter]=144+scene;
 		midi_cue[(cue_counter)+1]=(keyboard[0])+pot_tracking[(seq_step_mod>>3)+((scene)*4)]+scene_transpose[i];midi_cue[(cue_counter)+2]=127;}  // keyboard midi send with transpose
 
 			midi_cue[50]=cue_counter;
@@ -146,6 +146,7 @@ void cdc_send(void){
 			uint8_t note_midi[50];
 			uint8_t note_off_midi[50];
 
+
 			//memcpy(cue_temp,midi_cue,25);
 
 
@@ -187,7 +188,7 @@ void cdc_send(void){
 
 			memcpy(send_temp,note_off_midi,len1); // from last send
 			len=len+len1;
-
+			serial_len=len;
 			memcpy(send_temp+len1,note_midi,len);
 			memcpy(send_temp+len,send_buffer,12);  // midi first then lights
 			len=len+12;
@@ -200,7 +201,19 @@ void cdc_send(void){
 
 			}
 
-			memcpy(serial_out,note_midi,9);
+			if (all_update==10){  // send on note off
+
+							memcpy(send_temp+len,send_all,24);
+							len=len+24;
+							all_update=0;
+
+						}
+
+
+
+			memcpy(serial_out,send_temp,serial_len);
+
+
 			CDC_Transmit_FS(send_temp, len); //send all if possible , after each step midi notes first  // might change
 
 			if (midi_cc) midi_cue[50]= midi_cue[50]- midi_cc_list[12];   // remove cc

@@ -247,12 +247,12 @@ int main(void)
 				  if (((s_temp>>3)&1)&&keyboard[0])   {midi_cue[50]=3; midi_cue_noteoff[50]=0;}else  {midi_cue[50]=0; midi_cue_noteoff[50]=0;}
 			  }
 
-			  serial_out[0]=145;serial_out[1]=64;serial_out[2]=127;
-			 			  HAL_UART_Transmit(&huart1,serial_out,3,100);
+			 // serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
+
 			  cdc_send();
+			  HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
 
-
- 				printf(" %d ",noteoff_list[15]);printf(" %d ", noteoff_list[16]);printf(" %d ", noteoff_list[17]);printf(" %d ", noteoff_list[18]);
+ 				printf(" %d ",temp);printf(" %d ", noteoff_list[16]);printf(" %d ", noteoff_list[17]);printf(" %d ", noteoff_list[18]);
  				printf("   %d ", midi_cue_noteoff[15]);printf(" %d ", midi_cue_noteoff[16]);printf(" %d ", midi_cue_noteoff[17]);printf("  %d\n ", timer_value );
 
  				//		printf(" %d ", midi_cue[3]);
@@ -283,12 +283,35 @@ int main(void)
  		}  // end of seq_enable
 
 	  if(all_update==1){   // update all square scene lights
+
 		  for (i=0;i<40;i++)  { send_all[i*3]=144;
 		  send_all[(i*3)+1]=i;
 		  send_all[(i*3)+2]=button_states[i];
 		  }
 
 		  all_update=2;}
+
+
+	  if((all_update>2) & (all_update<8)){   // update selected line  square scene lights 3-7
+
+
+
+		  uint8_t select_line=(((all_update-3))*8)&31;
+
+		   select_line= square_buttons_list [select_line];
+
+		   temp=select_line;
+
+
+	 	  	 for (i=0;i<8;i++)  {
+	 	  		 send_all[i*3]=144;
+	 		  send_all[(i*3)+1]=i+select_line;    // button
+	 		  send_all[(i*3)+2]=button_states[i+select_line];   // button value
+	 		  }
+
+	 		  all_update=10;}
+
+
 
 
 /*

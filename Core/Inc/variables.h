@@ -4,12 +4,20 @@
 
 uint16_t bpm_table[256];  // lut values for temp TIM10 ARR
 uint8_t tempo; // tempo value
+
+//buttons
 uint8_t volume; // volume button
 uint8_t pan;
+uint8_t shift; // track shift button
+uint8_t pause; // enable pause mode
+uint8_t select; //select button
+uint8_t right_arrow;
+uint8_t left_arrow;
+uint8_t device;
 
 
 uint8_t serial1_temp;
-
+uint8_t temp;
 
 uint8_t serial1_hold[10];
 uint8_t serial1_hold2[10];
@@ -26,7 +34,7 @@ uint8_t note_temp[3]={0,0,0};   // holds current note being filled
 uint8_t note_replace_enable=0;
 char print_out[10][3];
 uint8_t send_all[128]; //scene sends
-uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scene light off ,then midi
+uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scene light off ,only for controller,then midi
 volatile uint16_t seq_pos;  // 16 bit  , 24/quater or 8/step  on 1/16th , sequencer clock
 uint16_t s_temp;
 uint16_t mtc_tick=0;  // incoming realtime clock counter
@@ -49,7 +57,7 @@ uint8_t square_buttons_list [33]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,
 uint8_t button_convert[41]=	{32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
 uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 3 bits 7-5 , pitch 5 bits LSB 0-4
-uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , channel 1, only for display
+uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , channel 1, only used for display info and nothing else
 uint8_t scene_pitch[260]; // stores a pitch value per field 8*32 , stored in order
 uint8_t scene_velocity[260]; // stores a pitch value per field 8*32
 uint8_t pot_states[8]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current state
@@ -61,25 +69,24 @@ uint8_t midi_cue[50];  // data cue for midi max 8 notes [25] = message length
 uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length
 uint32_t sys_cnt[3];
 uint8_t note_off_enable;
-uint8_t right_arrow;
-uint8_t left_arrow;
+
 uint8_t counter_a;
 // SPI stuff
 uint8_t spi_send[10];
 uint8_t status_reg[2];
-uint8_t select; //select button
+
 
 uint8_t flash_flag=0;
 uint8_t flash_read_block2[260] ={1,1,1,1,1,1,1,0}; // this should clearif flash read works
 uint8_t send_spi2[260];
 uint8_t write_once; // allow only a single flash write for now
-uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0};
+uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1,0,1};
 uint8_t spi_hold[260]={0,10,0,0};
 uint8_t all_settings[100];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
-uint8_t pause; // enable pause mode
+
 uint8_t seq_step_mem;  // mem for looper
-uint8_t shift; // track shift button
+
 uint8_t pot_tracking[33] ; // record pot movements , maybe after 1 bar ,only transpose for now
 uint8_t mute_list[9]; //track scene mutes
 uint8_t noteoff_list[25]; //track note offs sorted 0-7 , empty when not in use
@@ -99,4 +106,6 @@ uint8_t play_speed[20]={8,8,8,8,8,1,8,8,1,1,1,1,1,1,1,1,0};  // sets playback sp
 uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
 uint8_t midi_cc; // enabled if sending midi cc
 uint8_t midi_cc_list[13];  // keep cc to be sent here [12] is len
-uint8_t serial_out[30];
+uint8_t serial_out[50];
+uint8_t serial_len;
+uint8_t midi_channel_list[17]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
