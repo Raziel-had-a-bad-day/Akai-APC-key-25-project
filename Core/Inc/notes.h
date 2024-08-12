@@ -72,7 +72,7 @@ void buttons_store(void){
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[68])  volume=1; else volume=0;
 		if (button_states[69])  pan=1; else pan=0;
-		if (button_states[71])  device=1; else select=0;
+		if (button_states[71])  device=1; else device=0;
 
 
 		button_pressed=incoming_data1; // important  , only after note on
@@ -116,7 +116,7 @@ void buttons_store(void){
 		midi_cc_list[2]=incoming_message[2]&127;
 		midi_cc_list[12]=3;
 
-		if(device && select )   {
+		if((device) && (select) )   {
 
 			button_pressed=square_buttons_list[pot_states[7]>>3]; // last data
 			button_states[square_buttons_list[midi_channel_list[scene_buttons[0]]]]=0;  // turn off
@@ -150,7 +150,7 @@ void buttons_store(void){
 	}
 
 
-	if(keyboard[0] && shift)  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard to enter transpose info , also mute
+	if((keyboard[0]) && (shift))  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard to enter transpose info , also mute
 
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
 		scene_select=scene_select-1;
@@ -194,7 +194,7 @@ void buttons_store(void){
 
 					{if (scene_memory[i+((scene_select)*32)]>>5) button_states[square_buttons_list[i]]=5; else button_states[square_buttons_list[i]]=0;}
 
-							if(device && select &&  (i==temp_select))  {
+							if((device) && (select) &&  (i==temp_select))  {
 								button_states[square_buttons_list[temp_select]]=3; // show current midichannel red if enabled
 
 							}

@@ -25,8 +25,10 @@ void midi_send(void){  // only for midi music no info return
 
 				midi_cue[(cue_counter)+1]=drum_list[i];  // or pitch info
 				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
-				if (!velocity) velocity=64; //missing velocity info still
-				velocity= (velocity*scene_volume[i])>>7;
+			//	if (!velocity) velocity=64; //missing velocity info still
+				//if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
+			//	velocity= (velocity*scene_volume[i])>>7;
+				if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
 
 				if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
 				midi_cue[(cue_counter)+2]=velocity&127;
@@ -50,8 +52,15 @@ void midi_send(void){  // only for midi music no info return
 
 
 				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
-				if (!velocity) velocity=127; //missing velocity info still
+			//	if (!velocity) velocity=127; //missing velocity info still
 				velocity= (velocity*scene_volume[i])>>7;
+
+			//	if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
+				if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
+				//velocity= (velocity-scene_volume[i])>>7;
+
+
+
 
 				if ((scene_solo) & (scene!=i)) velocity=0;   // mute everything but solo
 
