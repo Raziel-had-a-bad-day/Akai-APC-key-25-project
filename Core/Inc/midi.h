@@ -14,6 +14,7 @@ void midi_send(void){  // only for midi music no info return
 
 		for (i=0;i<4;i++){    // drums
 			cue_counter=i*3;
+
 			if((bar_looping) && (i==(bar_looping-1)) && loop_selector<2 )  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
 						if((bar_looping) && (i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
 
@@ -22,18 +23,28 @@ void midi_send(void){  // only for midi music no info return
 			if ((scene_memory[seq_step_mod+(i*32)]>>5) && (!mute_list[i]) )     {    // only on note on
 
 				midi_cue[cue_counter]=midi_channel_list[i]+144;  // channel 3
+				//nrpn_cue[8]=((scene_pitch[seq_step_mod+(2*32)])+pot_tracking[(seq_step_mod>>3)+(2*4)]+scene_transpose[2])& 127;   // send pitch info for nrpn  part 2
 
-				midi_cue[(cue_counter)+1]=drum_list[i];  // or pitch info
-				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
-			//	if (!velocity) velocity=64; //missing velocity info still
+				//midi_cue[(cue_counter)+1]=drum_list[i];
+					midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
+
+					//nrpn_cue[(cue_counter+6)]=i*8;  // select pitch ,dont need this
+					nrpn_cue[cue_counter]=i;
+					nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  // change nrpn value
+
+					if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // or pitch info
+
+					if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
+					velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
+
 				//if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
-			//	velocity= (velocity*scene_volume[i])>>7;
-				if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
+			velocity= (velocity*scene_volume[i])>>7;
+			//	if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
 
 				if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
 				midi_cue[(cue_counter)+2]=velocity&127;
 				//cue_counter++;
-			} else midi_cue[cue_counter]=0;
+			} else {midi_cue[cue_counter]=0;nrpn_cue[cue_counter]=0;}
 		}
 		for (i=4;i<8;i++){   // notes in order or empty 0-7
 
@@ -46,17 +57,17 @@ void midi_send(void){  // only for midi music no info return
 
 
 						midi_cue[cue_counter]=144+midi_channel_list[i];  // channel 4
-						if(mute_list[i]) midi_cue[cue_counter]=0;    //send nothing
+
 
 						midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
-
+						if(mute_list[i]) midi_cue[cue_counter]=0;    //send nothing // IMPORTANT OR WILL SEND GARBAGE //
 
 				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
 			//	if (!velocity) velocity=127; //missing velocity info still
 				velocity= (velocity*scene_volume[i])>>7;
 
 			//	if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
-				if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
+				//if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
 				//velocity= (velocity-scene_volume[i])>>7;
 
 
@@ -76,6 +87,9 @@ void midi_send(void){  // only for midi music no info return
 
 
 		}
+
+
+
 
 		if (midi_cc){   // send cc info from here
 			len=midi_cc_list[12];
@@ -147,14 +161,18 @@ void midi_send(void){  // only for midi music no info return
 void cdc_send(void){
 
 
-			uint8_t len;
+			uint8_t len;  // note on
 			uint8_t send_temp[256];
-			uint8_t len1;
+			uint8_t len1;  // note off
 			uint8_t cue_counter;
 			uint8_t counterb;
 			uint8_t note_midi[50];
+			uint8_t nrpn_temp[100];
 			uint8_t note_off_midi[50];
+			uint8_t serial_temp[50];
 
+			uint8_t cue_counter2=0;
+			uint8_t nrpn_chl=185;
 
 			//memcpy(cue_temp,midi_cue,25);
 
@@ -164,7 +182,24 @@ void cdc_send(void){
 			for (i=0;i<8;i++){  // short , ready to send notes only
 				counterb=i*3;
 
+
+				if (nrpn_cue[counterb]){
+
+					nrpn_temp[cue_counter2] = nrpn_chl; // CC99  , ch 10
+					nrpn_temp[cue_counter2+1] =99;
+					nrpn_temp[cue_counter2+2] =5;
+										nrpn_temp[cue_counter2+3] = nrpn_chl;  //CC98
+										nrpn_temp[cue_counter2+4] =98;
+										nrpn_temp[cue_counter2+5] =nrpn_cue[counterb]*8;  // select pitch for part
+														nrpn_temp[cue_counter2+6] = nrpn_chl;
+														nrpn_temp[cue_counter2+7] =6;
+														nrpn_temp[cue_counter2+8] =nrpn_cue[counterb+1];  // data
+															cue_counter2=cue_counter2+9;
+
+				}
+
 				if (midi_cue[counterb]){
+
 					note_midi[cue_counter]=midi_cue[counterb];
 					note_midi[(cue_counter)+1]=midi_cue[counterb+1];
 					note_midi[(cue_counter)+2]=midi_cue[counterb+2];
@@ -172,7 +207,10 @@ void cdc_send(void){
 
 
 				}}
-				note_midi[50]=cue_counter;
+
+			note_midi[50]=cue_counter;
+			nrpn_temp[80]=cue_counter2;  // can be a trimmed a lot
+
 
 				//memcpy(cue_temp,midi_cue_noteoff,25);
 				cue_counter=0;
@@ -196,9 +234,14 @@ void cdc_send(void){
 				//	if(pause) len=0;
 
 			memcpy(send_temp,note_off_midi,len1); // from last send
-			len=len+len1;
+
+
+
+			if (pause) len=len1; else len=len+len1;
 			serial_len=len;
+
 			memcpy(send_temp+len1,note_midi,len);
+
 			memcpy(send_temp+len,send_buffer,12);  // midi first then lights
 			len=len+12;
 
@@ -218,11 +261,16 @@ void cdc_send(void){
 
 						}
 
-
-
+// NRPN
 			memcpy(serial_out,send_temp,serial_len);
 
 
+
+			memcpy(serial_out+serial_len,nrpn_temp,nrpn_temp[80]);    // temp only !  add nrpn
+
+			serial_len=serial_len+nrpn_temp[80];
+		//	nrpn_cue[50]=0;
+//
 			CDC_Transmit_FS(send_temp, len); //send all if possible , after each step midi notes first  // might change
 
 			if (midi_cc) midi_cue[50]= midi_cue[50]- midi_cc_list[12];   // remove cc

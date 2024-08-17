@@ -125,11 +125,19 @@ void buttons_store(void){
 		all_update=3+(pot_states[7]>>6);  // 3+0-4
 
 
-		}   // input midichannel
+		  // input midichannel
 
-		if (scene_buttons[0]>3) scene_volume[incoming_data1-48]= pot_states [incoming_data1-48]; else scene_volume[incoming_data1-52]= pot_states [incoming_data1-48]; // velocity mod on midi out
+		//if (scene_buttons[0]>3) scene_volume[incoming_data1-48]= pot_states [incoming_data1-48]; else scene_volume[incoming_data1-52]= pot_states [incoming_data1-48]; // velocity mod on midi out
 
 		}
+		if (incoming_message[2] <64)     // crossfade mode
+		{	scene_volume[(incoming_data1-52)*2]= 127;      // 0,2,4,6,
+		scene_volume[((incoming_data1-52)*2)+1]= 127-((63-incoming_message[2])<<1);} //1,3,5,7
+		else
+		{	scene_volume[(incoming_data1-52)*2]=127-(( incoming_message[2]-64)<<1);      // 0,2,4,6,
+				scene_volume[((incoming_data1-52)*2)+1]=127;} //1,3,5,7
+
+		} //end of pots 4-8
 
 
 

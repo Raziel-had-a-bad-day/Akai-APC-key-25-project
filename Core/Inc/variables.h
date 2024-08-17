@@ -38,7 +38,7 @@ uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scen
 volatile uint16_t seq_pos;  // 16 bit  , 24/quater or 8/step  on 1/16th , sequencer clock
 uint16_t s_temp;
 uint16_t mtc_tick=0;  // incoming realtime clock counter
-uint8_t seq_enable;  // start stop sequencer
+uint8_t seq_enable=1;  // start stop sequencer
 uint8_t seq_step; // 0-32 steps
 uint8_t realtime;
 uint8_t message_cue[10];
@@ -101,7 +101,7 @@ uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
 uint8_t loop_selector;  //steps through loop
-uint8_t play_speed[20]={8,8,8,8,8,1,8,8,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
+uint8_t play_speed[20]={8,8,8,1,8,1,8,8,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
 
 uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
 uint8_t midi_cc; // enabled if sending midi cc
@@ -109,3 +109,4 @@ uint8_t midi_cc_list[13];  // keep cc to be sent here [12] is len
 uint8_t serial_out[50];
 uint8_t serial_len;
 uint8_t midi_channel_list[17]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
+uint8_t nrpn_cue[80]={186,99,5,186,98,16,186,6,32};  // stores message for nrpn on es1 only needs 1 initial c99=5  then only  2 bytes repeating  CC 98 =NRPN LSB and CC 6 =value , for now 9 bytes though  , initial normal 3 bytes then convrted to 9

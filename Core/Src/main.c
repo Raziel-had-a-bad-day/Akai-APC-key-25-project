@@ -252,7 +252,7 @@ int main(void)
 			  cdc_send();
 			  HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
 
- 				printf(" %d ",temp);printf(" %d ", noteoff_list[16]);printf(" %d ", noteoff_list[17]);printf(" %d ", noteoff_list[18]);
+ 				printf(" %d ",midi_cue[50]);printf(" %d ", serial_len);printf(" %d ", noteoff_list[17]);printf(" %d ", noteoff_list[18]);
  				printf("   %d ", midi_cue_noteoff[15]);printf(" %d ", midi_cue_noteoff[16]);printf(" %d ", midi_cue_noteoff[17]);printf("  %d\n ", timer_value );
 
  				//		printf(" %d ", midi_cue[3]);
