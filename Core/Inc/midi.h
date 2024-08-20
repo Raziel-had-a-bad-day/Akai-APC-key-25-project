@@ -10,7 +10,8 @@ void midi_send(void){  // only for midi music no info return
 		uint8_t seq_step_mod=seq_step;
 		uint8_t scene=scene_buttons[0];
 		uint8_t len;
-		uint8_t cue_temp[50];
+
+
 
 		for (i=0;i<4;i++){    // drums
 			cue_counter=i*3;
@@ -29,8 +30,13 @@ void midi_send(void){  // only for midi music no info return
 					midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
 
 					//nrpn_cue[(cue_counter+6)]=i*8;  // select pitch ,dont need this
-					nrpn_cue[cue_counter]=i;
-					nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  // change nrpn value
+
+
+
+					if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
+					else 	nrpn_cue[cue_counter]=0;
+
+
 
 					if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // or pitch info
 
@@ -45,6 +51,10 @@ void midi_send(void){  // only for midi music no info return
 				midi_cue[(cue_counter)+2]=velocity&127;
 				//cue_counter++;
 			} else {midi_cue[cue_counter]=0;nrpn_cue[cue_counter]=0;}
+
+
+		//	if ((nrpn_cue[cue_counter]==0)  && (es_filter[i&3])!=(es_filter[(i&3)+4]))    	{	nrpn_cue[cue_counter]=i+16; nrpn_cue[(cue_counter+1)]=es_filter[(i&3)+4];  es_filter[i&3]=(es_filter[(i&3)+4]);}   // add filter value pref between notes
+
 		}
 		for (i=4;i<8;i++){   // notes in order or empty 0-7
 
@@ -183,17 +193,25 @@ void cdc_send(void){
 				counterb=i*3;
 
 
-				if (nrpn_cue[counterb]){
+				if (nrpn_cue[counterb] || (es_filter_cue[0])){				// NRPN section
 
 					nrpn_temp[cue_counter2] = nrpn_chl; // CC99  , ch 10
 					nrpn_temp[cue_counter2+1] =99;
 					nrpn_temp[cue_counter2+2] =5;
 										nrpn_temp[cue_counter2+3] = nrpn_chl;  //CC98
 										nrpn_temp[cue_counter2+4] =98;
-										nrpn_temp[cue_counter2+5] =nrpn_cue[counterb]*8;  // select pitch for part
-														nrpn_temp[cue_counter2+6] = nrpn_chl;
+									if 	(!es_filter_cue[0]) {nrpn_temp[cue_counter2+5] =nrpn_cue[counterb]*8;   nrpn_temp[cue_counter2+8] =pitch_lut[nrpn_cue[counterb+1]&127]; } // data,   pitch translate
+
+
+									else  {  nrpn_temp[cue_counter2+5] =((es_filter_cue[0]-1)*8)+2;  															// es filter
+									nrpn_temp[cue_counter2+8] =es_filter_cue[ 1];
+									es_filter_cue[0]=0;
+									}
+
+									nrpn_temp[cue_counter2+6] = nrpn_chl;
 														nrpn_temp[cue_counter2+7] =6;
-														nrpn_temp[cue_counter2+8] =nrpn_cue[counterb+1];  // data
+
+
 															cue_counter2=cue_counter2+9;
 
 				}

@@ -110,3 +110,6 @@ uint8_t serial_out[50];
 uint8_t serial_len;
 uint8_t midi_channel_list[17]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
 uint8_t nrpn_cue[80]={186,99,5,186,98,16,186,6,32};  // stores message for nrpn on es1 only needs 1 initial c99=5  then only  2 bytes repeating  CC 98 =NRPN LSB and CC 6 =value , for now 9 bytes though  , initial normal 3 bytes then convrted to 9
+uint8_t pitch_lut[127] ={0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127};   // es1 pitch table  4 octaves
+uint8_t es_filter[9]; // track es1 filters  old and new values  say 4+4
+uint8_t es_filter_cue[20];   // hold filter data for nrpn

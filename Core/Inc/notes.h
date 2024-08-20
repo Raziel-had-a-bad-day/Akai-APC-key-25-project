@@ -106,6 +106,19 @@ void buttons_store(void){
 
 	if (status == 176) {
 		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot
+
+
+		if ((incoming_data1==48) &&(!select) && (scene_buttons[0]<4))  // filter
+		{
+
+			es_filter[scene_buttons[0]+4]=incoming_message[2];   // use filter on es1  or else
+	//	if ( (es_filter[i&3])!=(es_filter[(i&3)+4]))
+
+		{es_filter_cue[0] =scene_buttons[0]+1; es_filter_cue[1] =incoming_message[2]; }
+
+
+
+		}
 		if ((incoming_data1==55) &&(shift)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
 
