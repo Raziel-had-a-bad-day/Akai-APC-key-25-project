@@ -96,7 +96,7 @@ void stop_start(void);
 void note_off(void);
 void arrows(void);
 void cdc_send(void);
-
+void all_notes_off(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -239,7 +239,7 @@ int main(void)
 
 
 
-			  if (!pause)		 {note_off();midi_send();}
+			  if (!pause)		 {midi_send();note_off();}    																			// needs to change
 			//  memcpy(midi_cue_noteoff,midi_cue,50);
 
 
@@ -250,6 +250,10 @@ int main(void)
 			 // serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
 
 			  cdc_send();
+
+
+
+
 			  HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
 
  				printf(" %d ",nrpn_cue[6]);printf(" %d ", nrpn_cue[7]);printf(" %d ", noteoff_list[17]);printf(" %d ", noteoff_list[18]);
@@ -383,7 +387,7 @@ int main(void)
 
 
  			buttons_store();   // only runs after receive
- 			if (button_states[91] ) {pause=1; } else pause=0;
+ 			if (button_states[91] ) {pause=1;all_notes_off(); } else pause=0;
 
 
  	  }
@@ -660,7 +664,18 @@ void stop_start(void)             {
     if  (stop_toggle ==4) {HAL_TIM_Base_Start_IT(&htim10);stop_toggle=0;}
 
 }
+void all_notes_off(void){
+	uint8_t data[48];
+	for (i=0;i<16;i++){
+		data[i*3]=176+i;
+		data[(i*3)+1]=123;
+		data[(i*3)+2]=0;
+	}
+	 HAL_UART_Transmit(&huart1,data,48,100); //   send all notes off on serial
+	 HAL_Delay(100);
+	 //CDC_Transmit_FS(data+3, 45);
 
+}
 
 
 /* USER CODE END 4 */

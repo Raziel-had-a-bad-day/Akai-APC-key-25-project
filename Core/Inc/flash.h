@@ -154,7 +154,7 @@ void flash_read(void){
 	for (i=0;i<32;i++)
 		//pot_tracking[i>>1] =scene_transpose[3+(i>>3)];
 
-	{if (scene_memory[i]>>5) button_states[square_buttons_list[i]]=5; // needs this to run first so first page loads
+	{if (scene_memory[i]) button_states[square_buttons_list[i]]=5; // needs this to run first so first page loads
 
 	}
 	if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting

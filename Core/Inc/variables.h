@@ -101,7 +101,7 @@ uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
 uint8_t loop_selector;  //steps through loop
-uint8_t play_speed[20]={8,8,8,1,8,1,8,8,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
+uint8_t play_speed[20]={8,8,8,1,8,1,8,1,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
 
 uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
 uint8_t midi_cc; // enabled if sending midi cc

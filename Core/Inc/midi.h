@@ -21,7 +21,7 @@ void midi_send(void){  // only for midi music no info return
 
 
 
-			if ((scene_memory[seq_step_mod+(i*32)]>>5) && (!mute_list[i]) )     {    // only on note on
+			if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) )     {    // only on note on
 
 				midi_cue[cue_counter]=midi_channel_list[i]+144;  // channel 3
 				//nrpn_cue[8]=((scene_pitch[seq_step_mod+(2*32)])+pot_tracking[(seq_step_mod>>3)+(2*4)]+scene_transpose[2])& 127;   // send pitch info for nrpn  part 2
@@ -63,7 +63,7 @@ void midi_send(void){  // only for midi music no info return
 			if((bar_looping) && (i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
 
 
-			if ((scene_memory[seq_step_mod+(i*32)]>>5) && (!mute_list[i]))  {
+			if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]))  {
 
 
 						midi_cue[cue_counter]=144+midi_channel_list[i];  // channel 4
@@ -120,7 +120,7 @@ void midi_send(void){  // only for midi music no info return
 
 
 	void note_off(void) {      // way off here
-		uint8_t len1=midi_cue[50];
+		uint8_t len1=midi_cue[50];  // no longer relevant
 
 		uint8_t counter=0;
 		uint8_t counterb=0;
@@ -140,13 +140,13 @@ void midi_send(void){  // only for midi music no info return
 
 				counterb=i*3;
 
-				if (midi_cue[counterb])   {    // only if new message otherwise leave alone
+				if (midi_cue[counterb])   {    // only if new message otherwise leave alone , not enough
 
-					midi_cue_noteoff[counterb] = noteoff_list[counterb];  // copy old to send out
-					noteoff_list[counterb]= midi_cue[counterb];  // replace old with new for late
+					midi_cue_noteoff[counterb] = noteoff_list[counterb];  // copy old  channel to send out
+					noteoff_list[counterb]= midi_cue[counterb];  // replace old with new for later
 
 
-
+					// if(! (noteoff_list[counterb+2]))   midi_cue_noteoff[(counterb)+1] =noteoff_list[counterb+1];   // if vel is 0 then keep old note
 					midi_cue_noteoff[(counterb)+1] =noteoff_list[counterb+1];
 					noteoff_list[(counterb)+1]= midi_cue[counterb+1];
 

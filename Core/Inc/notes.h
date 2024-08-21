@@ -12,14 +12,12 @@ void buttons_store(void){
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
 	uint8_t current_scene=((scene_buttons[0])*32);
-
+	uint8_t clear[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 	//uint8_t seq_step_pointer= seq_step+(scene_buttons[0]*32); // scene memory address point
 	if (status == 128) // note off
 		{note_off_flag[0]=0;
 		if (incoming_data1==98) shift=0;
-
-
 
 			}
 
@@ -29,8 +27,6 @@ void buttons_store(void){
 									scene_select=incoming_data1 +1;}  //enable scene_select section
 
 	if (status == 145)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47);}  // store last key pressed mainly , 48-72 default setting(24)
-
-
 
 
 
@@ -73,7 +69,7 @@ void buttons_store(void){
 		if (button_states[68])  volume=1; else volume=0;
 		if (button_states[69])  pan=1; else pan=0;
 		if (button_states[71])  device=1; else device=0;
-
+		if (button_states[81])  {button_states[91]=5;button_states[81]=0;memcpy(seq_step_list,clear,16); seq_step=0; }     // pause and reset to start
 
 		button_pressed=incoming_data1; // important  , only after note on
 
@@ -129,7 +125,7 @@ void buttons_store(void){
 		midi_cc_list[2]=incoming_message[2]&127;
 		midi_cc_list[12]=3;
 
-		if((device) && (select) )   {
+		if((device) && (select) )   {														///   Midi channel
 
 			button_pressed=square_buttons_list[pot_states[7]>>3]; // last data
 			button_states[square_buttons_list[midi_channel_list[scene_buttons[0]]]]=0;  // turn off
@@ -159,8 +155,8 @@ void buttons_store(void){
 
 		{
 
-			scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base , only with shift off
-
+			scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base , only with shift off , should trigger a note or loses track
+			button_pressed=last_button;  //retrigger
 
 
 
@@ -171,7 +167,7 @@ void buttons_store(void){
 	}
 
 
-	if((keyboard[0]) && (shift))  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard to enter transpose info , also mute
+	if((keyboard[0]) && (shift))  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard and shift to enter transpose info , also mute
 
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
 		scene_select=scene_select-1;
@@ -213,9 +209,9 @@ void buttons_store(void){
 
 			for (i=0;i<32;i++){
 
-					{if (scene_memory[i+((scene_select)*32)]>>5) button_states[square_buttons_list[i]]=5; else button_states[square_buttons_list[i]]=0;}
+					{if (scene_memory[i+((scene_select)*32)]) button_states[square_buttons_list[i]]=5; else button_states[square_buttons_list[i]]=0;}  // should show even if 0 velocity
 
-							if((device) && (select) &&  (i==temp_select))  {
+							if((device) && (select) &&  (i==temp_select))  {// show current midichannel red if enabled
 								button_states[square_buttons_list[temp_select]]=3; // show current midichannel red if enabled
 
 							}
