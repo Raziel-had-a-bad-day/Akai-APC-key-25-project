@@ -14,6 +14,7 @@ uint8_t select; //select button
 uint8_t right_arrow;
 uint8_t left_arrow;
 uint8_t device;
+uint8_t clip_stop;
 
 
 uint8_t serial1_temp;
@@ -104,8 +105,7 @@ uint8_t loop_selector;  //steps through loop
 uint8_t play_speed[20]={8,8,8,1,8,1,8,1,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
 
 uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
-uint8_t midi_cc; // enabled if sending midi cc
-uint8_t midi_cc_list[13];  // keep cc to be sent here [12] is len
+
 uint8_t serial_out[50];
 uint8_t serial_len;
 uint8_t midi_channel_list[17]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
@@ -113,3 +113,10 @@ uint8_t nrpn_cue[80]={186,99,5,186,98,16,186,6,32};  // stores message for nrpn 
 uint8_t pitch_lut[127] ={0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127};   // es1 pitch table  4 octaves
 uint8_t es_filter[9]; // track es1 filters  old and new values  say 4+4
 uint8_t es_filter_cue[20];   // hold filter data for nrpn
+uint8_t midi_cc[9]; // enabled if sending midi cc
+uint8_t midi_cc_cue[20];  //  0=part+1 ,1 is value
+
+uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part
+uint8_t play_screen=0;  // enable for secondary screen for muting setup
+uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
+

@@ -1,3 +1,46 @@
+void play_muting(void){    // all muting stuff here
+
+
+		  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
+
+				uint8_t data_temp2=(i&7)+(scene_buttons[0]*8);
+				if (play_screen==2)	{	if   (play_list[data_temp2 ]&(1<<(i>>3)))		     button_states[square_buttons_list[i]]=3;    else  button_states[square_buttons_list[i]]=0; 	  }  //write to buttons
+
+				 if (button_states [square_buttons_list[i]]  &&(play_screen==3) ) 	    play_list[data_temp2]=  play_list[data_temp2]|(1<<(i>>3));
+				 else play_list[data_temp2]=  play_list[data_temp2]&(~(1<<(i>>3)));   // read from buttons
+
+
+
+					}
+	}
+
+void main_screen(void){
+
+	uint8_t temp_select = midi_channel_list[scene_buttons[0]]; // midicannel> button list
+	uint8_t data_temp;
+
+	for (i = 0; i < 32; i++) {     // only on scene select
+		data_temp = i + (scene_buttons[0] * 32);
+
+		if (!play_screen) {
+			{
+				if (scene_memory[data_temp])
+					button_states[square_buttons_list[i]] = 5;
+				else
+					button_states[square_buttons_list[i]] = 0;
+			}  // should show even if 0 velocity
+
+			if ((device) && (select) && (i == temp_select)) { // show current midichannel red if enabled
+				button_states[square_buttons_list[temp_select]] = 3; // show current midichannel red if enabled
+
+			}
+		}
+
+	}
+
+
+
+}
 
 
 void buttons_store(void){
@@ -68,10 +111,13 @@ void buttons_store(void){
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[68])  volume=1; else volume=0;
 		if (button_states[69])  pan=1; else pan=0;
-		if (button_states[71])  device=1; else device=0;
+		if (button_states[71])  {device=1;  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;button_states[81]=0;memcpy(seq_step_list,clear,16); seq_step=0; }     // pause and reset to start
+		if (button_states[82] && (!clip_stop))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }
+		if ((!button_states[82])  && (clip_stop))    {clip_stop=0; play_screen=0; all_update=1; main_screen(); }
 
-		button_pressed=incoming_data1; // important  , only after note on
+
+			button_pressed=incoming_data1; // important  , only after note on
 
 
 
@@ -112,18 +158,26 @@ void buttons_store(void){
 
 		{es_filter_cue[0] =scene_buttons[0]+1; es_filter_cue[1] =incoming_message[2]; }
 
-
-
 		}
+
+		if ((incoming_data1==48) &&(!select) && (scene_buttons[0]>3))  //  cc function
+			{
+
+			//	midi_cc[scene_buttons[0]+4]=incoming_message[2];   // use filter on es1  or else
+		//	if ( (es_filter[i&3])!=(es_filter[(i&3)+4]))
+
+			{midi_cc_cue[0] =midi_channel_list[scene_buttons[0]]+176; midi_cc_cue[1] =incoming_message[2]; }
+
+			}
+
+
+
+
 		if ((incoming_data1==55) &&(shift)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
 
-		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift))  {
-		//	midi_cc=1;   // volume cc message enable   , for now disabled
-		midi_cc_list[0]=176+scene_buttons[0];
-		midi_cc_list[1]=7; //volume control
-		midi_cc_list[2]=incoming_message[2]&127;
-		midi_cc_list[12]=3;
+		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift))  {    // pots 4-8
+
 
 		if((device) && (select) )   {														///   Midi channel
 
@@ -183,6 +237,8 @@ void buttons_store(void){
 
 
 			if ((scene_select)!=scene_buttons[0]){
+
+
 				if (!scene_mute)
 
 
@@ -198,37 +254,15 @@ void buttons_store(void){
 			}
 
 
-
-
-
-
 			scene_buttons[0]=scene_select;
 			all_update=1;
-			uint8_t temp_select=midi_channel_list[scene_buttons[0]];// midicannel> button list
 
 
-			for (i=0;i<32;i++){
-
-					{if (scene_memory[i+((scene_select)*32)]) button_states[square_buttons_list[i]]=5; else button_states[square_buttons_list[i]]=0;}  // should show even if 0 velocity
-
-							if((device) && (select) &&  (i==temp_select))  {// show current midichannel red if enabled
-								button_states[square_buttons_list[temp_select]]=3; // show current midichannel red if enabled
-
-							}
-
+			 if(play_screen) {play_screen=2;   play_muting();} else main_screen();
+//  buttons from scene memory , ok , data seems to get lost here
 
 
 			}
-
-		  // ignore is muting
-
-		  // disable switch scene if muting enabled
-
-
-
-			 //  buttons from scene memory , ok , data seems to get lost here
-
-		}
 
 	
 		scene_select=0;
@@ -245,6 +279,42 @@ void buttons_store(void){
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -103,6 +103,28 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 
 
+		  memcpy  (test_data3+4 ,play_list,  256);
+		  test_data3[0]=0x06;
+		  test_data3[2]=0x02; //page5
+				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
+				  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
+				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
+				  HAL_Delay(20);
+
+
+				  test_data3[0]=0x02; //write ,page program
+				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);   // low
+				  HAL_SPI_Transmit(&hspi1, test_data3 ,260, 1000);  //address,then data
+				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
+				  HAL_Delay(200);
+
+				  test_data3[0]=0x04; //disable write
+				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0); // low
+				  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
+				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
+				  HAL_Delay(20);
+
+
 		  HAL_Delay(200);
 		//  write_once=1;
 
@@ -124,7 +146,7 @@ void flash_read(void){
 	uint8_t test_data3[260]={0,10,0,0};
 
 
-	test_data2[0]=0x03; //read ok
+	test_data2[0]=0x03; //read ok , get notes
 
 	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);  // when readin low till the end
 	HAL_SPI_TransmitReceive (&hspi1,test_data2, test_data3,  256, 100); // request data , works
@@ -133,11 +155,13 @@ void flash_read(void){
 
 	memcpy(scene_memory,test_data3+4,256);
 
-	test_data2[2]=1;
+	test_data2[2]=1;  // get settings
 	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);  // when readin low till the end
 	HAL_SPI_TransmitReceive (&hspi1,test_data2, test_data3,  104, 100); // request data , works
 	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
 	HAL_Delay(100);
+
+
 
 	memcpy(all_settings,test_data3+4,100); // copy back
 	memcpy(scene_transpose,all_settings,9);
@@ -147,6 +171,13 @@ void flash_read(void){
 	memcpy(scene_volume,all_settings+57,8);
 	memcpy(midi_channel_list,all_settings+65,8);
 
+	test_data2[2]=2;   // get play list
+	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);  // when readin low till the end
+	HAL_SPI_TransmitReceive (&hspi1,test_data2, test_data3,  256, 100); // request data , works
+	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
+	HAL_Delay(100);
+
+	memcpy(play_list,test_data3+4,256);
 
 
 	tempo=all_settings[90];

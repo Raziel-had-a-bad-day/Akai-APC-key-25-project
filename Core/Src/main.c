@@ -97,6 +97,9 @@ void note_off(void);
 void arrows(void);
 void cdc_send(void);
 void all_notes_off(void);
+void play_muting(void);
+void main_screen(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -202,7 +205,12 @@ int main(void)
 
 			  if(!pause) {
 
-			  for (i=0;i<8;i++){ seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change playback speed count up
+
+
+
+
+
+				  for (i=0;i<8;i++){ seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change playback speed count up
 			  if (play_speed[i]==1)   seq_step_list[i] =  ((seq_step_list[i+8]&7) +((seq_step_list[i+8]>>6)<<3))&31;  else  seq_step_list[i] =( seq_step_list[i+8]>>3)&31;
 
 			  }}
@@ -219,6 +227,16 @@ int main(void)
 
 				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
 			  // looper visual only when in scene though
+
+
+
+
+				if ((seq_step_mod&7)==0)   play_position=(play_position+1)&31;
+				if (!seq_step_mod) play_position=(play_position>>2)<<2;   // reset
+
+				if (play_screen) seq_step_mod = ((play_position&3)*8) + ((play_position>>2)&7);  // play mute steps
+
+
 
 			  send_buffer[1] = square_buttons_list[seq_step_mem];   // for displaying 0-32 , reset previous light then new on , should be based on memory
 			  send_buffer[2]=button_states[send_buffer[1]]; // last state
@@ -256,8 +274,8 @@ int main(void)
 
 			  HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
 
- 				printf(" %d ",nrpn_cue[6]);printf(" %d ", nrpn_cue[7]);printf(" %d ", noteoff_list[17]);printf(" %d ", noteoff_list[18]);
- 				printf("   %d ", midi_cue_noteoff[15]);printf(" %d ", midi_cue_noteoff[16]);printf(" %d ", midi_cue_noteoff[17]);printf("  %d\n ", timer_value );
+ 				printf(" %d ",play_list[0]);printf(" %d ", play_list[1]);printf(" %d ", play_list[2]);printf(" %d ", play_screen);
+ 				printf("   %d ", play_position);printf(" %d ", midi_cue_noteoff[16]);printf(" %d ", midi_cue_noteoff[17]);printf("  %d\n ", timer_value );
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);
@@ -375,19 +393,21 @@ int main(void)
 
  	  if (cdc_buffer[0]) {      //  when cdc buffer incoming
  		  seq_enable=1; // wont start till midi in
- 			for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
+
+
+ 		  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
  				uint8_t data_temp=i+(scene_buttons[0]*32);
 
-
- 			{	if (button_states [square_buttons_list[i]])  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; else scene_memory[data_temp]	= 0;}
-
- 	  } // this needs fix
- 		//	printf(" %d ",button_states[34]);printf(" %d ",button_states[35]);printf(" %d ",button_states[37]);printf(" %d ",scene_memory[3]);
- 			// needs velocity and pitch too here
+ 				if (!play_screen)
+ 			{	if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; else scene_memory[data_temp]	= 0;}			// note data
 
 
- 			buttons_store();   // only runs after receive
- 			if (button_states[91] ) {pause=1;all_notes_off(); } else pause=0;
+ 				}  // play list  muting
+ 		 if(play_screen) {play_screen=3;   play_muting();}
+ 		  buttons_store();   // only runs after receive
+
+
+ 		  if (button_states[91] ) {pause=1;all_notes_off(); } else pause=0;
 
 
  	  }
