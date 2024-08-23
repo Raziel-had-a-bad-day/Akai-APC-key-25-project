@@ -1,8 +1,5 @@
 void flash_write(void){					// too much crap needs to simplify , easy mistakes
-	  if ((button_states[70]) & (write_once==0)){
-
-
-
+	  if ((send) & (write_once==0)&&(!shift)          ){
 
 		// flash_sector_erase(10 );
 		  uint8_t spi_test3[5]={0,10,0,0};
@@ -125,9 +122,9 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 				  HAL_Delay(20);
 
 
-		  HAL_Delay(200);
+		  HAL_Delay(2000);
 		//  write_once=1;
-
+		  send=0;
 		  button_states[70]=0;
 
 		  other_buttons=1;

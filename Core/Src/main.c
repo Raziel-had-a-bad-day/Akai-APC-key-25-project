@@ -60,6 +60,10 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
+
+
+
+
 #include "flash.h"
 
 
@@ -171,52 +175,29 @@ int main(void)
 
 
 
-
-
-
-
-/*
-	  if (other_buttons){
-	   			 				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
-	   			 				for (i=0;i<17;i++)  { send_all[i*3]=144;
-	   			 		 					send_all[(i*3)+1]=buttons_list[i];
-
-	   			 		 					send_all[(i*3)+2]=button_states[buttons_list[i]];
-	   			 		 				send_all[(i*3)+2]=0;
-
-	   			 		 					}
-
-	   			 		 					CDC_Transmit_FS(send_all, 51); // send apc data , bit heavy
-	   			 		 					other_buttons=0;
-
-	   			 			}
-*/
-
-
 	  if (seq_enable) {
-
-
-
 
 		  if ((s_temp>>3) != (seq_pos>>3)) {
 
 
-			  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]];
+			  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
+			  uint8_t step_temp=0;
 
 			  if(!pause) {
 
+				  for (i=0;i<8;i++){
+					  seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change  +8 normal speed
+					  step_temp=(( seq_step_list[i+8]>>3)&31);
 
+			//	  if (play_speed[i]==1)   seq_step_list[i] =  ((seq_step_list[i+8]&7) +((seq_step_list[i+8]>>6)<<3))&31;    //   looping first 8 , +1 steps
+		//	  if (play_speed[i]==2)   seq_step_list[i] =  (((seq_step_list[i+8]>>1)&7) +((seq_step_list[i+8]>>7)<<4))&31;  //  +2 steps
+					//  if (play_speed[i]==2)  	  seq_step_list[i] =( seq_step_list[i+8]>>2)&31;
 
+			//  else
+						  	 if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   // divide by 8  , copy back unless repeating then enable bit 6
 
-
-
-				  for (i=0;i<8;i++){ seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change playback speed count up
-			  if (play_speed[i]==1)   seq_step_list[i] =  ((seq_step_list[i+8]&7) +((seq_step_list[i+8]>>6)<<3))&31;  else  seq_step_list[i] =( seq_step_list[i+8]>>3)&31;
 
 			  }}
-
-
-
 
 
 			  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)) )
@@ -237,14 +218,15 @@ int main(void)
 				if (play_screen) seq_step_mod = ((play_position&3)*8) + ((play_position>>2)&7);  // play mute steps
 
 
-
+				  send_buffer[0] =144;
 			  send_buffer[1] = square_buttons_list[seq_step_mem];   // for displaying 0-32 , reset previous light then new on , should be based on memory
 			  send_buffer[2]=button_states[send_buffer[1]]; // last state
+			  send_buffer[3] =144;
 			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on
 			  send_buffer[5] = 1;
 			  send_buffer[9] = 144;
-			  send_buffer[10] = buttons_list[counter_a];
-			  send_buffer[11] = button_states[buttons_list[counter_a]];
+			  send_buffer[10] = buttons_list[counter_a]&127;
+			  send_buffer[11] = button_states[buttons_list[counter_a]]&127;
 			  if(counter_a>18) counter_a=0; else counter_a++; // keep updating extra buttons from button states
 
 
@@ -265,14 +247,14 @@ int main(void)
 				  if (((s_temp>>3)&1)&&keyboard[0])   {midi_cue[50]=3; midi_cue_noteoff[50]=0;}else  {midi_cue[50]=0; midi_cue_noteoff[50]=0;}
 			  }
 
-			 // serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
-
+			  serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
+////
 			  cdc_send();
-
-
-
-
 			  HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
+/////
+
+
+			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
  				printf(" %d ",play_list[0]);printf(" %d ", play_list[1]);printf(" %d ", play_list[2]);printf(" %d ", play_screen);
  				printf("   %d ", play_position);printf(" %d ", midi_cue_noteoff[16]);printf(" %d ", midi_cue_noteoff[17]);printf("  %d\n ", timer_value );
@@ -290,7 +272,7 @@ int main(void)
 
  				  if(pause) {// keyboard midi send during pause
  					  { if (keyboard[0]&&(scene_buttons[0]>3))  {;midi_cue[0]=143+scene_buttons[0];
- 					  midi_cue[1]=(keyboard[0])+scene_transpose[scene_buttons[0]];midi_cue[2]=127;}
+ 					  midi_cue[1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;midi_cue[2]=127;}
  					  midi_cue[50]=3;}
  					// midi_cue[50]=0;
 

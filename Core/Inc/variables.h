@@ -13,8 +13,12 @@ uint8_t pause; // enable pause mode
 uint8_t select; //select button
 uint8_t right_arrow;
 uint8_t left_arrow;
+uint8_t up_arrow;
+uint8_t down_arrow;
+
 uint8_t device;
 uint8_t clip_stop;
+uint8_t send;
 
 
 uint8_t serial1_temp;
@@ -102,7 +106,8 @@ uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
 uint8_t loop_selector;  //steps through loop
-uint8_t play_speed[20]={8,8,8,1,8,1,8,1,1,1,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
+uint8_t play_speed[20]={8,8,8,8,8,8,8,8,8,8,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
+uint8_t speed_default[12]={8,4,2,1,8,4,2,1,0,0,0};     // play speed deafults   [8] hholds last value selected
 
 uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
 

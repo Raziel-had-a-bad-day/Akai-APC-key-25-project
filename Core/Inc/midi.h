@@ -10,42 +10,42 @@ void midi_send(void){  // only for midi music no info return
 		uint8_t seq_step_mod=seq_step;
 		uint8_t scene=scene_buttons[0];
 		 uint8_t data_temp2;
+		 uint8_t retrigger=0; // enable if seq_step hasn't_ moved
 
 
 
-		for (i=0;i<4;i++){    // drums
+		for (i=0;i<8;i++){    // drums
 			cue_counter=i*3;
 			data_temp2=(play_position>>2)+(i*8);
-			if((bar_looping) && (i==(bar_looping-1)) && loop_selector<2 )  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
+
+
+			seq_step_mod=seq_step_list[i]&31;
+			if (seq_step_list[i]>>5) retrigger=1;
+
+
+
+			if((bar_looping) && (i==(bar_looping-1)) && loop_selector<2 )  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; //else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
 						if((bar_looping) && (i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
 
 
 
-			if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  (play_list[data_temp2 ]&(1<<(play_position&3)))	 )     {    // only on note on
+						if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  (play_list[data_temp2 ]&(1<<(play_position&3)))	&& (!retrigger) )     {    // only on note on
 
 				midi_cue[cue_counter]=midi_channel_list[i]+144;  // channel 3
-				//nrpn_cue[8]=((scene_pitch[seq_step_mod+(2*32)])+pot_tracking[(seq_step_mod>>3)+(2*4)]+scene_transpose[2])& 127;   // send pitch info for nrpn  part 2
 
-				//midi_cue[(cue_counter)+1]=drum_list[i];
 					midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
 
-					//nrpn_cue[(cue_counter+6)]=i*8;  // select pitch ,dont need this
-
-
-
-					if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
+				if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
 					else 	nrpn_cue[cue_counter]=0;
 
-
-
-					if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // or pitch info
+					if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // use drum list if set to  channel 10
 
 					if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
 					velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
 
 				//if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
 			velocity= (velocity*scene_volume[i])>>7;
-			//	if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
+
 
 				if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
 				midi_cue[(cue_counter)+2]=velocity&127;
@@ -56,43 +56,43 @@ void midi_send(void){  // only for midi music no info return
 		//	if ((nrpn_cue[cue_counter]==0)  && (es_filter[i&3])!=(es_filter[(i&3)+4]))    	{	nrpn_cue[cue_counter]=i+16; nrpn_cue[(cue_counter+1)]=es_filter[(i&3)+4];  es_filter[i&3]=(es_filter[(i&3)+4]);}   // add filter value pref between notes
 
 		}
-		for (i=4;i<8;i++){   // notes in order or empty 0-7
-
-			cue_counter=i*3;
-			data_temp2=(play_position&7)+(i*8);
-			if((bar_looping) && (i==(bar_looping-1)) && loop_selector<2 )  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
-			if((bar_looping) && (i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
-
-
-			if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  (play_list[data_temp2 ]&(1<<(play_position&3))))  {
-
-
-						midi_cue[cue_counter]=144+midi_channel_list[i];  // channel 4
-
-
-						midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
-						if(mute_list[i]) midi_cue[cue_counter]=0;    //send nothing // IMPORTANT OR WILL SEND GARBAGE //
-
-				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
-			//	if (!velocity) velocity=127; //missing velocity info still
-				velocity= (velocity*scene_volume[i])>>7;
-
-			//	if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
-				//if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
-				//velocity= (velocity-scene_volume[i])>>7;
-
-
-
-
-				if ((scene_solo) & (scene!=i)) velocity=0;   // mute everything but solo
-
-				midi_cue[(cue_counter)+2]=velocity&127;
-				//cue_counter++;
-			} else  midi_cue[cue_counter]=0;
+//		for (i=4;i<8;i++){   // notes in order or empty 0-7
+//
+//			cue_counter=i*3;
+//			data_temp2=(play_position&7)+(i*8);
+//			if((bar_looping) && (i==(bar_looping-1)) && loop_selector<2 )  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
+//			if((bar_looping) && (i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
+//
+//
+//			if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  (play_list[data_temp2 ]&(1<<(play_position&3))))  {
+//
+//
+//						midi_cue[cue_counter]=144+midi_channel_list[i];  // channel 4
+//
+//
+//						midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
+//						if(mute_list[i]) midi_cue[cue_counter]=0;    //send nothing // IMPORTANT OR WILL SEND GARBAGE //
+//
+//				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
+//			//	if (!velocity) velocity=127; //missing velocity info still
+//				velocity= (velocity*scene_volume[i])>>7;
+//
+//			//	if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
+//				//if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
+//				//velocity= (velocity-scene_volume[i])>>7;
+//
+//
+//
+//
+//				if ((scene_solo) & (scene!=i)) velocity=0;   // mute everything but solo
+//
+//				midi_cue[(cue_counter)+2]=velocity&127;
+//				//cue_counter++;
+//			} else  midi_cue[cue_counter]=0;
 
 
 		if (keyboard[0]&&(seq_step_mod&1)&&(scene>3))  {cue_counter=cue_counter+3;midi_cue[cue_counter]=144+scene;
-		midi_cue[(cue_counter)+1]=(keyboard[0])+pot_tracking[(seq_step_mod>>3)+((scene)*4)]+scene_transpose[i];midi_cue[(cue_counter)+2]=127;}  // keyboard midi send with transpose
+		midi_cue[(cue_counter)+1]=((keyboard[0])+pot_tracking[(seq_step_mod>>3)+((scene)*4)]+scene_transpose[i])&127;midi_cue[(cue_counter)+2]=127;}  // keyboard midi send with transpose
 
 			midi_cue[50]=cue_counter;
 
@@ -101,22 +101,6 @@ void midi_send(void){  // only for midi music no info return
 
 
 
-
-//		if (midi_cc){   // send cc info from here
-//			len=midi_cc_list[12];
-//
-//
-//			//for (i=0;i<len;i++){ cue_counter++;
-//			//midi_cue[cue_counter*3]=midi_cc;}
-//
-//			memcpy(midi_cue+midi_cue[50],midi_cc_list,len);
-//
-//			midi_cue[50]=midi_cue[50]+len;    // disable after note off or it gets reset
-//
-//
-//		}
-
-	}
 
 
 
@@ -163,7 +147,7 @@ void midi_send(void){  // only for midi music no info return
 
 void cdc_send(void){
 
-
+	UART_HandleTypeDef huart1;
 			uint8_t len;  // note on
 			uint8_t send_temp[256];
 			uint8_t len1;  // note off
@@ -186,20 +170,22 @@ void cdc_send(void){
 				counterb=i*3;
 
 
-				if (nrpn_cue[counterb] || (es_filter_cue[0])){				// NRPN section
-
+			//	if (nrpn_cue[counterb] || (es_filter_cue[0])){				// NRPN section and filter
+					if (nrpn_cue[counterb] ){				// NRPN section
 					nrpn_temp[cue_counter2] = nrpn_chl; // CC99  , ch 10
 					nrpn_temp[cue_counter2+1] =99;
 					nrpn_temp[cue_counter2+2] =5;
 										nrpn_temp[cue_counter2+3] = nrpn_chl;  //CC98
 										nrpn_temp[cue_counter2+4] =98;
-									if 	(!es_filter_cue[0]) {nrpn_temp[cue_counter2+5] =nrpn_cue[counterb]*8;   nrpn_temp[cue_counter2+8] =pitch_lut[nrpn_cue[counterb+1]&127]; } // data,   pitch translate
+							//		if 	(!es_filter_cue[0])
+
+									{nrpn_temp[cue_counter2+5] =nrpn_cue[counterb]*8;   nrpn_temp[cue_counter2+8] =pitch_lut[nrpn_cue[counterb+1]&127]; } // data,   pitch translate
 
 
-									else  {  nrpn_temp[cue_counter2+5] =((es_filter_cue[0]-1)*8)+2;  															// es filter
-									nrpn_temp[cue_counter2+8] =es_filter_cue[ 1];
-									es_filter_cue[0]=0;
-									}
+								//	else  {  nrpn_temp[cue_counter2+5] =((es_filter_cue[0]-1)*8)+2;  															// es filter
+							//		nrpn_temp[cue_counter2+8] =es_filter_cue[ 1];
+								//	es_filter_cue[0]=0;
+									//}
 
 									nrpn_temp[cue_counter2+6] = nrpn_chl;
 														nrpn_temp[cue_counter2+7] =6;
@@ -303,7 +289,7 @@ void cdc_send(void){
 		//	nrpn_cue[50]=0;
 //
 			CDC_Transmit_FS(send_temp, len); //send all if possible , after each step midi notes first  // might change
-
+			//HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
 //			if (midi_cc) midi_cue[50]= midi_cue[50]- midi_cc_list[12];   // remove cc
 //			midi_cc_list[12]=0;
 //			midi_cc=0;   // disable cc
