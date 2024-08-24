@@ -120,8 +120,9 @@ uint8_t es_filter[9]; // track es1 filters  old and new values  say 4+4
 uint8_t es_filter_cue[20];   // hold filter data for nrpn
 uint8_t midi_cc[9]; // enabled if sending midi cc
 uint8_t midi_cc_cue[20];  //  0=part+1 ,1 is value
+uint8_t midi_extra_cue[30] ; // extra stuff to be sent that ins't regular [28] is length
 
 uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part
 uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
-
+uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well

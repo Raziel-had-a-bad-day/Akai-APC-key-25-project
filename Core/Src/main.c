@@ -186,8 +186,8 @@ int main(void)
 			  if(!pause) {
 
 				  for (i=0;i<8;i++){
-					  seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change  +8 normal speed
-					  step_temp=(( seq_step_list[i+8]>>3)&31);
+					  seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change  +8 normal speed  0-255
+					  step_temp=(( seq_step_list[i+8]>>3)&31);  // 0-31
 
 			//	  if (play_speed[i]==1)   seq_step_list[i] =  ((seq_step_list[i+8]&7) +((seq_step_list[i+8]>>6)<<3))&31;    //   looping first 8 , +1 steps
 		//	  if (play_speed[i]==2)   seq_step_list[i] =  (((seq_step_list[i+8]>>1)&7) +((seq_step_list[i+8]>>7)<<4))&31;  //  +2 steps
@@ -224,9 +224,14 @@ int main(void)
 			  send_buffer[3] =144;
 			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on
 			  send_buffer[5] = 1;
-			  send_buffer[9] = 144;
-			  send_buffer[10] = buttons_list[counter_a]&127;
-			  send_buffer[11] = button_states[buttons_list[counter_a]]&127;
+
+			  send_buffer[6] = 144;
+			  send_buffer[7] = buttons_list[counter_a]&127;
+			  send_buffer[8] = button_states[buttons_list[counter_a]]&127;
+
+
+
+
 			  if(counter_a>18) counter_a=0; else counter_a++; // keep updating extra buttons from button states
 
 
@@ -236,15 +241,37 @@ int main(void)
 
 			  if (!button_states[64]) {bar_looping=0; }
 
+			  if(write_velocity) scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
+
+
+			  if (!pause)		 {midi_send();note_off();}
 
 
 
-			  if (!pause)		 {midi_send();note_off();}    																			// needs to change
+			  // needs to change
 			//  memcpy(midi_cue_noteoff,midi_cue,50);
 
 
 			  if(pause) {  // triger notes slower during pause and keyboard pressed
-				  if (((s_temp>>3)&1)&&keyboard[0])   {midi_cue[50]=3; midi_cue_noteoff[50]=0;}else  {midi_cue[50]=0; midi_cue_noteoff[50]=0;}
+
+
+				  if (keyboard[0])  {
+
+					  if (midi_channel_list[scene_buttons[0]]==9)
+					  {  midi_extra_cue[0]=153;         // use drumlist for now
+
+					  midi_extra_cue[1]=(drum_list[scene_buttons[0]]);midi_extra_cue[2]=127; midi_extra_cue[28]=3;
+
+					  {	nrpn_cue[scene_buttons[0]*3]=scene_buttons[0]+1; nrpn_cue[(scene_buttons[0]*3)+1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;  } // pitch data
+					  keyboard[0]=0;}
+					  else  {midi_extra_cue[0]=144+midi_channel_list[scene_buttons[0]];  midi_extra_cue[1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;
+					  midi_extra_cue[2]=127; midi_extra_cue[28]=3;}
+
+				  }
+
+				  else  {midi_extra_cue[2]=0;midi_extra_cue[28]=3; midi_cue_noteoff[50]=0;}
+
+
 			  }
 
 			  serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
@@ -256,8 +283,8 @@ int main(void)
 
 			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
- 				printf(" %d ",play_list[0]);printf(" %d ", play_list[1]);printf(" %d ", play_list[2]);printf(" %d ", play_screen);
- 				printf("   %d ", play_position);printf(" %d ", midi_cue_noteoff[16]);printf(" %d ", midi_cue_noteoff[17]);printf("  %d\n ", timer_value );
+ 				printf(" %d ",serial_out[0]);printf(" %d ", serial_out[1]);printf(" %d ", serial_out[2]);printf(" %d ", serial_out[3]);
+ 				printf(" %d ", serial_out[4]);printf(" %d ", serial_out[5]);printf("  %d ",serial_out[6]);printf("   %d ", play_position);printf("   %d\n ",serial_len);
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);
@@ -270,14 +297,14 @@ int main(void)
  				  arrows();
  				  if (!pause) seq_step = seq_pos>> 3; else seq_step=seq_step;
 
- 				  if(pause) {// keyboard midi send during pause
- 					  { if (keyboard[0]&&(scene_buttons[0]>3))  {;midi_cue[0]=143+scene_buttons[0];
- 					  midi_cue[1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;midi_cue[2]=127;}
- 					  midi_cue[50]=3;}
- 					// midi_cue[50]=0;
-
-
- 				  }
+// 				  if(pause) {// keyboard midi send during pause
+// 					  { if (keyboard[0]&&(scene_buttons[0]>3))  {;midi_cue[0]=143+scene_buttons[0];
+// 					  midi_cue[1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;midi_cue[2]=127;}
+// 					  midi_cue[50]=3;}
+// 					// midi_cue[50]=0;
+//
+//
+// 				  }
 
 
  				  s_temp = seq_pos;

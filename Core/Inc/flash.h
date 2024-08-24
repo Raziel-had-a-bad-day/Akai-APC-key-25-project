@@ -122,7 +122,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 				  HAL_Delay(20);
 
 
-		  HAL_Delay(2000);
+		  HAL_Delay(500);
 		//  write_once=1;
 		  send=0;
 		  button_states[70]=0;

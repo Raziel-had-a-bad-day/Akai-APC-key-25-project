@@ -20,7 +20,7 @@ void midi_send(void){  // only for midi music no info return
 
 
 			seq_step_mod=seq_step_list[i]&31;
-			if (seq_step_list[i]>>5) retrigger=1;
+			if (seq_step_list[i]>>5) retrigger=1; else retrigger=0;
 
 
 
@@ -35,7 +35,7 @@ void midi_send(void){  // only for midi music no info return
 
 					midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
 
-				if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
+				if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i+1; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
 					else 	nrpn_cue[cue_counter]=0;
 
 					if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // use drum list if set to  channel 10
@@ -91,8 +91,7 @@ void midi_send(void){  // only for midi music no info return
 //			} else  midi_cue[cue_counter]=0;
 
 
-		if (keyboard[0]&&(seq_step_mod&1)&&(scene>3))  {cue_counter=cue_counter+3;midi_cue[cue_counter]=144+scene;
-		midi_cue[(cue_counter)+1]=((keyboard[0])+pot_tracking[(seq_step_mod>>3)+((scene)*4)]+scene_transpose[i])&127;midi_cue[(cue_counter)+2]=127;}  // keyboard midi send with transpose
+
 
 			midi_cue[50]=cue_counter;
 
@@ -179,7 +178,7 @@ void cdc_send(void){
 										nrpn_temp[cue_counter2+4] =98;
 							//		if 	(!es_filter_cue[0])
 
-									{nrpn_temp[cue_counter2+5] =nrpn_cue[counterb]*8;   nrpn_temp[cue_counter2+8] =pitch_lut[nrpn_cue[counterb+1]&127]; } // data,   pitch translate
+									{nrpn_temp[cue_counter2+5] =(nrpn_cue[counterb]-1)*8;   nrpn_temp[cue_counter2+8] =pitch_lut[nrpn_cue[counterb+1]&127]; } // data,   pitch translate
 
 
 								//	else  {  nrpn_temp[cue_counter2+5] =((es_filter_cue[0]-1)*8)+2;  															// es filter
@@ -240,29 +239,41 @@ void cdc_send(void){
 					len=note_midi[50];
 				//	if(pause) len=0;
 
-			memcpy(send_temp,note_off_midi,len1); // from last send
+			memcpy(send_temp,note_off_midi,len1); // adding  Note off
 
 
 
-			if (pause) len=len1; else len=len+len1;
-			serial_len=len;
+			memcpy(send_temp+len1,note_midi,len);     // adding Note on
 
-			memcpy(send_temp+len1,note_midi,len);
+			 if (pause)  len=len1; else len=len+len1;     // add note off and note on
 
-			memcpy(send_temp+len,send_buffer,12);  // midi first then lights
-			len=len+12;
+					serial_len=len;
 
+
+
+
+			if (send_buffer[9] )        {memcpy(send_temp+len,send_buffer,12);  len=len+12;}                   // adding send_buffer
+			else {memcpy(send_temp+len,send_buffer,9);len=len+9;}
+
+
+			memcpy(serial_out,midi_extra_cue,midi_extra_cue[28]);   // extra stuff sent , anything
 
 
 			// start of serial send
-			memcpy(serial_out,send_temp,serial_len);
+			memcpy(serial_out+midi_extra_cue[28],send_temp,serial_len);
+			serial_len=serial_len+midi_extra_cue[28];
+					midi_extra_cue[28]=0;
+
 
 					memcpy(serial_out+serial_len,nrpn_temp,nrpn_temp[80]);    // temp only !  add nrpn
 
 					serial_len=serial_len+nrpn_temp[80];
-
-					memcpy(serial_out+serial_len,cc_temp,cc_temp[20]);    // cc send
-					serial_len=serial_len+cc_temp[20];
+					nrpn_temp[80]=0;  // empty
+//					memcpy(serial_out+serial_len,cc_temp,cc_temp[20]);    // cc send
+//
+//
+//
+//					serial_len=serial_len+cc_temp[20];
 					cc_temp[20]=0;
 			// end of serial send
 

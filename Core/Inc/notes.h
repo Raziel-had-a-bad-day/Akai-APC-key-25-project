@@ -54,14 +54,19 @@ void buttons_store(void){
 	uint8_t buffer_clear = 0;
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
-	uint8_t current_scene=((scene_buttons[0])*32);
+	uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
 	uint8_t clear[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;  // currently playing note position 0-31
+	 // uint8_t current_velocity= scene_velocity[seq_step_mod+current_scene];
 
 	//uint8_t seq_step_pointer= seq_step+(scene_buttons[0]*32); // scene memory address point
 	if (status == 128) // note off
 		{note_off_flag[0]=0;
-		if (incoming_data1==98) shift=0;
 
+
+		if (incoming_data1==98)    // shift related functions
+			{shift=0;
+			write_velocity=0;}
 			}
 
 		  // skip for now
@@ -173,7 +178,7 @@ void buttons_store(void){
 			}
 
 
-
+		if ((incoming_data1==49) && shift && (!keyboard[0]) )  write_velocity=(((pot_states[1]>>5)<<5)+31)&112; // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
 
 		if ((incoming_data1==55) &&(shift)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
@@ -224,7 +229,7 @@ void buttons_store(void){
 
 
 	//if((keyboard[0]) )  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
-	if((keyboard[0]) )  {scene_transpose[scene_buttons[0]]=(keyboard[0]+19)&63 ;keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
+	if((keyboard[0]) && (!pause) )  {scene_transpose[scene_buttons[0]]=(keyboard[0]+19)&63 ;keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
 
 
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
@@ -278,8 +283,8 @@ void buttons_store(void){
 	if (buffer_clear)
 		memcpy(cdc_buffer, clear, 3);
 
-	if (button_pressed!=255)  {send_buffer[6]=144; send_buffer[7]=button_pressed;send_buffer[8]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
-
+	if (button_pressed!=255)  {send_buffer[9]=144; send_buffer[10]=button_pressed;send_buffer[11]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
+	else send_buffer[9] =0;    // not very useful
 
 
 }
