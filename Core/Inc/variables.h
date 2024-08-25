@@ -42,6 +42,7 @@ uint8_t send_all[128]; //scene sends
 uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scene light off ,only for controller,then midi
 volatile uint16_t seq_pos;  // 16 bit  , 24/quater or 8/step  on 1/16th , sequencer clock
 uint16_t s_temp;
+uint16_t seq_pos_mem;
 uint16_t mtc_tick=0;  // incoming realtime clock counter
 uint8_t seq_enable=1;  // start stop sequencer
 uint8_t seq_step; // 0-32 steps
@@ -51,6 +52,8 @@ uint8_t message_counter;// points to select byte in midi
 volatile uint16_t timer_value=512; // sets timer ccr  def is 1100 for now
 uint16_t seq_tmp;
 uint8_t cdc_buffer[12];  // receive buffer on sub , check usbd_cdc_if.c and h for more
+uint8_t cdc_send_cue[260];   //hold from cdc
+uint8_t cdc_len;
 uint32_t Len;
 //  pot byte  are 176 , 48-55, 0-127
 // square buttons byte   144 /128 ,   0-39,127,   top row is 32-39
@@ -110,6 +113,7 @@ uint8_t play_speed[20]={8,8,8,8,8,8,8,8,8,8,1,1,1,1,1,1,0};  // sets playback sp
 uint8_t speed_default[12]={8,4,2,1,8,4,2,1,0,0,0};     // play speed deafults   [8] hholds last value selected
 
 uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
+uint16_t seq_step_fine[10];  // holds high count for seq_step_list   *8 res
 
 uint8_t serial_out[50];
 uint8_t serial_len;

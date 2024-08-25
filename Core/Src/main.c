@@ -176,28 +176,55 @@ int main(void)
 
 
 	  if (seq_enable) {
+		  uint8_t step_temp=0;
+		  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
 
-		  if ((s_temp>>3) != (seq_pos>>3)) {
 
-
-			  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
-			  uint8_t step_temp=0;
+		 if (seq_pos_mem!=seq_pos){     // runs  8 times /step
 
 			  if(!pause) {
 
-				  for (i=0;i<8;i++){
-					  seq_step_list[i+8] = (seq_step_list[i+8]+play_speed[i])&255;   // slow speed option change  +8 normal speed  0-255
-					  step_temp=(( seq_step_list[i+8]>>3)&31);  // 0-31
+						  for (i=0;i<8;i++){				// controls steps needs better res
+							  seq_step_fine[i] = (seq_step_fine[i]+play_speed[i])&2047;   // slow speed option change  +8 normal speed  0-255
+							  step_temp=(( seq_step_fine[i]>>6)&31);  // 0-31
 
-			//	  if (play_speed[i]==1)   seq_step_list[i] =  ((seq_step_list[i+8]&7) +((seq_step_list[i+8]>>6)<<3))&31;    //   looping first 8 , +1 steps
-		//	  if (play_speed[i]==2)   seq_step_list[i] =  (((seq_step_list[i+8]>>1)&7) +((seq_step_list[i+8]>>7)<<4))&31;  //  +2 steps
-					//  if (play_speed[i]==2)  	  seq_step_list[i] =( seq_step_list[i+8]>>2)&31;
-
-			//  else
-						  	 if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   // divide by 8  , copy back unless repeating then enable bit 6
+								  	 if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   // divide by 64  , copy back unless repeating then enable bit 6
 
 
-			  }}
+					  }}
+
+			  if (!pause)		 {midi_send();note_off();}
+			  cdc_send();
+			  if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info
+			  if(pause) {  //play notes  during pause from keyboard
+
+						  if (keyboard[0])  {
+							  last_key=keyboard[0];   //store key
+
+							  if (midi_channel_list[scene_buttons[0]]==9)
+							  {  midi_extra_cue[0]=153;         // use drumlist for now
+
+							  midi_extra_cue[1]=(drum_list[scene_buttons[0]]);midi_extra_cue[2]=127; midi_extra_cue[28]=3;
+
+							  {	nrpn_cue[scene_buttons[0]*3]=scene_buttons[0]+1; nrpn_cue[(scene_buttons[0]*3)+1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;  } // pitch data
+							  keyboard[0]=0;}
+							  else  {midi_extra_cue[0]=144+midi_channel_list[scene_buttons[0]];  midi_extra_cue[1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;
+							  midi_extra_cue[2]=127; midi_extra_cue[28]=3;}
+
+						  }
+
+						  else   { if     (   midi_extra_cue[2])       {midi_extra_cue[2]=0;midi_extra_cue[28]=3; midi_cue_noteoff[50]=0;}   else midi_extra_cue[28]=0;}
+
+					  }
+
+
+			 seq_pos_mem=seq_pos;
+		 }
+
+
+
+
+		  if ((s_temp>>3) != (seq_pos>>3)) {
 
 
 			  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)) )
@@ -244,7 +271,7 @@ int main(void)
 			  if(write_velocity) scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
 
 
-			  if (!pause)		 {midi_send();note_off();}
+
 
 
 
@@ -252,32 +279,13 @@ int main(void)
 			//  memcpy(midi_cue_noteoff,midi_cue,50);
 
 
-			  if(pause) {  // triger notes slower during pause and keyboard pressed
 
-
-				  if (keyboard[0])  {
-
-					  if (midi_channel_list[scene_buttons[0]]==9)
-					  {  midi_extra_cue[0]=153;         // use drumlist for now
-
-					  midi_extra_cue[1]=(drum_list[scene_buttons[0]]);midi_extra_cue[2]=127; midi_extra_cue[28]=3;
-
-					  {	nrpn_cue[scene_buttons[0]*3]=scene_buttons[0]+1; nrpn_cue[(scene_buttons[0]*3)+1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;  } // pitch data
-					  keyboard[0]=0;}
-					  else  {midi_extra_cue[0]=144+midi_channel_list[scene_buttons[0]];  midi_extra_cue[1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;
-					  midi_extra_cue[2]=127; midi_extra_cue[28]=3;}
-
-				  }
-
-				  else  {midi_extra_cue[2]=0;midi_extra_cue[28]=3; midi_cue_noteoff[50]=0;}
-
-
-			  }
-
-			  serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
+			  //serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
 ////
-			  cdc_send();
-			  HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
+
+			  CDC_Transmit_FS(cdc_send_cue, cdc_len);cdc_len=0;
+
+
 /////
 
 

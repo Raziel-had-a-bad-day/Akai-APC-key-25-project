@@ -135,9 +135,8 @@ void buttons_store(void){
 
 
 						if (select) {
-							scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;
-							scene_pitch[last_button]= pot_states[0]>>2;
-
+							if (pause) {scene_pitch[last_button]=last_key  ; last_key=0;} else scene_pitch[last_button]= pot_states[0]>>2;   // add pitch
+							scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;  // add velocity
 
 						}   // only use if select enabled , otherwise leave
 

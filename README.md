@@ -22,3 +22,4 @@ clip stop = a muting menu , mute very 8 notes 8*32 in total per part
 down arrow = cycles playback speed on part 
 shift and pot2 = while holding shift will modify velocity values for current part 
 pause = play keyboard notes with transpose  
+pause +select = enter pitch for notes using keyboard 
