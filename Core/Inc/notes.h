@@ -99,14 +99,27 @@ void buttons_store(void){
 		}
 
 
-		 if ((incoming_data1>7)&(incoming_data1 <99)){				// button lights
+		 if ((incoming_data1>7)&&(incoming_data1 <99) && (!clip_stop) ){				// button lights all
 
-		 switch(button_selection){    // blank , r
+		 switch(button_selection){    // change state
 		 case 0 :button_states[incoming_data1 ] = 5;break;
 		 case 3 :button_states[incoming_data1 ] = 0;break;
 		 case 5 :button_states[incoming_data1 ] = 0;  ;break;}
 		 //case 5 :button_states[incoming_data1 ] = 3;break; }
 		 }
+
+		 if ((incoming_data1>7)&&(incoming_data1 <99) && (clip_stop) ){				// button lights all
+
+			 switch(button_selection){    // change state
+			 case 0 :button_states[incoming_data1 ] = 3;break;
+			 case 3 :button_states[incoming_data1 ] = 0;break;
+			 case 5 :button_states[incoming_data1 ] = 0;  ;break;}
+			 //case 5 :button_states[incoming_data1 ] = 3;break; }
+			 }
+
+
+
+
 
 
 
@@ -129,20 +142,23 @@ void buttons_store(void){
 
 
 
-		if ((incoming_data1 >7)&&(incoming_data1 <40)&& (button_states[incoming_data1])){     // midi stuff   , only if enabled though
+		if ((incoming_data1 >7)&&(incoming_data1 <40) ){     //  , only if enabled though ,
+			last_button= square_buttons_list[incoming_data1-8]+(current_scene)-8;   // memory location 0-256
 
-						last_button= square_buttons_list[incoming_data1-8]+(current_scene)-8;   // memory location 0-256
+		if	 (!clip_stop) { // only on main screen
 
+			if (button_states[incoming_data1]  ){   // if button lit but not in play screen
+						scene_memory[last_button]=127; // just to turn on , gets replaced
 
-						if (select) {
+						if (select  ) {
 							if (pause) {scene_pitch[last_button]=last_key  ; last_key=0;} else scene_pitch[last_button]= pot_states[0]>>2;   // add pitch
 							scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;  // add velocity
 
 						}   // only use if select enabled , otherwise leave
 
-
-
-						if (scene_velocity[last_button]==0) button_states[incoming_data1 ] = 3;  // change to red if 0 velocity
+			} else scene_memory[last_button]=0;
+		}
+			//			if (scene_velocity[last_button]==0) button_states[incoming_data1 ] = 3;  // change to red if 0 velocity , nah
 
 
 					//	if (keyboard[0]) scene_pitch[last_button]= keyboard[0]; // replace if pressed
@@ -152,7 +168,7 @@ void buttons_store(void){
 
 	} // change button state
 
-	if (status == 176) {
+	if (status == 176) {// store pot
 		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot
 
 
@@ -185,14 +201,21 @@ void buttons_store(void){
 		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift))  {    // pots 4-8
 
 
-		if((device) && (select) )   {														///   Midi channel
+		if((device) && (select) )   {														///   Midi channel  , maybe elsewhere
 
-			button_pressed=square_buttons_list[pot_states[7]>>3]; // last data
-			button_states[square_buttons_list[midi_channel_list[scene_buttons[0]]]]=0;  // turn off
+		//	button_pressed=square_buttons_list[pot_states[7]>>3]; // last data
 
-			midi_channel_list[scene_buttons[0]]=pot_states[7]>>3;button_states[square_buttons_list[pot_states[7]>>3]]=3;
-		all_update=3+(pot_states[7]>>6);  // 3+0-4
+		//	midi_channel_list[20]=midi_channel_list[scene_buttons[0]];
+			button_states[square_buttons_list[midi_channel_list[scene_buttons[0]]]]=0 ;  // turn off
+			//midi_channel_list[20]=midi_channel_list[scene_buttons[0]];   // store last setting
 
+
+		midi_channel_list[scene_buttons[0]]=pot_states[7]>>3;    // add pot value
+			button_states[square_buttons_list[pot_states[7]>>3]]=3;			// turn on light
+
+
+			all_update=3+(pot_states[7]>>6);  // 3+0-4
+		//all_update=2;
 
 		  // input midichannel
 

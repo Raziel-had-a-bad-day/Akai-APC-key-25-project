@@ -37,6 +37,9 @@ uint8_t clear[3]={0,0,0};
 uint8_t velocity=0;   // enable for velocity data byte
 uint8_t note_temp[3]={0,0,0};   // holds current note being filled
 uint8_t note_replace_enable=0;
+uint8_t note_length_list[10];   // keeps note count for note off
+uint8_t program; // current loaded program pointer
+
 char print_out[10][3];
 uint8_t send_all[128]; //scene sends
 uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scene light off ,only for controller,then midi
@@ -117,7 +120,7 @@ uint16_t seq_step_fine[10];  // holds high count for seq_step_list   *8 res
 
 uint8_t serial_out[50];
 uint8_t serial_len;
-uint8_t midi_channel_list[17]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
+uint8_t midi_channel_list[21]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
 uint8_t nrpn_cue[80]={186,99,5,186,98,16,186,6,32};  // stores message for nrpn on es1 only needs 1 initial c99=5  then only  2 bytes repeating  CC 98 =NRPN LSB and CC 6 =value , for now 9 bytes though  , initial normal 3 bytes then convrted to 9
 uint8_t pitch_lut[127] ={0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127};   // es1 pitch table  4 octaves
 uint8_t es_filter[9]; // track es1 filters  old and new values  say 4+4

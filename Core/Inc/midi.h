@@ -32,9 +32,9 @@ void midi_send(void){  // only for midi music no info return
 
 
 
-						if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  play_list_mute  	&& (!retrigger) )     {    //  NOTE ON   ,disable if retrigger
+						if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  play_list_mute  	&& (!retrigger) )     {    //  NOTE ON   ,disable if retrigger, plays from scene memory but only for note one
 
-							midi_cue[cue_counter]=midi_channel_list[i]+144;  // channel 3
+							midi_cue[cue_counter]=midi_channel_list[i]+144;  // get midi channel
 
 							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
 
@@ -120,7 +120,7 @@ void midi_send(void){  // only for midi music no info return
 
 				counterb=i*3;
 
-				if (midi_cue[counterb])   {    // only if new message otherwise leave alone , not enough
+				if (midi_cue[counterb]   || (seq_pos==254 ))   {    // only if new message otherwise leave alone , not enough
 
 					midi_cue_noteoff[counterb] = noteoff_list[counterb];  // copy old  channel to send out
 					noteoff_list[counterb]= midi_cue[counterb];  // replace old with new for later

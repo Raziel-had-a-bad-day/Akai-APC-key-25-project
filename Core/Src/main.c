@@ -274,7 +274,6 @@ int main(void)
 
 
 
-
 			  // needs to change
 			//  memcpy(midi_cue_noteoff,midi_cue,50);
 
@@ -404,7 +403,17 @@ int main(void)
 
  	  }  // end of midi in
 */
+		if((device) && (select) )   {														///   Midi channel  , maybe elsewhere
 
+				//	button_pressed=square_buttons_list[pot_states[7]>>3]; // last data
+			//		button_states[square_buttons_list[midi_channel_list[20]]]=0;
+			//		button_states[square_buttons_list[midi_channel_list[scene_buttons[0]]]]=3;  //
+				//	midi_channel_list[scene_buttons[0]]=pot_states[7]>>3;
+
+
+			//		button_states[square_buttons_list[pot_states[7]>>3]]=3;
+				//all_update=3+(pot_states[7]>>6);  // 3+0-4
+				}
 
 
 
@@ -415,9 +424,11 @@ int main(void)
  		  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
  				uint8_t data_temp=i+(scene_buttons[0]*32);
 
- 				if (!play_screen)
- 			{	if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; else scene_memory[data_temp]	= 0;}			// note data
+ 		//		if (!play_screen)
+ 		//	{	  // this needs to go
 
+ 	//			if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; else scene_memory[data_temp]	= 0;}			// note data
+ 		//		if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; }		  // add but dont remove
 
  				}  // play list  muting
  		 if(play_screen) {play_screen=3;   play_muting();}
