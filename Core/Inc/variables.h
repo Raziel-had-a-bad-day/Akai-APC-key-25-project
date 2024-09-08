@@ -39,7 +39,8 @@ uint8_t note_temp[3]={0,0,0};   // holds current note being filled
 uint8_t note_replace_enable=0;
 uint8_t note_length_list[10];   // keeps note count for note off
 uint8_t program; // current loaded program pointer
-
+uint8_t patch_load; // patch to be loaded 0-15
+uint8_t patch_save;  //  patch save  0-15
 char print_out[10][3];
 uint8_t send_all[128]; //scene sends
 uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scene light off ,only for controller,then midi

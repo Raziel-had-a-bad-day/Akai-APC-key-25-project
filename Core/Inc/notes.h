@@ -13,6 +13,14 @@ void play_muting(void){    // all muting stuff here
 
 					}
 	}
+void patch_screen(void)		{     // shows last loaded patch and save patch as well , save=blink
+	for (i=0;i<32;i++) {//blank
+			button_states[i+7]=0;
+		}
+		//	button_states[square_buttons_list[load_patch]]=3;   // light currently loaded
+			button_states[square_buttons_list[patch_save]]=4;   // blink postion to be saved
+			all_update=1;
+	}
 
 void main_screen(void){
 
@@ -56,7 +64,7 @@ void buttons_store(void){
 	uint8_t status=incoming_message[0];
 	uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
 	uint8_t clear[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;  // currently playing note position 0-31
+//	  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;  // currently playing note position 0-31
 	 // uint8_t current_velocity= scene_velocity[seq_step_mod+current_scene];
 
 	//uint8_t seq_step_pointer= seq_step+(scene_buttons[0]*32); // scene memory address point
@@ -129,7 +137,7 @@ void buttons_store(void){
 		if (button_states[65]) {down_arrow=1;  	speed_default[8] =	(speed_default[8]+1)&7; play_speed[scene_buttons[0]]=speed_default[speed_default[8]];   button_states[65]=0;    }		else down_arrow=0;
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[68])  volume=1; else volume=0;
-		if (button_states[69])  pan=1; else pan=0;
+		if (button_states[69])  { pan=1; patch_screen()  ;   }   else pan=0;
 		if (button_states[70])  send=1; else send=0;
 		if (button_states[71])  {device=1;  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;button_states[81]=0;memcpy(seq_step_list,clear,16); seq_step=0; }     // pause and reset to start
@@ -140,29 +148,37 @@ void buttons_store(void){
 			button_pressed=incoming_data1; // important  , only after note on
 
 
+			if (!clip_stop && (!pan)) {     // main screen
 
+			if ((incoming_data1 > 7) && (incoming_data1 < 40)) { //  , only if enabled though ,
+				last_button = square_buttons_list[incoming_data1 - 8]
+						+ (current_scene) - 8;   // memory location 0-256
+				if (button_states[incoming_data1]) { // if button lit but not in play screen
+					scene_memory[last_button] = 127; // just to turn on , gets replaced
+					if (select) {
+						if (pause) {
+							scene_pitch[last_button] = last_key;
+							last_key = 0;
+						} else
+							scene_pitch[last_button] = pot_states[0] >> 2; // add pitch
+						scene_velocity[last_button] = (((pot_states[1] >> 5)
+								<< 5) + 31) & 112;  // add velocity
+					}   // only use if select enabled , otherwise leave
+				} else
+					scene_memory[last_button] = 0;
 
-		if ((incoming_data1 >7)&&(incoming_data1 <40) ){     //  , only if enabled though ,
-			last_button= square_buttons_list[incoming_data1-8]+(current_scene)-8;   // memory location 0-256
-
-		if	 (!clip_stop) { // only on main screen
-
-			if (button_states[incoming_data1]  ){   // if button lit but not in play screen
-						scene_memory[last_button]=127; // just to turn on , gets replaced
-
-						if (select  ) {
-							if (pause) {scene_pitch[last_button]=last_key  ; last_key=0;} else scene_pitch[last_button]= pot_states[0]>>2;   // add pitch
-							scene_velocity[last_button]=  (((pot_states[1]>>5)<<5)+31)&112;  // add velocity
-
-						}   // only use if select enabled , otherwise leave
-
-			} else scene_memory[last_button]=0;
+			}
 		}
-			//			if (scene_velocity[last_button]==0) button_states[incoming_data1 ] = 3;  // change to red if 0 velocity , nah
+		if (clip_stop && (!pan)) {     // play mute  screen
 
-
-					//	if (keyboard[0]) scene_pitch[last_button]= keyboard[0]; // replace if pressed
+			if ((incoming_data1 > 7) && (incoming_data1 < 40)) { //  , only if enabled though ,
+				last_button = square_buttons_list[incoming_data1 - 8]
+						+ (current_scene) - 8;   // memory location 0-256
+			}
 		}
+
+
+
 
 
 
@@ -170,7 +186,10 @@ void buttons_store(void){
 
 	if (status == 176) {// store pot
 		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot
-
+		if (pan) {
+			patch_save=pot_states[7]>>4;   // set next memory to be save d or loaded
+			patch_screen();
+		}
 
 //		if ((incoming_data1==48) &&(!select) && (scene_buttons[0]<4))  // filter
 //		{
@@ -498,8 +517,6 @@ void arrows(void){
 
 
 }
-
-
 
 
 

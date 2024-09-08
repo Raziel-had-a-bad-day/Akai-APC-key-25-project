@@ -91,6 +91,7 @@ static void MX_USART1_UART_Init(void);
 void note_handling(uint8_t incoming_data);
 void note_replace(uint8_t note_replace);
 //void USB_CDC_RxHandler(uint8_t*, uint32_t);
+void patch_screen(void);
 void buttons_store(void);
 void midi_send(void);  // creates midi_cue data
 void flash_write(void);
@@ -103,6 +104,10 @@ void cdc_send(void);
 void all_notes_off(void);
 void play_muting(void);
 void main_screen(void);
+
+
+
+
 
 /* USER CODE END PFP */
 
@@ -422,7 +427,7 @@ int main(void)
 
 
  		  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
- 				uint8_t data_temp=i+(scene_buttons[0]*32);
+ 		//		uint8_t data_temp=i+(scene_buttons[0]*32);
 
  		//		if (!play_screen)
  		//	{	  // this needs to go
