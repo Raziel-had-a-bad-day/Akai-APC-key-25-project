@@ -31,7 +31,7 @@
 #include "usbd_cdc_if.h"
 #include "midi.h"
 #include "notes.h"
-
+#include "lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -107,7 +107,8 @@ void cdc_send(void);
 void all_notes_off(void);
 void play_muting(void);
 void main_screen(void);
-
+void lcd_start(void);
+void lcd_print(uint8_t  pos , char print);  // position 0-39 , character
 
 
 
@@ -160,6 +161,7 @@ int main(void)
   HAL_SPI_Init(&hspi1); // write to register hspi2
   HAL_DMA_Init(&hdma_spi1_rx);
   	HAL_DMA_Init(&hdma_spi1_tx);
+  //	HAL_I2C_Init(&hi2c1);
 
 
     HAL_TIM_Base_Start_IT(&htim10);
@@ -168,6 +170,7 @@ int main(void)
   //CDC_Transmit_FS("Hello\r\n",7);
 
 	printf("hello");
+
 	//memcpy(scene_memory,test_data,32);
 	//button_states[70]=1;
 
@@ -175,6 +178,8 @@ int main(void)
 	//  get flash data
 	flash_read();
 	other_buttons=1; // nothing
+
+	lcd_start();
 	// panic_delete();
   /* USER CODE END 2 */
 
@@ -302,6 +307,13 @@ int main(void)
 
  				printf(" %d ",serial_out[0]);printf(" %d ", serial_out[1]);printf(" %d ", serial_out[2]);printf(" %d ", serial_out[3]);
  				printf(" %d ", serial_out[4]);printf(" %d ", serial_out[5]);printf("  %d ",serial_out[6]);printf("   %d ", play_position);printf("   %d\n ",serial_len);
+
+ 				if (lcd_pos>30) lcd_pos=0; else lcd_pos++;
+ 				lcd_print(lcd_pos,lcd_char);
+
+
+ 				lcd_char=lcd_pos+40;
+
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);
