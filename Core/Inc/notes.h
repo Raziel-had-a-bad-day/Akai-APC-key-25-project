@@ -92,7 +92,7 @@ void buttons_store(void){
 
 		note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
 		if (incoming_data1==98) shift=1;
-
+/*
 
 		if (incoming_data1==64){			// looping select , pot base or bars 1-4 from start
 			switch(loop_selector){
@@ -105,6 +105,9 @@ void buttons_store(void){
 			}
 
 		}
+*/
+
+
 
 
 		 if ((incoming_data1>7)&&(incoming_data1 <99) && (!clip_stop) ){				// button lights all
@@ -130,7 +133,7 @@ void buttons_store(void){
 
 
 
-
+		 if (button_states[64]) {loop_selector=1;} else loop_selector=0;
 		if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
 		if (button_states[67])  {right_arrow=1;     }  //shift notes right
 		if (button_states[86])  select=1; else select=0;  // select enable
@@ -214,10 +217,10 @@ void buttons_store(void){
 
 		if ((incoming_data1==49) && shift && (!keyboard[0]) )  write_velocity=(((pot_states[1]>>5)<<5)+31)&112; // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
 
-		if ((incoming_data1==55) &&(shift)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
+		if ((incoming_data1==55) &&(shift)&& (!loop_selector)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
 
-		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift))  {    // pots 4-8
+		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (!loop_selector))  {    // pots 4-8
 
 
 		if((device) && (select) )   {														///   Midi channel  , maybe elsewhere
@@ -240,8 +243,8 @@ void buttons_store(void){
 
 		//if (scene_buttons[0]>3) scene_volume[incoming_data1-48]= pot_states [incoming_data1-48]; else scene_volume[incoming_data1-52]= pot_states [incoming_data1-48]; // velocity mod on midi out
 
-		}
-		if (incoming_message[2] <64)     // crossfade mode
+		}  // end of midi selection
+		if ((incoming_message[2] <64))      // crossfade mode
 		{	scene_volume[(incoming_data1-52)*2]= 127;      // 0,2,4,6,
 		scene_volume[((incoming_data1-52)*2)+1]= 127-((63-incoming_message[2])<<1);} //1,3,5,7
 		else
@@ -249,8 +252,11 @@ void buttons_store(void){
 				scene_volume[((incoming_data1-52)*2)+1]=127;} //1,3,5,7
 
 		} //end of pots 4-8
+		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (loop_selector))  {    // pots 4-8  with loop light on
 
 
+		looper_list[(scene_buttons[0]*4)+(incoming_data1  - 52) ]=(pot_states[incoming_data1  - 48]>>2)&31;
+		}
 
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
 		if ((incoming_data1==50) && (!keyboard[0]))  // if held down
@@ -266,7 +272,7 @@ void buttons_store(void){
 
 		//if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_step_pointer]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
 
-	}
+	} // end of CC (176, pots ) message
 
 
 	//if((keyboard[0]) )  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
@@ -311,7 +317,7 @@ void buttons_store(void){
 			 if(play_screen) {play_screen=2;   play_muting();} else main_screen();
 //  buttons from scene memory , ok , data seems to get lost here
 
-
+			 current_midi=midi_channel_list[scene_buttons[0]];
 			}
 
 	

@@ -19,15 +19,17 @@ void midi_send(void){  // only for midi music no info return
 			data_temp2=(play_position>>2)+(i*8);
 
 
-			seq_step_mod=seq_step_list[i]&31;
+			seq_step_mod=seq_step_list[i]&31;   // good but needs to change for looping
 			if (seq_step_list[i]>>5) retrigger=1; else retrigger=0;    // ESSENTIAL  stop retrigger if same position
 
-			if (bar_looping ){   // LOOPING
+			//if (bar_looping ){   // LOOPING will be permanent by default for all channels
 
-			if((i==(bar_looping-1)) && loop_selector<2 )  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; //else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
-						if((i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
+		//	if((i==(bar_looping-1)) && loop_selector<2 )
+
+			//	seq_step_mod=((seq_step&7)+(looper_list[i<<2]))&31; //else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
+					//	if((i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
 						play_list_mute=1;
-		}	else play_list_mute=(play_list[data_temp2 ]&(1<<(play_position&3)));    // disable play muting if looping
+		//}	else play_list_mute=(play_list[data_temp2 ]&(1<<(play_position&3)));    // disable play muting if looping
 
 
 

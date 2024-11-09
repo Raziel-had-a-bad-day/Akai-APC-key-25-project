@@ -3,16 +3,21 @@
 
 
 
-uint8_t lcd_init[20]={3,3,3,2,2,8,0,8,0,15,0,6,0,1,0,2 };  // 4 bit initialize code ,starting at DB4  ,0-3 send straight  ignore finish  + add delay ,   then send double and wait for finish no delay
+uint8_t lcd_init[20]={3,3,3,2,2,8,0,8,0,12,0,6,0,1,0,2 };  // 4 bit initialize code ,starting at DB4  ,0-3 send straight  ignore finish  + add delay ,   then send double and wait for finish no delay , no cursor or blinking (12)
 uint8_t lcd_delay[20]={100,100,100,10,10,10,10,10,10,100,10,10,10,10,10};  //top then bottom
 
 uint8_t lcd_tx;   // send 2 bytes , RS(0) = data/instruction  ,R/W(1)=read/write , CS(2) =enable  as well ,bit 3= backlight ,  bits 4-7=data
 uint8_t lcd_rx;  // check for
 uint8_t lcd_pos;
-char lcd_char;
+char lcd_char[32];    // string   to print
 I2C_HandleTypeDef hi2c1;
 
-
+uint8_t *lcd_page1[20]={   &play_position,&seq_current_step,&current_midi,
+													0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};			// lcd pointers menu page 1 list  , start psotion + variable+ length
+uint8_t lcd_page1_ref[]={8,2,11,2,30,2,0,0,0,0,0,0,0,0,0};   // start and length of *lcd_page1 references
+uint8_t page_up_counter; // tracks menu search
+int8_t var_size; // track size of variables for lcd
+int dec_hold;
 
 
 	void lcd_start(){
@@ -47,7 +52,12 @@ I2C_HandleTypeDef hi2c1;
 
 		uint8_t lcd_send[4];
 		if (pos>31) pos=31;
-	if (pos>15) pos=pos+48;  //
+
+
+
+
+
+		if (pos>15) pos=pos+48;  //
 		pos=pos&127;
 		//pos=80-pos;
 		lcd_send[0]=(((pos&240)+128))+12;   // rs is P0 rs off
@@ -60,8 +70,8 @@ I2C_HandleTypeDef hi2c1;
 		HAL_Delay(1);
 
 
-
-	//	print=pos+64;   // B
+		if (print<32) print=95;
+	//	print=print+48;   // B
 
 		lcd_send[0]=((print)&240)+13;  // rs is p0   rs on
 		lcd_send[1]=8;
@@ -77,7 +87,33 @@ I2C_HandleTypeDef hi2c1;
 	}
 
 
+void lcd_menu_vars(void){     // grab vars for menu
 
+
+
+		for (lcd_pos=0;lcd_pos<32;lcd_pos++){   // check for menu values
+
+			if (lcd_pos==lcd_page1_ref[page_up_counter]) {
+
+
+				var_size=lcd_page1_ref[page_up_counter+1]; // set length
+
+			dec_hold=(*lcd_page1[page_up_counter>>1]);   //  hold numbers only for now
+
+			 if (dec_hold<10)  sprintf (lcd_char,"  %d", dec_hold) ;  else if (dec_hold<100)  sprintf (lcd_char," %d", dec_hold) ; else   sprintf (lcd_char,"%d", dec_hold) ;  // check length and add space
+			if (var_size==1)  {lcd_print(lcd_pos,lcd_char[2]);lcd_pos++;}
+			if (var_size==2)  {lcd_print(lcd_pos,lcd_char[1]);lcd_pos++; lcd_print(lcd_pos,lcd_char[2]);lcd_pos++; }
+			if (var_size==3)  {lcd_print(lcd_pos,lcd_char[0]);lcd_pos++;lcd_print(lcd_pos,lcd_char[1]);lcd_pos++; lcd_print(lcd_pos,lcd_char[2]);lcd_pos++;  }
+			var_size=0;
+
+		page_up_counter=page_up_counter+2;
+		if (lcd_page1_ref[page_up_counter]==0)   page_up_counter=0; // reset if empty
+}
+
+}
+
+
+}
 
 
 

@@ -109,7 +109,7 @@ void play_muting(void);
 void main_screen(void);
 void lcd_start(void);
 void lcd_print(uint8_t  pos , char print);  // position 0-39 , character
-
+void lcd_menu_vars(void);
 
 
 
@@ -191,8 +191,9 @@ int main(void)
 
 
 	  if (seq_enable) {
-		  uint8_t step_temp=0;
+		  uint16_t step_temp=0;
 		  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
+		  uint8_t step_end;
 
 
 		 if (seq_pos_mem!=seq_pos){     // runs  8 times /step
@@ -200,10 +201,21 @@ int main(void)
 			  if(!pause) {
 
 						  for (i=0;i<8;i++){				// controls steps needs better res
-							  seq_step_fine[i] = (seq_step_fine[i]+play_speed[i])&2047;   // slow speed option change  +8 normal speed  0-255
-							  step_temp=(( seq_step_fine[i]>>6)&31);  // 0-31
 
-								  	 if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   // divide by 64  , copy back unless repeating then enable bit 6
+							  step_end=((looper_list[(i*4)+1]+looper_list[(i*4)])&31);  // end of loop position
+
+
+							  seq_step_fine[i] = (seq_step_fine[i]+8)&2047;   // slow speed option change  +8 normal speed  0-255
+
+
+							  step_temp=(( seq_step_fine[i]>>6)&31);
+							  if ((step_temp==step_end) && (step_temp))  { seq_step_fine[i] =looper_list[(i*4)]<<6; } // jump to start of loop
+							//  else step_temp++; // jump back to start
+
+
+							  //	  step_temp=(( seq_step_fine[i]>>6)&31);  // 0-31
+
+								  	 if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   //  copy back unless repeating then enable bit 6 , to stop retriggering notes
 
 
 					  }}
@@ -242,11 +254,15 @@ int main(void)
 		  if ((s_temp>>3) != (seq_pos>>3)) {
 
 
-			  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)) )
-			  {
+			//  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)) )
+		//	  {
 
-				  if (loop_selector<2) seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
-			  }
+				//  if (loop_selector<2)
+			//  seq_step_mod=((seq_step&7)+(looper_list[scene_buttons[0]<<2]))&31;
+			  seq_step_mod=seq_step_list[scene_buttons[0]]&31;
+			  seq_current_step=seq_step_mod;
+			  //else seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
+		//	  }
 
 				uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
 			  // looper visual only when in scene though
@@ -306,14 +322,12 @@ int main(void)
 			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
  				printf(" %d ",serial_out[0]);printf(" %d ", serial_out[1]);printf(" %d ", serial_out[2]);printf(" %d ", serial_out[3]);
- 				printf(" %d ", serial_out[4]);printf(" %d ", serial_out[5]);printf("  %d ",serial_out[6]);printf("   %d ", play_position);printf("   %d\n ",serial_len);
-
- 				if (lcd_pos>30) lcd_pos=0; else lcd_pos++;
- 				lcd_print(lcd_pos,lcd_char);
+ 				printf(" %d ", serial_out[4]);printf("loop0=%d ", looper_list[0]);printf(" loop1=%d ",looper_list[4]);printf("    pos=%d ", play_position);printf("  txt=%*s",3,lcd_char );printf("   %d\n ",lcd_pos);
 
 
- 				lcd_char=lcd_pos+40;
+ 				// print section
 
+ 				lcd_menu_vars();
 
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);

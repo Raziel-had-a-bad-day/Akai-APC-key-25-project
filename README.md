@@ -15,7 +15,7 @@ send = write to flash ,
 send+shift = reload 
 solo = solo current selected part only , 
 mute = select any part to mute, 
-up arrow = press to select looping current part 1=pot4 2-5=bar 1-4 . 
+up arrow = enables loop controls pot5=start pot6=length pot7=gap pot8=speed 
 keyboard = transpose change on selected part  
 Stop all clips = stops and jumps to start 
 clip stop = a muting menu , mute very 8 notes 8*32 in total per part 

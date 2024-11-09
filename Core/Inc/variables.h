@@ -112,12 +112,13 @@ uint8_t scene_mute; // muting
 uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
-uint8_t loop_selector;  //steps through loop
+uint8_t loop_selector;  //enables loop controls pot 4-8 when up arrow is on
 uint8_t play_speed[20]={8,8,8,8,8,8,8,8,8,8,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
 uint8_t speed_default[12]={8,4,2,1,8,4,2,1,0,0,0};     // play speed deafults   [8] hholds last value selected
 
-uint8_t seq_step_list[20]; //store seq_step per part  .for now just notes 4-8
+uint8_t seq_step_list[20]; //store seq_step position per part  .for now just notes 4-8
 uint16_t seq_step_fine[10];  // holds high count for seq_step_list   *8 res
+uint8_t seq_current_step; // current position on selected from seq_step_list
 
 uint8_t serial_out[50];
 uint8_t serial_len;
@@ -129,8 +130,10 @@ uint8_t es_filter_cue[20];   // hold filter data for nrpn
 uint8_t midi_cc[9]; // enabled if sending midi cc
 uint8_t midi_cc_cue[20];  //  0=part+1 ,1 is value
 uint8_t midi_extra_cue[30] ; // extra stuff to be sent that ins't regular [28] is length
+uint8_t current_midi; // holds selected channel
 
 uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part
 uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
+uint8_t looper_list[33]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start 2=length 3=gap between repeats 4=speed (default 0,32,0,8)
