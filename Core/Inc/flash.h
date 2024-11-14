@@ -83,15 +83,17 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		  HAL_Delay(20);
 
 
-		  	  all_settings[90]=tempo;
+		  	  all_settings[200]=tempo;
 			memcpy(all_settings,scene_transpose,9); // copy settings
 			memcpy(all_settings+9,pot_states,8);
 			memcpy(all_settings+17,pot_tracking,32);
 			memcpy(all_settings+49,mute_list,8);
 			memcpy(all_settings+57,scene_volume,8);
 			memcpy(all_settings+65,midi_channel_list,8);
+			memcpy(all_settings+73,looper_list,32);
 
-			memcpy  (test_data3+4 ,all_settings,  100); // copy
+
+			memcpy  (test_data3+4 ,all_settings,  200); // copy
 
 
 		  test_data3[0]=0x06;
@@ -104,7 +106,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 		  test_data3[0]=0x02; //write ,page program
 		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);   // low
-		  HAL_SPI_Transmit(&hspi1, test_data3 ,104, 1000);  //address,then data
+		  HAL_SPI_Transmit(&hspi1, test_data3 ,204, 1000);  //address,then data
 		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
 		  HAL_Delay(200);
 
@@ -168,20 +170,20 @@ void flash_read(void){     // 1kbyte for now
 	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
 	HAL_Delay(100);
 
-	memcpy(scene_memory,test_data3+4,256);
+	memcpy(scene_memory,test_data3+4,256);    // buttons data
 
-	memcpy(all_settings,test_data3+260,100); // copy back
+	memcpy(all_settings,test_data3+260,100); // copy back settings block
 	memcpy(scene_transpose,all_settings,9);
 	memcpy(pot_states,all_settings+9,8);
 	memcpy(pot_tracking,all_settings+17,32);
 	memcpy(mute_list,all_settings+49,8);
 	memcpy(scene_volume,all_settings+57,8);
 	memcpy(midi_channel_list,all_settings+65,8);
+	memcpy(looper_list,all_settings+73,32);
+	memcpy(play_list,test_data3+516,256);   // next block
 
-	memcpy(play_list,test_data3+516,256);
 
-
-	tempo=all_settings[90];
+	tempo=all_settings[200];
 	if (tempo==255) tempo=120;
 	if (!tempo) tempo=120;
 
@@ -196,7 +198,7 @@ void flash_read(void){     // 1kbyte for now
 
 	for (i=0;i<255;i++){
 		scene_velocity [i]=(scene_memory[i]>>1)&112;    //needs to update velocities or lost , shifted
-		scene_pitch [i]=(scene_memory[i])&31;   // pitch
+		scene_pitch [i]=(scene_memory[i])&31;   // pitch ?
 
 	}
 	if (tempo==255)  tempo= 120;  //sets it for tempo 120 in case missing

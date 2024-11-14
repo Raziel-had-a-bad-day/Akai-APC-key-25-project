@@ -44,7 +44,7 @@ uint8_t patch_save;  //  patch save  0-15
 char print_out[10][3];
 uint8_t send_all[128]; //scene sends
 uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scene light off ,only for controller,then midi
-volatile uint16_t seq_pos;  // 16 bit  , 24/quater or 8/step  on 1/16th , sequencer clock
+volatile uint16_t seq_pos;  // 16 bit  , 24/quater or 8/step  on 1/16th , sequencer clock, rarely used might change
 uint16_t s_temp;
 uint16_t seq_pos_mem;
 uint16_t mtc_tick=0;  // incoming realtime clock counter
@@ -59,10 +59,12 @@ uint8_t cdc_buffer[12];  // receive buffer on sub , check usbd_cdc_if.c and h fo
 uint8_t cdc_send_cue[260];   //hold from cdc
 uint8_t cdc_len;
 uint32_t Len;
+volatile uint8_t button_send_trigger;  // send button midi repeat
+uint8_t trigger_mem;
 //  pot byte  are 176 , 48-55, 0-127
 // square buttons byte   144 /128 ,   0-39,127,   top row is 32-39
 //  round vertical  144/128,81-85,127
-// play 91 . record 93 ,shift button 98
+// play 91 . stop all clip =81 ,record 93 ,shift button 98 ,82 clip stop
 // round horizontal 64-71
 // velocity  1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
 uint8_t square_buttons_list [33]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15}; // just reads buttons in top.down order
@@ -94,7 +96,7 @@ uint8_t send_spi2[260];
 uint8_t write_once; // allow only a single flash write for now
 uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1,0,1};
 uint8_t spi_hold[260]={0,10,0,0};
-uint8_t all_settings[100];  // store all extra settings:  transpose , pots
+uint8_t all_settings[200];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
 
 uint8_t seq_step_mem;  // mem for looper
@@ -119,6 +121,9 @@ uint8_t speed_default[12]={8,4,2,1,8,4,2,1,0,0,0};     // play speed deafults   
 uint8_t seq_step_list[20]; //store seq_step position per part  .for now just notes 4-8
 uint16_t seq_step_fine[10];  // holds high count for seq_step_list   *8 res
 uint8_t seq_current_step; // current position on selected from seq_step_list
+uint8_t seq_step_reset[10];  // tracks when seq_step_list reset to start
+uint8_t seq_step_long; // 32*32
+
 
 uint8_t serial_out[50];
 uint8_t serial_len;
@@ -137,3 +142,5 @@ uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
 uint8_t looper_list[33]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start 2=length 3=gap between repeats 4=speed (default 0,32,0,8)
+uint8_t loop_current_start;
+uint8_t loop_current_length;

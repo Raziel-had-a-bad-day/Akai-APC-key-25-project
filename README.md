@@ -7,7 +7,7 @@ Mute and solo works , saves mute on restart. Press keyboard ,turn pot 2 for velo
 Pot 1 = pitch, nrpn data 
 Pot 2 = Velocity,
 Pot 3 = Transpose, 
-Pot 4 = loop start position while looping, 
+Pot 4 = loop start position while looping, disabled 
 Pot 5-8 = crossfade  velocity between 1-2,3-4 etc  , 
 Shift+Pot 8 = tempo , select+pot1 or pot2  to enter pitch and velocity or press on keyboard while pressing buttons, 
 device+select = midi settings for parts using bottom row part buttons and pot 8 of entry red light shows current midi channel, 
@@ -19,7 +19,7 @@ up arrow = enables loop controls pot5=start pot6=length pot7=gap pot8=speed
 keyboard = transpose change on selected part  
 Stop all clips = stops and jumps to start 
 clip stop = a muting menu , mute very 8 notes 8*32 in total per part 
-down arrow = cycles playback speed on part 
+down arrow = play transpose or play note
 shift and pot2 = while holding shift will modify velocity values for current part 
 pause = play keyboard notes with transpose  
 pause +select = enter pitch for notes using keyboard 

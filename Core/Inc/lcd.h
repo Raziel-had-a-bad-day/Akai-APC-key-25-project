@@ -12,15 +12,15 @@ uint8_t lcd_pos;
 char lcd_char[32];    // string   to print
 I2C_HandleTypeDef hi2c1;
 
-uint8_t *lcd_page1[20]={   &play_position,&seq_current_step,&current_midi,
-													0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};			// lcd pointers menu page 1 list  , start psotion + variable+ length
-uint8_t lcd_page1_ref[]={8,2,11,2,30,2,0,0,0,0,0,0,0,0,0};   // start and length of *lcd_page1 references
+uint8_t *lcd_page1[20]={   &seq_step_long,&seq_current_step,&current_midi,&loop_current_start,&loop_current_length,&tempo,
+													0,0,0,0,0,0,0,0,0,0,0,0,0};			// lcd pointers menu page 1 list  , start psotion + variable+ length
+uint8_t lcd_page1_ref[]={8,2,11,2,30,2,24,2,27,2,16,3,0,0,0};   // start and length of *lcd_page1 references
 uint8_t page_up_counter; // tracks menu search
 int8_t var_size; // track size of variables for lcd
 int dec_hold;
 
 
-	void lcd_start(){
+	void lcd_start(void){
 
 
 		uint8_t  state_check= HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x4E), 3, 5);   // Always left shift  0x27 or it  will fail
@@ -91,26 +91,26 @@ void lcd_menu_vars(void){     // grab vars for menu
 
 
 
-		for (lcd_pos=0;lcd_pos<32;lcd_pos++){   // check for menu values
+	for (lcd_pos=0;lcd_pos<32;lcd_pos++){   // check for menu values
 
-			if (lcd_pos==lcd_page1_ref[page_up_counter]) {
+		if (lcd_pos==lcd_page1_ref[page_up_counter]) {
 
 
-				var_size=lcd_page1_ref[page_up_counter+1]; // set length
+			var_size=lcd_page1_ref[page_up_counter+1]; // set length
 
 			dec_hold=(*lcd_page1[page_up_counter>>1]);   //  hold numbers only for now
 
-			 if (dec_hold<10)  sprintf (lcd_char,"  %d", dec_hold) ;  else if (dec_hold<100)  sprintf (lcd_char," %d", dec_hold) ; else   sprintf (lcd_char,"%d", dec_hold) ;  // check length and add space
+			if (dec_hold<10)  sprintf (lcd_char,"  %d", dec_hold) ;  else if (dec_hold<100)  sprintf (lcd_char," %d", dec_hold) ; else   sprintf (lcd_char,"%d", dec_hold) ;  // check length and add space
 			if (var_size==1)  {lcd_print(lcd_pos,lcd_char[2]);lcd_pos++;}
 			if (var_size==2)  {lcd_print(lcd_pos,lcd_char[1]);lcd_pos++; lcd_print(lcd_pos,lcd_char[2]);lcd_pos++; }
 			if (var_size==3)  {lcd_print(lcd_pos,lcd_char[0]);lcd_pos++;lcd_print(lcd_pos,lcd_char[1]);lcd_pos++; lcd_print(lcd_pos,lcd_char[2]);lcd_pos++;  }
 			var_size=0;
 
-		page_up_counter=page_up_counter+2;
-		if (lcd_page1_ref[page_up_counter]==0)   page_up_counter=0; // reset if empty
-}
+			page_up_counter=page_up_counter+2;
+			if (lcd_page1_ref[page_up_counter]==0)   page_up_counter=0; // reset if empty
+		}
 
-}
+	}
 
 
 }

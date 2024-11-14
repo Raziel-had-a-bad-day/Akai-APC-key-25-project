@@ -9,14 +9,14 @@ void midi_send(void){  // only for midi music no info return
 		uint16_t velocity=0;
 		uint8_t seq_step_mod=seq_step;
 		uint8_t scene=scene_buttons[0];
-		 uint8_t data_temp2;
+		// uint8_t data_temp2;
 		 uint8_t retrigger=0; // enable if seq_step hasn't_ moved
 		 uint8_t play_list_mute;
 
 
 		for (i=0;i<8;i++){    // drums
 			cue_counter=i*3;
-			data_temp2=(play_position>>2)+(i*8);
+		//	data_temp2=(play_position>>2)+(i*8);
 
 
 			seq_step_mod=seq_step_list[i]&31;   // good but needs to change for looping
@@ -38,7 +38,8 @@ void midi_send(void){  // only for midi music no info return
 
 							midi_cue[cue_counter]=midi_channel_list[i]+144;  // get midi channel
 
-							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
+							//midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
+							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+scene_transpose[i])& 127;;  //  pitch info +transpose  ?
 
 							if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i+1; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
 							else 	nrpn_cue[cue_counter]=0;
@@ -150,9 +151,9 @@ void midi_send(void){  // only for midi music no info return
 		}
 
 
-void cdc_send(void){
+void cdc_send(void){     // all midi runs often , need to separate
 
-	UART_HandleTypeDef huart1;
+	//UART_HandleTypeDef huart1;
 			uint8_t len;  // note on
 			uint8_t send_temp[256];
 			uint8_t len1;  // note off
@@ -216,7 +217,7 @@ void cdc_send(void){
 
 			note_midi[50]=cue_counter;
 			nrpn_temp[80]=cue_counter2;  // can be a trimmed a lot
-
+			nrpn_temp[80]=0;   //disable nrpn for now
 
 				//memcpy(cue_temp,midi_cue_noteoff,25);
 				cue_counter=0;

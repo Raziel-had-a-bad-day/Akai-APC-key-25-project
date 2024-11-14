@@ -1,3 +1,9 @@
+
+void stop_start(void);
+
+
+
+
 void play_muting(void){    // all muting stuff here
 
 
@@ -63,7 +69,7 @@ void buttons_store(void){
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
 	uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
-	uint8_t clear[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	uint16_t clear[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 //	  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;  // currently playing note position 0-31
 	 // uint8_t current_velocity= scene_velocity[seq_step_mod+current_scene];
 
@@ -137,16 +143,16 @@ void buttons_store(void){
 		if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
 		if (button_states[67])  {right_arrow=1;     }  //shift notes right
 		if (button_states[86])  select=1; else select=0;  // select enable
-		if (button_states[65]) {down_arrow=1;  	speed_default[8] =	(speed_default[8]+1)&7; play_speed[scene_buttons[0]]=speed_default[speed_default[8]];   button_states[65]=0;    }		else down_arrow=0;
+		if (button_states[65]) {down_arrow=1;  	   }		else down_arrow=0;
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[68])  volume=1; else volume=0;
 		if (button_states[69])  { pan=1; patch_screen()  ;   }   else pan=0;
 		if (button_states[70])  send=1; else send=0;
 		if (button_states[71])  {device=1;  }else {device=0; }
-		if (button_states[81])  {button_states[91]=5;button_states[81]=0;memcpy(seq_step_list,clear,16); seq_step=0; }     // pause and reset to start
-		if (button_states[82] && (!clip_stop))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }
+		if (button_states[81])  {button_states[91]=5;memcpy(seq_step_fine,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
+		if (button_states[82] && (!clip_stop))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen
 		if ((!button_states[82])  && (clip_stop))    {clip_stop=0; play_screen=0; all_update=1; main_screen(); }
-
+	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
 
 			button_pressed=incoming_data1; // important  , only after note on
 
@@ -254,8 +260,9 @@ void buttons_store(void){
 		} //end of pots 4-8
 		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (loop_selector))  {    // pots 4-8  with loop light on
 
+		if (incoming_data1==53)	looper_list[(scene_buttons[0]*4)+(incoming_data1  - 52) ]=((pot_states[incoming_data1  - 48]>>2)&31)+1;  // 1-32
+		else looper_list[(scene_buttons[0]*4)+(incoming_data1  - 52) ]=(pot_states[incoming_data1  - 48]>>2)&31;
 
-		looper_list[(scene_buttons[0]*4)+(incoming_data1  - 52) ]=(pot_states[incoming_data1  - 48]>>2)&31;
 		}
 
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
@@ -276,7 +283,7 @@ void buttons_store(void){
 
 
 	//if((keyboard[0]) )  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
-	if((keyboard[0]) && (!pause) )  {scene_transpose[scene_buttons[0]]=(keyboard[0]+19)&63 ;keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
+	if((keyboard[0]) && (!pause) && (!down_arrow))  {scene_transpose[scene_buttons[0]]=(keyboard[0]+19)&63 ;keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
 
 
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
@@ -476,7 +483,7 @@ void note_replace(uint8_t note_replace) {    // replace first note
 
 
 
-void arrows(void){
+void arrows(void){   // disable
 
 	if (right_arrow)
 	{
