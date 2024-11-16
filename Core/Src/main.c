@@ -262,6 +262,8 @@ int main(void)
 
 		//  if((button_send_trigger>>3)!=trigger_mem){      //
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
+			 if (play_list_write) play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;    // keep writing if enabled
+
 			  //  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)) )
 			  //	  {
 
@@ -286,8 +288,9 @@ int main(void)
 
 			  	  // play _position needs to change need to track individually
 				//if ((seq_step_mod&7)==step_end)
-				if ((seq_step_mod&7)==0)   play_position=(play_position+1)&31;  // normal screen leave alone
-				if (!seq_step_mod) play_position=(play_position>>2)<<2;   // reset
+				play_position=seq_step_long;
+			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
+				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
 				//	if (seq_step_mod==step_end) play_position=(play_position+1)&31;  // count up on zero at every 88 notes
 					//	play_position=seq_step_reset[selected_scene]; // maybe not ,just use main clock
 		//	  if ((play_position&3)==3) play_position=(play_position>>2)<<2;   // clear  2 bits on reset
@@ -300,11 +303,11 @@ int main(void)
 			  send_buffer[2]=button_states[send_buffer[1]]; // last state
 			  send_buffer[3] =144;
 			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on
-			  send_buffer[5] = 1;
+			  if (record) send_buffer[5] = 4; else send_buffer[5] = 1;
 
 			  send_buffer[6] = 144;
 			  send_buffer[7] = buttons_list[counter_a]&127;
-			  send_buffer[8] = button_states[buttons_list[counter_a]]&127;
+			  send_buffer[8] = button_states[buttons_list[counter_a]]&127;  // not all will light up :/
 
 
 
@@ -318,7 +321,7 @@ int main(void)
 
 			  if (!button_states[64]) {bar_looping=0; }
 
-			  if(write_velocity) scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
+			  if(write_velocity && button_states[square_buttons_list[seq_step_mod]] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
 
 
 
@@ -340,9 +343,20 @@ int main(void)
 
 			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
- 				printf(" %d ",serial_out[0]);printf(" %d ", serial_out[1]);printf(" %d ", serial_out[2]);printf(" %d ", serial_out[3]);
- 				printf(" %d ", serial_out[4]);printf("pitch=%d ", scene_pitch[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);printf(" transps=%d ",scene_transpose[selected_scene]);
+ 			//	printf(" play_list=%d ",play_list[seq_step_long+(selected_scene*32)]);
+ /*
+ 				printf("step_long= %d ", (seq_step_long+(selected_scene*32)));printf("button=%d ", button_states[square_buttons_list[seq_step_long]]);printf(" %d ", serial_out[3]);
+ 				printf(" %d ", serial_out[4]);printf("pitch=%d ", scene_pitch[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);
+ 				printf(" transps=%d ",scene_transpose[selected_scene]);
  				printf("    vel=%d ", scene_velocity[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);printf("  txt=%*s",3,lcd_char );printf("   %d\n ",lcd_pos);
+ 				printf("   %d\n ",lcd_pos);
+ */
+
+			  for (i=0;i<32;i++){	printf(" %d",play_list[((selected_scene*32)+i)] );
+
+			  }
+
+			  printf("   %d\n ",lcd_pos);
 
 
  				// print section
@@ -480,16 +494,19 @@ int main(void)
  		  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
  				uint8_t data_temp=i+(scene_buttons[0]*32);
 
- 			if (!play_screen){
+
+ 				if (!play_screen){
  		//	{	  // this needs to go
 
  			//	if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; else scene_memory[data_temp]	= 0;}			// note data
- 				if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; }		  // add but dont remove
- 	  }
+ 			//	if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; }		  // add but dont remove
+ 			if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= ((scene_velocity [data_temp])&112)+scene_pitch[data_temp]; } // only for current
+
+ 		  }
  			//	}  // play list  muting
 
 
- 	  if(play_screen) {play_screen=3;   play_muting();}
+ 	  if(play_screen) {play_screen=3;   play_muting();} // only reads, on receive
  		  buttons_store();   // only runs after receive
 
 

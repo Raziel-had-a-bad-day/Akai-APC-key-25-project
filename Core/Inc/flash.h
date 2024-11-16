@@ -18,13 +18,13 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		 		  }
 */
 
-		 		  /*
+
 			for (i=0;i<256;i++){
-				temp_data=	(scene_velocity [i]<<1)&224;    //merge into scene memory
-				test_data3[i+4]=	(scene_pitch [i]&31)+temp_data;   // pitch
+				if (scene_velocity[i])  scene_memory[i]=	((scene_velocity [i]&112)<<1)+	(scene_pitch [i]&31) ;   //merge into scene memory
+
 
 			}
-*/
+
 		 		  test_data3[2]=patch_mem;
 
 		 		  memcpy  (test_data3+4 ,scene_memory,  256);

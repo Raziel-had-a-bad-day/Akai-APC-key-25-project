@@ -4,17 +4,46 @@ void stop_start(void);
 
 
 
-void play_muting(void){    // all muting stuff here
+void play_muting(void){    // all muting stuff here , sometimes it loses data
+
+	uint8_t square_buttons_play [33]= {32,24,16,8,33,25,17,9,34,26,18,10,35,27,19,11,36,28,20,12,37,29,21,13,38,30,22,14,39,31,23,15};  // follows play steps
 
 
-		  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
+	if (!pot_states[2])     pot_states[2]=64;  // check if empty
+//	uint8_t pot_out=pot_states[2]>>1;
+	if ( play_list_write)   play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;  // keep updating while shift on
 
-				uint8_t data_temp2=(i&7)+(scene_buttons[0]*8);
-				if (play_screen==2)	{	if   (play_list[data_temp2 ]&(1<<(i>>3)))		     button_states[square_buttons_list[i]]=3;    else  button_states[square_buttons_list[i]]=0; 	  }  //write to buttons
 
-				 if (button_states [square_buttons_list[i]]  &&(play_screen==3) ) 	    play_list[data_temp2]=  play_list[data_temp2]|(1<<(i>>3));
-				 else play_list[data_temp2]=  play_list[data_temp2]&(~(1<<(i>>3)));   // read from buttons
 
+	for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
+
+				uint8_t data_temp2=i+(scene_buttons[0]*32);    // button + scene_select writes all on selected
+				uint8_t data_temp3=button_states[square_buttons_play[i]];      // change as its wrong
+
+				if (play_screen==2)	{	if   (play_list[data_temp2 ])		    data_temp3=3;    // this runs first , always
+				else  data_temp3=0; 	  }  //write to buttons only when pressed , this i ok
+
+				if ((data_temp3==3)  && (play_screen==3)  && (!play_list[data_temp2]))  {play_list[data_temp2]=  63;  // write if empty
+
+
+
+
+
+				}
+
+
+			//	if ((data_temp3==3)  && (play_screen==3) && (record)) 	  // default
+				// if (record)  play_list[data_temp2]=  (scene_transpose[scene_buttons[i]]);
+
+
+			//	 else play_list[data_temp2]=  0;   // read from buttons
+
+			//	 if ((data_temp3==3)  && (play_screen==3) && (record) ) 	play_list[data_temp2]=  (scene_transpose[scene_buttons[i]])&63;  // change to transpose info
+
+
+
+
+				 button_states[square_buttons_play[i]]=data_temp3;   // getting random trigger
 
 
 					}
@@ -80,6 +109,7 @@ void buttons_store(void){
 
 		if (incoming_data1==98)    // shift related functions
 			{shift=0;
+			play_list_write=0;
 			write_velocity=0;}
 			}
 
@@ -119,8 +149,8 @@ void buttons_store(void){
 		 if ((incoming_data1>7)&&(incoming_data1 <99) && (!clip_stop) ){				// button lights all
 
 		 switch(button_selection){    // change state
-		 case 0 :button_states[incoming_data1 ] = 5;break;
-		 case 3 :button_states[incoming_data1 ] = 0;break;
+		 case 0 :button_states[incoming_data1 ] = 5;break;   // normal lights , yellow
+		 case 3 :button_states[incoming_data1 ] = 0;break;		// green
 		 case 5 :button_states[incoming_data1 ] = 0;  ;break;}
 		 //case 5 :button_states[incoming_data1 ] = 3;break; }
 		 }
@@ -128,7 +158,7 @@ void buttons_store(void){
 		 if ((incoming_data1>7)&&(incoming_data1 <99) && (clip_stop) ){				// button lights all
 
 			 switch(button_selection){    // change state
-			 case 0 :button_states[incoming_data1 ] = 3;break;
+			 case 0 :button_states[incoming_data1 ] = 3;break;  // play mode lights
 			 case 3 :button_states[incoming_data1 ] = 0;break;
 			 case 5 :button_states[incoming_data1 ] = 0;  ;break;}
 			 //case 5 :button_states[incoming_data1 ] = 3;break; }
@@ -145,12 +175,14 @@ void buttons_store(void){
 		if (button_states[86])  select=1; else select=0;  // select enable
 		if (button_states[65]) {down_arrow=1;  	   }		else down_arrow=0;
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
+		if (button_states[93]) { record=1;} else record=0; // select enable
+
 		if (button_states[68])  volume=1; else volume=0;
 		if (button_states[69])  { pan=1; patch_screen()  ;   }   else pan=0;
 		if (button_states[70])  send=1; else send=0;
 		if (button_states[71])  {device=1;  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;memcpy(seq_step_fine,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
-		if (button_states[82] && (!clip_stop))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen
+		if (button_states[82] && (!clip_stop) && (!play_screen))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen
 		if ((!button_states[82])  && (clip_stop))    {clip_stop=0; play_screen=0; all_update=1; main_screen(); }
 	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
 
@@ -160,24 +192,28 @@ void buttons_store(void){
 			if (!clip_stop && (!pan)) {     // main screen
 
 			if ((incoming_data1 > 7) && (incoming_data1 < 40)) { //  , only if enabled though ,
-				last_button = square_buttons_list[incoming_data1 - 8]
-						+ (current_scene) - 8;   // memory location 0-256
+				last_button = square_buttons_list[incoming_data1 - 8]+ (current_scene) - 8;   // memory location 0-256
+
+
 				if (button_states[incoming_data1]) { // if button lit but not in play screen
 					scene_memory[last_button] = 127; // just to turn on , gets replaced
-					if (select) {
+				//	if (select) {  // might cancel this
 						if (pause) {
 							scene_pitch[last_button] = last_key;
 							last_key = 0;
 						} else
 							scene_pitch[last_button] = pot_states[0] >> 2; // add pitch
-						scene_velocity[last_button] = (((pot_states[1] >> 5)
-								<< 5) + 31) & 112;  // add velocity
-					}   // only use if select enabled , otherwise leave
-				} else
-					scene_memory[last_button] = 0;
+						//scene_velocity[last_button] = (((pot_states[1] >> 5)<< 5) + 31) & 112;  // add velocity
 
-			}
-		}
+
+
+						scene_velocity[last_button] =(pot_states[1]>>6)+64;
+					//}   // only use if select enabled , otherwise leave
+				} else
+					{scene_memory[last_button] = 0;scene_velocity[last_button]=0;}
+
+			} // incoming buttons 0 -32
+		}    // play screen off and patch screen off
 		if (clip_stop && (!pan)) {     // play mute  screen
 
 			if ((incoming_data1 > 7) && (incoming_data1 < 40)) { //  , only if enabled though ,
@@ -221,7 +257,7 @@ void buttons_store(void){
 			}
 
 
-		if ((incoming_data1==49) && shift && (!keyboard[0]) )  write_velocity=(((pot_states[1]>>5)<<5)+31)&112; // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
+		if ((incoming_data1==49) && shift && (!keyboard[0]) )  write_velocity=(((pot_states[1]&63))+63); // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
 
 		if ((incoming_data1==55) &&(shift)&& (!loop_selector)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
@@ -271,6 +307,8 @@ void buttons_store(void){
 		{
 
 			scene_transpose[scene_buttons[0]]=pot_states[2]>>1; // 0-64 transpose from base , only with shift off , should trigger a note or loses track
+
+			if (shift)  play_list_write=1; // enter to play list when enabled
 			button_pressed=last_button;  //retrigger
 
 
@@ -321,7 +359,7 @@ void buttons_store(void){
 			all_update=1;
 
 
-			 if(play_screen) {play_screen=2;   play_muting();} else main_screen();
+			 if(play_screen) {play_screen=2;   play_muting();} else main_screen();  // reset play screen
 //  buttons from scene memory , ok , data seems to get lost here
 
 			 current_midi=midi_channel_list[scene_buttons[0]];

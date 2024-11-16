@@ -9,14 +9,14 @@ void midi_send(void){  // only for midi music no info return
 		uint16_t velocity=0;
 		uint8_t seq_step_mod=seq_step;
 		uint8_t scene=scene_buttons[0];
-		// uint8_t data_temp2;
+		 uint8_t data_temp2;
 		 uint8_t retrigger=0; // enable if seq_step hasn't_ moved
-		 uint8_t play_list_mute;
+		 uint8_t play_list_mute=1;
 
 
 		for (i=0;i<8;i++){    // drums
 			cue_counter=i*3;
-		//	data_temp2=(play_position>>2)+(i*8);
+			data_temp2=(seq_step_long)+(i*32);   //8+ 0-63
 
 
 			seq_step_mod=seq_step_list[i]&31;   // good but needs to change for looping
@@ -28,9 +28,10 @@ void midi_send(void){  // only for midi music no info return
 
 			//	seq_step_mod=((seq_step&7)+(looper_list[i<<2]))&31; //else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
 					//	if((i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
-						play_list_mute=1;
-		//}	else play_list_mute=(play_list[data_temp2 ]&(1<<(play_position&3)));    // disable play muting if looping
-
+					//	play_list_mute=1; // main muting control ,disable for now
+		//}	else
+			if (play_list[data_temp2 ])play_list_mute=1; else play_list_mute=0;     // disable play muting if looping
+		//	scene_transpose[i]= play_list[data_temp2 ]; // replaces transpose
 
 
 
@@ -39,7 +40,9 @@ void midi_send(void){  // only for midi music no info return
 							midi_cue[cue_counter]=midi_channel_list[i]+144;  // get midi channel
 
 							//midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
-							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+scene_transpose[i])& 127;;  //  pitch info +transpose  ?
+							//midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+scene_transpose[i])& 127;;  //  pitch info +transpose  ?
+							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+play_list[data_temp2 ])& 127;;  //  pitch info +transpose but only from play_list
+
 
 							if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i+1; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
 							else 	nrpn_cue[cue_counter]=0;

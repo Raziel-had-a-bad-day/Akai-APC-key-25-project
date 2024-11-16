@@ -19,7 +19,7 @@ uint8_t down_arrow;
 uint8_t device;
 uint8_t clip_stop;
 uint8_t send;
-
+uint8_t record;
 
 uint8_t serial1_temp;
 uint8_t temp;
@@ -137,10 +137,15 @@ uint8_t midi_cc_cue[20];  //  0=part+1 ,1 is value
 uint8_t midi_extra_cue[30] ; // extra stuff to be sent that ins't regular [28] is length
 uint8_t current_midi; // holds selected channel
 
-uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part
+uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part, change to hold transpose
 uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
+uint8_t play_list_write=0; // keeps writing while shift is held down
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
 uint8_t looper_list[33]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start 2=length 3=gap between repeats 4=speed (default 0,32,0,8)
 uint8_t loop_current_start;
 uint8_t loop_current_length;
+uint8_t step_record; // works in stop mode
+
+
+uint8_t test_byte;
