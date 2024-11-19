@@ -98,6 +98,9 @@ uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1
 uint8_t spi_hold[260]={0,10,0,0};
 uint8_t all_settings[200];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
+uint8_t other_buttons_hold[20]; // keeps track of buttons
+uint8_t send_buffer_sent;
+uint8_t button_states_save[100];
 
 uint8_t seq_step_mem;  // mem for looper
 
@@ -123,6 +126,7 @@ uint16_t seq_step_fine[10];  // holds high count for seq_step_list   *8 res
 uint8_t seq_current_step; // current position on selected from seq_step_list
 uint8_t seq_step_reset[10];  // tracks when seq_step_list reset to start
 uint8_t seq_step_long; // 32*32
+uint8_t seq_step_enable[9]; // step change tracking
 
 
 uint8_t serial_out[50];

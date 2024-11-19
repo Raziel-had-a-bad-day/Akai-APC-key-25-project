@@ -172,28 +172,28 @@ void buttons_store(void){
 		 if (button_states[64]) {loop_selector=1;} else loop_selector=0;
 		if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
 		if (button_states[67])  {right_arrow=1;     }  //shift notes right
-		if (button_states[86])  select=1; else select=0;  // select enable
+		if (button_states[86])  {select=1;main_screen();} else select=0;  // select enable
 		if (button_states[65]) {down_arrow=1;  	   }		else down_arrow=0;
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
-		if (button_states[93]) { record=1;} else record=0; // select enable
+		if (button_states[93]) { record=1;} else {record=0;} // select enable
 
 		if (button_states[68])  volume=1; else volume=0;
 		if (button_states[69])  { pan=1; patch_screen()  ;   }   else pan=0;
 		if (button_states[70])  send=1; else send=0;
-		if (button_states[71])  {device=1;  }else {device=0; }
+		if (button_states[71])  {device=1;main_screen();  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;memcpy(seq_step_fine,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
-		if (button_states[82] && (!clip_stop) && (!play_screen))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen
+		if ((button_states[82]) && (!clip_stop) && (!play_screen))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen
 		if ((!button_states[82])  && (clip_stop))    {clip_stop=0; play_screen=0; all_update=1; main_screen(); }
 	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
 
 			button_pressed=incoming_data1; // important  , only after note on
-
+			if (button_pressed!=255)  {send_buffer[9]=144; send_buffer[10]=button_pressed;send_buffer[11]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
 
 			if (!clip_stop && (!pan)) {     // main screen
 
 			if ((incoming_data1 > 7) && (incoming_data1 < 40)) { //  , only if enabled though ,
 				last_button = square_buttons_list[incoming_data1 - 8]+ (current_scene) - 8;   // memory location 0-256
-
+				if (shift) {seq_step_long=last_button&31; play_position=seq_step_long; }
 
 				if (button_states[incoming_data1]) { // if button lit but not in play screen
 					scene_memory[last_button] = 127; // just to turn on , gets replaced
@@ -223,11 +223,10 @@ void buttons_store(void){
 		}
 
 
+		    // not very useful
 
 
-
-
-	} // change button state
+						} // change button state , note on
 
 	if (status == 176) {// store pot
 		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot
@@ -374,9 +373,6 @@ void buttons_store(void){
 
 	if (buffer_clear)
 		memcpy(cdc_buffer, clear, 3);
-
-	if (button_pressed!=255)  {send_buffer[9]=144; send_buffer[10]=button_pressed;send_buffer[11]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
-	else send_buffer[9] =0;    // not very useful
 
 
 }

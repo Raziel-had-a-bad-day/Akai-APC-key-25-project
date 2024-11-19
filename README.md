@@ -25,3 +25,4 @@ pause = play keyboard notes with transpose
 pause +select = enter pitch for notes using keyboard 
 pan = shows current loaded patch  , pot 8 to set load/save position 
 shift+pot3 = transpose per 8 bar ,for play screen 
+shift + note buttons = jumps to select position on play 

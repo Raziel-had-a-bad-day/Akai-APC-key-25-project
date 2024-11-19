@@ -110,7 +110,7 @@ void main_screen(void);
 void lcd_start(void);
 void lcd_print(uint8_t  pos , char print);  // position 0-39 , character
 void lcd_menu_vars(void);
-
+void nrpn_send(void);
 
 
 /* USER CODE END PFP */
@@ -198,7 +198,7 @@ int main(void)
 		  uint8_t selected_scene=scene_buttons[0];
 		//  uint8_t step_start;
 		//  uint8_t play_total; // different for each note
-
+		  uint8_t buttons_list[20]={0,64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};  //extra buttons  slow
 
 		  if (seq_pos_mem!=seq_pos){     // runs  8 times /step  , control sequencer counting
 
@@ -213,19 +213,61 @@ int main(void)
 
 
 					  step_temp=(( seq_step_fine[i]>>6)&31);  // reads fine position
+					  if(seq_step_list[i]!=step_temp) seq_step_enable[i]=1; // flips on change of step
+
 					  if ((step_temp==step_end) && (step_temp))  { seq_step_fine[i] =looper_list[(i*4)]<<6; seq_step_reset[i]=(seq_step_reset[i]+1)&31; } // jump to start of loop, too early
-					  //  else step_temp++; // jump back to start
 
-
-					  //	  step_temp=(( seq_step_fine[i]>>6)&31);  // 0-31
 
 					  if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   //  copy back unless repeating then enable bit 6 , to stop retriggering notes
 
 
 				  }}
 
-			  if (!pause)		 {midi_send();note_off();}
-			  cdc_send(); // all midi
+			  if (!pause)		 {midi_send();note_off();}   // midi data calculate
+			  cdc_send(); // all midi compiled for send
+
+
+			  if (send_buffer_sent==1)                  {    // moving light send and button change , quick
+
+				    // track only this
+//			  				  send_buffer[0] =144;
+//			  			  send_buffer[1] = square_buttons_list[seq_step_mem];   // for displaying 0-32 , reset previous light then new on , should be based on memory
+//			  			  send_buffer[2]=button_states[send_buffer[1]]; // last state
+//			  			  send_buffer[3] =144;
+//			  			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on , mostly for green moving button
+//
+//			  			  if (record) send_buffer[5] = 4; else send_buffer[5] = 1; //colour
+			  			seq_step_mem=seq_step_mod;
+			  			  send_buffer_sent=2;
+			  					}
+
+			  			 //// extra buttons
+
+			  				counter_a=0;
+			  							  for (i=1;i<19;i++) {   // test for extra button changes and set counter_a, quick
+			  								  if (other_buttons_hold[i]!= button_states[buttons_list[i]]) {counter_a=i;
+			  								  other_buttons_hold[i]= button_states[buttons_list[i]];}
+			  							  	  	  }
+
+
+
+			  			  if (counter_a) {
+
+
+			  			  send_buffer[6] = 144;
+			  			  send_buffer[7] = buttons_list[counter_a]&127;
+			  			  send_buffer[8] = button_states[buttons_list[counter_a]]&127;  // not all will light up :/
+
+			  			  } else
+			  				  send_buffer[6] = 0;
+
+
+
+
+
+			  if (cdc_len) {CDC_Transmit_FS(cdc_send_cue, cdc_len);cdc_len=0;  } // USB send
+
+
 			  if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info
 
 
@@ -279,63 +321,39 @@ int main(void)
 			  //else seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
 			  //	  }
 
-			  uint8_t buttons_list[20]={64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};
+
 			  // looper visual only when in scene though
 
 			  //step_start=looper_list[(selected_scene*4)+1];
 			  step_end=((looper_list[(selected_scene*4)+1]+looper_list[(selected_scene*4)])&31);
-			 // step_length=looper_list[(selected_scene*4)+1]&31;
 
-			  	  // play _position needs to change need to track individually
-				//if ((seq_step_mod&7)==step_end)
 				play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
-				//	if (seq_step_mod==step_end) play_position=(play_position+1)&31;  // count up on zero at every 88 notes
-					//	play_position=seq_step_reset[selected_scene]; // maybe not ,just use main clock
-		//	  if ((play_position&3)==3) play_position=(play_position>>2)<<2;   // clear  2 bits on reset
-
-			//	if (play_screen) seq_step_mod = ((play_position&3)*8) + ((play_position>>2)&7);  // play mute steps
-				if (play_screen) seq_step_mod=((play_position&3)*8) + ((play_position>>2)&7);;  // track only this
-
-				  send_buffer[0] =144;
-			  send_buffer[1] = square_buttons_list[seq_step_mem];   // for displaying 0-32 , reset previous light then new on , should be based on memory
-			  send_buffer[2]=button_states[send_buffer[1]]; // last state
-			  send_buffer[3] =144;
-			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on
-			  if (record) send_buffer[5] = 4; else send_buffer[5] = 1;
-
-			  send_buffer[6] = 144;
-			  send_buffer[7] = buttons_list[counter_a]&127;
-			  send_buffer[8] = button_states[buttons_list[counter_a]]&127;  // not all will light up :/
 
 
 
 
-			  if(counter_a>18) counter_a=0; else counter_a++; // keep updating extra buttons from button states
 
 
-			  seq_step_mem=seq_step_mod;
 
-			  if ((button_states[64])& (!bar_looping)) {bar_looping=scene_buttons[0]+1;}
 
-			  if (!button_states[64]) {bar_looping=0; }
+
+
+			  ////
+
+
+
+
+			  if (seq_step_mem!=seq_step_mod)		{send_buffer_sent=1;}
+
 
 			  if(write_velocity && button_states[square_buttons_list[seq_step_mod]] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
 
 
-
-
-
-			  // needs to change
-			//  memcpy(midi_cue_noteoff,midi_cue,50);
-
-
-
-			  //serial_out[0]=145;//serial_out[1]=64;serial_out[2]=127;
 ////
 
-			  CDC_Transmit_FS(cdc_send_cue, cdc_len);cdc_len=0;
+
 
 
 /////
@@ -343,7 +361,7 @@ int main(void)
 
 			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
- 			//	printf(" play_list=%d ",play_list[seq_step_long+(selected_scene*32)]);
+ 				 if (send_buffer[9]) printf(" send_buffer[9]=%d\n ",send_buffer[9]);
  /*
  				printf("step_long= %d ", (seq_step_long+(selected_scene*32)));printf("button=%d ", button_states[square_buttons_list[seq_step_long]]);printf(" %d ", serial_out[3]);
  				printf(" %d ", serial_out[4]);printf("pitch=%d ", scene_pitch[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);
@@ -351,13 +369,13 @@ int main(void)
  				printf("    vel=%d ", scene_velocity[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);printf("  txt=%*s",3,lcd_char );printf("   %d\n ",lcd_pos);
  				printf("   %d\n ",lcd_pos);
  */
-
+/*
 			  for (i=0;i<32;i++){	printf(" %d",play_list[((selected_scene*32)+i)] );
 
 			  }
 
 			  printf("   %d\n ",lcd_pos);
-
+*/
 
  				// print section
 
@@ -390,14 +408,6 @@ int main(void)
 
  		}  // end of seq_enable
 
-	  if(all_update==1){   // update all square scene lights
-
-		  for (i=0;i<40;i++)  { send_all[i*3]=144;
-		  send_all[(i*3)+1]=i;
-		  send_all[(i*3)+2]=button_states[i];
-		  }
-
-		  all_update=2;}
 
 
 	  if((all_update>2) & (all_update<8)){   // update selected line  square scene lights 3-7

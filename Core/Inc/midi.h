@@ -3,7 +3,7 @@
 
 
 
-void midi_send(void){  // only for midi music no info return
+void midi_send(void){  // produces midi data from notes etc ,only for midi music no info return
 
 		uint8_t cue_counter=0;
 		uint16_t velocity=0;
@@ -15,6 +15,9 @@ void midi_send(void){  // only for midi music no info return
 
 
 		for (i=0;i<8;i++){    // drums
+
+		if(seq_step_enable[i]){	  // only runs on on note change
+
 			cue_counter=i*3;
 			data_temp2=(seq_step_long)+(i*32);   //8+ 0-63
 
@@ -22,14 +25,6 @@ void midi_send(void){  // only for midi music no info return
 			seq_step_mod=seq_step_list[i]&31;   // good but needs to change for looping
 			if (seq_step_list[i]>>5) retrigger=1; else retrigger=0;    // ESSENTIAL  stop retrigger if same position
 
-			//if (bar_looping ){   // LOOPING will be permanent by default for all channels
-
-		//	if((i==(bar_looping-1)) && loop_selector<2 )
-
-			//	seq_step_mod=((seq_step&7)+(looper_list[i<<2]))&31; //else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
-					//	if((i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
-					//	play_list_mute=1; // main muting control ,disable for now
-		//}	else
 			if (play_list[data_temp2 ])play_list_mute=1; else play_list_mute=0;     // disable play muting if looping
 		//	scene_transpose[i]= play_list[data_temp2 ]; // replaces transpose
 
@@ -39,8 +34,7 @@ void midi_send(void){  // only for midi music no info return
 
 							midi_cue[cue_counter]=midi_channel_list[i]+144;  // get midi channel
 
-							//midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
-							//midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+scene_transpose[i])& 127;;  //  pitch info +transpose  ?
+
 							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+play_list[data_temp2 ])& 127;;  //  pitch info +transpose but only from play_list
 
 
@@ -62,48 +56,9 @@ void midi_send(void){  // only for midi music no info return
 						} else {midi_cue[cue_counter]=0;nrpn_cue[cue_counter]=0;}      // end of note on
 
 
-
-		}    // end of loop
+						seq_step_enable[i]=0;
+		}}    // end of loop
 		midi_cue[50]=cue_counter;
-
-//		for (i=4;i<8;i++){   // notes in order or empty 0-7
-//
-//			cue_counter=i*3;
-//			data_temp2=(play_position&7)+(i*8);
-//			if((bar_looping) && (i==(bar_looping-1)) && loop_selector<2 )  seq_step_mod=((seq_step&7)+(pot_states[3]>>2))&31; else seq_step_mod=seq_step_list[i];  // enables looping on particular scene
-//			if((bar_looping) && (i==(bar_looping-1)) && loop_selector>1 )  seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
-//
-//
-//			if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  (play_list[data_temp2 ]&(1<<(play_position&3))))  {
-//
-//
-//						midi_cue[cue_counter]=144+midi_channel_list[i];  // channel 4
-//
-//
-//						midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+pot_tracking[(seq_step_mod>>3)+((i)*4)]+scene_transpose[i])& 127;;  //  pitch info ,pot tracking  ?
-//						if(mute_list[i]) midi_cue[cue_counter]=0;    //send nothing // IMPORTANT OR WILL SEND GARBAGE //
-//
-//				velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
-//			//	if (!velocity) velocity=127; //missing velocity info still
-//				velocity= (velocity*scene_volume[i])>>7;
-//
-//			//	if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
-//				//if (velocity<=scene_volume[i]) velocity=0;  // simple cutoff notes below a level
-//				//velocity= (velocity-scene_volume[i])>>7;
-//
-//
-//
-//
-//				if ((scene_solo) & (scene!=i)) velocity=0;   // mute everything but solo
-//
-//				midi_cue[(cue_counter)+2]=velocity&127;
-//				//cue_counter++;
-//			} else  midi_cue[cue_counter]=0;
-
-
-
-
-
 
 
 		}
@@ -166,7 +121,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 			uint8_t nrpn_temp[100];
 			uint8_t note_off_midi[50];
 			uint8_t cc_temp[22];
-
+			uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
 			uint8_t cue_counter2=0;
 			uint8_t nrpn_chl=185;
 			cc_temp[20]=0;
@@ -179,25 +134,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 				counterb=i*3;
 
 
-			//	if (nrpn_cue[counterb] || (es_filter_cue[0])){				// NRPN section and filter
-					if (nrpn_cue[counterb] ){				// NRPN section
-						nrpn_temp[cue_counter2] = nrpn_chl; // CC99  , ch 10
-						nrpn_temp[cue_counter2+1] =99;
-						nrpn_temp[cue_counter2+2] =5;
-						nrpn_temp[cue_counter2+3] = nrpn_chl;  //CC98
-						nrpn_temp[cue_counter2+4] =98;
-
-						{nrpn_temp[cue_counter2+5] =(nrpn_cue[counterb]-1)*8;   nrpn_temp[cue_counter2+8] =pitch_lut[nrpn_cue[counterb+1]&127]; } // data,   pitch translate
-
-						nrpn_temp[cue_counter2+6] = nrpn_chl;
-						nrpn_temp[cue_counter2+7] =6;
-
-						nrpn_cue[counterb]=0;     // clear once used
-						cue_counter2=cue_counter2+9;
-
-				}
-
-				if (midi_cc_cue[0]){       // send a single  cc
+				if (midi_cc_cue[0]){       // send a single  cc  if true
 
 					cc_temp[0]=midi_cc_cue[0]; // channel cc
 					cc_temp[1]=74;  // cutoff
@@ -207,7 +144,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 				}
 
-				if (midi_cue[counterb]){
+				if (midi_cue[counterb]){						  // note send if true
 
 					note_midi[cue_counter]=midi_cue[counterb];
 					note_midi[(cue_counter)+1]=midi_cue[counterb+1];
@@ -219,7 +156,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 				}}
 
 			note_midi[50]=cue_counter;
-			nrpn_temp[80]=cue_counter2;  // can be a trimmed a lot
+
 			nrpn_temp[80]=0;   //disable nrpn for now
 
 				//memcpy(cue_temp,midi_cue_noteoff,25);
@@ -257,19 +194,10 @@ void cdc_send(void){     // all midi runs often , need to separate
 			 if (pause==2)   len=0;   // disable all after last send
 
 
+
 			 serial_len=len;
 
 
-
-
-			 if (send_buffer[9]) {
-				 memcpy(send_temp + len, send_buffer, 12);
-				 len = len + 12;
-			 }                   // adding send_buffer
-			 else {
-				 memcpy(send_temp + len, send_buffer, 9);
-				 len = len + 9;
-			 }
 
 			 memcpy(serial_out, midi_extra_cue, midi_extra_cue[28]); // extra stuff sent , anything
 			 // start of serial send
@@ -299,25 +227,58 @@ void cdc_send(void){     // all midi runs often , need to separate
 		//	nrpn_cue[50]=0;
 //
 
-if (cdc_len==0) {			// only process after cdc send
+	if (cdc_len == 0) {	// only process after cdc send and only cdc send stuff , only  controller now
 
-			if (all_update==2){  // send on note off
+		len=0;
 
-				memcpy(send_temp+len,send_all,120);
-				len=len+120;
-				all_update=0;
+			if (play_screen) seq_step_mod=((play_position&3)*8) + ((play_position>>2)&7);
+			uint8_t button_exception1=square_buttons_list[((seq_step_mod ) & 31)];
+			uint8_t button_colour=0;
+			  if (record) button_colour=4; else button_colour=1;
 
-			}
-			if (all_update==10){  // send on note off
+		all_update=1;
 
-				memcpy(send_temp+len,send_all,24);
-				len=len+24;
-				all_update=0;
+		if(all_update==1){   // update all square scene lights
 
-			}
+			  for (i=0;i<40;i++)  {
 
-			memcpy(cdc_send_cue,send_temp,len);    // copy for cdc
-			cdc_len=len;}
+
+			  if (((button_states_save[i]) != button_states[i]) && (i!=button_exception1))  // send if changed
+			  {
+				  send_temp[len]=144;
+				  send_temp[len+1]=i;
+				  send_temp[len+2]=button_states[i];
+				 	len=len+3;
+				  button_states_save[i] = button_states[i];
+			  }
+			  if((i==button_exception1) && (button_states_save[i]!=button_colour)) {   // green moving button
+			  send_temp[len]=144;
+			  send_temp[len+1]=i;
+			  send_temp[len+2]=button_colour;
+			  len=len+3;
+			  button_states_save[i] =button_colour;
+			  }
+
+			  }
+
+		if (send_buffer[6]) {
+			memcpy(send_temp + len, send_buffer + 6, 3); // extra buttons, ok
+			len = len + 3;
+			send_buffer[6] = 0;
+
+		}
+		all_update = 0;
+		}
+	//	if (send_buffer_sent==2){
+//			memcpy(send_temp + len, send_buffer, 6);  // green moving button ,ok
+	//	len = len + 6;
+
+		send_buffer_sent=1;
+
+
+		memcpy(cdc_send_cue, send_temp, len);    // copy for cdc
+		cdc_len = len;
+	}
 
 
 
@@ -333,4 +294,78 @@ if (cdc_len==0) {			// only process after cdc send
 		}
 
 
+void nrpn_send(void){			 // all nrpn data goes here ,sends as well on serial
 
+
+
+	//UART_HandleTypeDef huart1;
+			uint8_t len;  // note on
+			uint8_t send_temp[256];
+			uint8_t len1;  // note off
+			uint8_t cue_counter;
+			uint8_t counterb;
+			uint8_t note_midi[50];
+			uint8_t nrpn_temp[100];
+			uint8_t note_off_midi[50];
+			uint8_t cc_temp[22];
+
+			uint8_t cue_counter2=0;
+			uint8_t nrpn_chl=185;
+			cc_temp[20]=0;
+			//memcpy(cue_temp,midi_cue,25);
+
+
+
+			cue_counter=0;
+			for (i=0;i<8;i++){  // short , ready to send notes only
+				counterb=i*3;
+
+
+			//	if (nrpn_cue[counterb] || (es_filter_cue[0])){				// NRPN section and filter
+					if (nrpn_cue[counterb] ){				// NRPN section   sent if true
+						nrpn_temp[cue_counter2] = nrpn_chl; // CC99  , ch 10
+						nrpn_temp[cue_counter2+1] =99;
+						nrpn_temp[cue_counter2+2] =5;
+						nrpn_temp[cue_counter2+3] = nrpn_chl;  //CC98
+						nrpn_temp[cue_counter2+4] =98;
+
+						{nrpn_temp[cue_counter2+5] =(nrpn_cue[counterb]-1)*8;   nrpn_temp[cue_counter2+8] =pitch_lut[nrpn_cue[counterb+1]&127]; } // data,   pitch translate
+
+						nrpn_temp[cue_counter2+6] = nrpn_chl;
+						nrpn_temp[cue_counter2+7] =6;
+
+						nrpn_cue[counterb]=0;     // clear once used
+						cue_counter2=cue_counter2+9;
+
+				}
+
+			}
+
+			nrpn_temp[80]=cue_counter2;  // can be a trimmed a lot
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
