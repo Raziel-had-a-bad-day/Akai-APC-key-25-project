@@ -16,21 +16,29 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 		for (i=0;i<8;i++){    // drums
 
-		if(seq_step_enable[i]){	  // only runs on on note change
+		//if(seq_step_enable[i]){	  // only runs on step change
 
 			cue_counter=i*3;
 			data_temp2=(seq_step_long)+(i*32);   //8+ 0-63
 
 
-			seq_step_mod=seq_step_list[i]&31;   // good but needs to change for looping
+			seq_step_mod=seq_step_list[i]&31;   // stays for now ,used only for setting keychange
 			if (seq_step_list[i]>>5) retrigger=1; else retrigger=0;    // ESSENTIAL  stop retrigger if same position
 
-			if (play_list[data_temp2 ])play_list_mute=1; else play_list_mute=0;     // disable play muting if looping
+		//	if (play_list[data_temp2 ])play_list_mute=1; else play_list_mute=0;     // disable play muting if looping
 		//	scene_transpose[i]= play_list[data_temp2 ]; // replaces transpose
 
 
 
-						if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  play_list_mute  	&& (!retrigger) )     {    //  NOTE ON   ,disable if retrigger, plays from scene memory but only for note one
+						if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  play_list_mute  	&& (!retrigger) &&
+								(loop_screen_note_on[i]==seq_step_fine[i])    // important , note on trigger now
+
+
+						)     {    //  NOTE ON   ,disable if retrigger, plays from scene memory but only for note one
+
+
+
+
 
 							midi_cue[cue_counter]=midi_channel_list[i]+144;  // get midi channel
 
@@ -38,8 +46,8 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+play_list[data_temp2 ])& 127;;  //  pitch info +transpose but only from play_list
 
 
-							if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i+1; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
-							else 	nrpn_cue[cue_counter]=0;
+					//		if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i+1; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
+						//	else 	nrpn_cue[cue_counter]=0;
 
 							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // use drum list if set to  channel 10
 
@@ -57,7 +65,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 
 						seq_step_enable[i]=0;
-		}}    // end of loop
+		}   // end of loop
 		midi_cue[50]=cue_counter;
 
 
@@ -232,34 +240,57 @@ void cdc_send(void){     // all midi runs often , need to separate
 		len=0;
 
 			if (play_screen) seq_step_mod=((play_position&3)*8) + ((play_position>>2)&7);
-			uint8_t button_exception1=square_buttons_list[((seq_step_mod ) & 31)];
+		//	uint8_t button_exception1=square_buttons_list[((seq_step_mod ) & 31)]; // 0-40
+			uint8_t button_exception1=((seq_step_mod ) & 31);
 			uint8_t button_colour=0;
 			  if (record) button_colour=4; else button_colour=1;
 
 		all_update=1;
 
-		if(all_update==1){   // update all square scene lights
+		if((all_update==1)){   // update all square scene lights on main screen
 
-			  for (i=0;i<40;i++)  {
+			  for (i=0;i<32;i++)  {
 
+				  uint8_t display_button=button_states[i+8]; // just holds normal 0-32 number value
+				  uint8_t alt_list=square_buttons_list[i];
 
-			  if (((button_states_save[i]) != button_states[i]) && (i!=button_exception1))  // send if changed
+			  if (((button_states_save[i]) != display_button) && (i!=button_exception1))  // send if changed
 			  {
 				  send_temp[len]=144;
-				  send_temp[len+1]=i;
-				  send_temp[len+2]=button_states[i];
+				  send_temp[len+1]=alt_list;
+				  send_temp[len+2]=display_button;  // only this part needs to change , all other normal
 				 	len=len+3;
-				  button_states_save[i] = button_states[i];
+				  button_states_save[i] = display_button;
 			  }
-			  if((i==button_exception1) && (button_states_save[i]!=button_colour)) {   // green moving button
+
+			  if((i==button_exception1) && (button_states_save[i]!=button_colour)) {   // green moving button , seems ok
 			  send_temp[len]=144;
-			  send_temp[len+1]=i;
+			  send_temp[len+1]=alt_list;
 			  send_temp[len+2]=button_colour;
 			  len=len+3;
 			  button_states_save[i] =button_colour;
 			  }
 
 			  }
+
+			  for (i=0;i<8;i++)  {  //selection
+
+			  				  uint8_t display_button=button_states[i]; // just holds normal 0-32 number value
+
+
+			  			  if ((button_states_save[i+32] != display_button))  // send if changed
+			  			  {
+			  				  send_temp[len]=144;
+			  				  send_temp[len+1]=i;
+			  				  send_temp[len+2]=display_button;  // only this part needs to change , all other normal
+			  				 	len=len+3;
+			  				  button_states_save[i+32] = display_button;
+			  			  }
+			  }
+
+
+
+
 
 		if (send_buffer[6]) {
 			memcpy(send_temp + len, send_buffer + 6, 3); // extra buttons, ok
@@ -269,6 +300,48 @@ void cdc_send(void){     // all midi runs often , need to separate
 		}
 		all_update = 0;
 		}
+
+/*
+
+		if((all_update==1)&&(loop_selector)){   // update all square scene lights on loop screen
+
+					  for (i=0;i<40;i++)  {
+
+
+					  if (((button_states_save[i]) != button_states_loop[i]) && (i!=button_exception1))  // send if changed
+					  {
+						  send_temp[len]=144;
+						  send_temp[len+1]=i;
+						  send_temp[len+2]=button_states[i];
+						 	len=len+3;
+						  button_states_save[i] = button_states_loop[i];
+					  }
+					  if((i==button_exception1) && (button_states_save[i]!=button_colour)) {   // green moving button
+					  send_temp[len]=144;
+					  send_temp[len+1]=i;
+					  send_temp[len+2]=button_colour;
+					  len=len+3;
+					  button_states_save[i] =button_colour;
+					  }
+
+					  }
+
+				if (send_buffer[6]) {
+					memcpy(send_temp + len, send_buffer + 6, 3); // extra buttons, ok
+					len = len + 3;
+					send_buffer[6] = 0;
+
+				}
+				all_update = 0;
+				}
+*/
+
+
+
+
+
+
+
 	//	if (send_buffer_sent==2){
 //			memcpy(send_temp + len, send_buffer, 6);  // green moving button ,ok
 	//	len = len + 6;

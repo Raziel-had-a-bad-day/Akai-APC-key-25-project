@@ -67,11 +67,11 @@ uint8_t trigger_mem;
 // play 91 . stop all clip =81 ,record 93 ,shift button 98 ,82 clip stop
 // round horizontal 64-71
 // velocity  1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
-uint8_t square_buttons_list [33]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15}; // just reads buttons in top.down order
-uint8_t button_convert[41]=	{32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
+uint8_t square_buttons_list [40]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7}; // just reads buttons in top.down order
+uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
 uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 3 bits 7-5 , pitch 5 bits LSB 0-4
-uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , channel 1, only used for display info and nothing else
+uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , 8-40 (0-32)  is out of order to make it easier on operations
 uint8_t scene_pitch[260]; // stores a pitch value per field 8*32 , stored in order
 uint8_t scene_velocity[260]; // stores a pitch value per field 8*32
 uint8_t pot_states[8]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current state
@@ -100,7 +100,11 @@ uint8_t all_settings[200];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
 uint8_t other_buttons_hold[20]; // keeps track of buttons
 uint8_t send_buffer_sent;
-uint8_t button_states_save[100];
+uint8_t button_states_save[100]; // reference for button changes for controller
+uint8_t button_states_loop[256];  // stored,loop screen buttons , on/off
+uint16_t  loop_screen_note_on[33];    //calculated(speed+button_states_loop), keeps info on note on 2048 count
+uint16_t loop_screen_note_off[33]; 		// calculated, note off record also 2048 count
+uint8_t button_states_main[64]; // button states on main screen , copied
 
 uint8_t seq_step_mem;  // mem for looper
 

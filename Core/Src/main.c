@@ -111,7 +111,8 @@ void lcd_start(void);
 void lcd_print(uint8_t  pos , char print);  // position 0-39 , character
 void lcd_menu_vars(void);
 void nrpn_send(void);
-
+void loop_screen(void);// loop screen change
+void note_buttons(void); // all note functions from buttons
 
 /* USER CODE END PFP */
 
@@ -206,16 +207,16 @@ int main(void)
 
 				  for (i=0;i<8;i++){				// controls steps needs better res
 
-					  step_end=((looper_list[(i*4)+1]+looper_list[(i*4)])&31);  // end of loop position
+				//	  step_end=((looper_list[(i*4)+1]+looper_list[(i*4)])&31);  // end of loop position , not needed
 
 
-					  seq_step_fine[i] = (seq_step_fine[i]+8)&2047;   // slow speed option change  +8 normal speed  0-255
+					  seq_step_fine[i] = (seq_step_fine[i]+8)&2047;   // slow speed option change  +8 normal speed  0-255 ,default
 
 
 					  step_temp=(( seq_step_fine[i]>>6)&31);  // reads fine position
 					  if(seq_step_list[i]!=step_temp) seq_step_enable[i]=1; // flips on change of step
 
-					  if ((step_temp==step_end) && (step_temp))  { seq_step_fine[i] =looper_list[(i*4)]<<6; seq_step_reset[i]=(seq_step_reset[i]+1)&31; } // jump to start of loop, too early
+					//  if ((step_temp==step_end) && (step_temp))  { seq_step_fine[i] =looper_list[(i*4)]<<6; seq_step_reset[i]=(seq_step_reset[i]+1)&31; } // jump to start of loop, too early
 
 
 					  if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   //  copy back unless repeating then enable bit 6 , to stop retriggering notes
@@ -226,7 +227,7 @@ int main(void)
 			  if (!pause)		 {midi_send();note_off();}   // midi data calculate
 			  cdc_send(); // all midi compiled for send
 
-
+			 // send_buffer_sent=1;
 			  if (send_buffer_sent==1)                  {    // moving light send and button change , quick
 
 				    // track only this
@@ -331,37 +332,18 @@ int main(void)
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
 
-
-
-
-
-
-
-
-
-
-			  ////
-
-
-
-
 			  if (seq_step_mem!=seq_step_mod)		{send_buffer_sent=1;}
 
 
-			  if(write_velocity && button_states[square_buttons_list[seq_step_mod]] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
+			  if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
 
 
 ////
 
 
-
-
-/////
-
-
 			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
- 				 if (send_buffer[9]) printf(" send_buffer[9]=%d\n ",send_buffer[9]);
+ 			//	 if (send_buffer[9]) printf(" send_buffer[9]=%d\n ",send_buffer[9]);
  /*
  				printf("step_long= %d ", (seq_step_long+(selected_scene*32)));printf("button=%d ", button_states[square_buttons_list[seq_step_long]]);printf(" %d ", serial_out[3]);
  				printf(" %d ", serial_out[4]);printf("pitch=%d ", scene_pitch[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);
@@ -369,13 +351,13 @@ int main(void)
  				printf("    vel=%d ", scene_velocity[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);printf("  txt=%*s",3,lcd_char );printf("   %d\n ",lcd_pos);
  				printf("   %d\n ",lcd_pos);
  */
-/*
-			  for (i=0;i<32;i++){	printf(" %d",play_list[((selected_scene*32)+i)] );
+
+			  for (i=0;i<40;i++){	printf(" %d",button_states[i] );
 
 			  }
 
 			  printf("   %d\n ",lcd_pos);
-*/
+
 
  				// print section
 
@@ -410,26 +392,26 @@ int main(void)
 
 
 
-	  if((all_update>2) & (all_update<8)){   // update selected line  square scene lights 3-7
-
-
-
-		  uint8_t select_line=(((all_update-3))*8)&31;
-
-		  select_line= square_buttons_list [select_line];
-
-		  temp=select_line;
-
-
-		  for (i=0;i<8;i++)  {
-			  send_all[i*3]=144;
-			  send_all[(i*3)+1]=i+select_line;    // button
-			  send_all[(i*3)+2]=button_states[i+select_line];   // button value
-		  }
-
-		  all_update=10;}
-
-
+//	  if((all_update>2) & (all_update<8)){   // update selected line  square scene lights 3-7
+//
+//
+//
+//		  uint8_t select_line=(((all_update-3))*8)&31;
+//
+//		  select_line= square_buttons_list [select_line];
+//
+//		  temp=select_line;
+//
+//
+//		  for (i=0;i<8;i++)  {
+//			  send_all[i*3]=144;
+//			  send_all[(i*3)+1]=i+select_line;    // button
+//			  send_all[(i*3)+2]=button_states[i+select_line];   // button value
+//		  }
+//
+//		  all_update=10;}
+//
+//
 
 
 /*
@@ -505,12 +487,14 @@ int main(void)
  				uint8_t data_temp=i+(scene_buttons[0]*32);
 
 
- 				if (!play_screen){
- 		//	{	  // this needs to go
+ 				if ((!play_screen) &&(!loop_selector)) {main_screen();
 
- 			//	if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; else scene_memory[data_temp]	= 0;}			// note data
- 			//	if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= (scene_velocity [data_temp]<<1)+scene_pitch[data_temp]; }		  // add but dont remove
- 			if (button_states [square_buttons_list[i]] )  scene_memory[data_temp]	= ((scene_velocity [data_temp])&112)+scene_pitch[data_temp]; } // only for current
+ 			if (button_states [i+8] )  scene_memory[data_temp]	= ((scene_velocity [data_temp])&112)+scene_pitch[data_temp]; } // only for current
+
+ 			//	if (!play_screen &&(loop_selector==2)){
+ 				 		//	if (button_states [i+8] )  button_states[i+8]	= button_states_loop [data_temp]; }
+
+
 
  		  }
  			//	}  // play list  muting

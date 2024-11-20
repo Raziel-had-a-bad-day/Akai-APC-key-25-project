@@ -190,9 +190,9 @@ void flash_read(void){     // 1kbyte for now
 	for (i=0;i<32;i++)
 		//pot_tracking[i>>1] =scene_transpose[3+(i>>3)];
 
-	{if (scene_memory[i]) button_states[square_buttons_list[i]]=5; // needs this to run first so first page loads
+	if (scene_memory[i]) button_states[i+8]=5; // needs this to run first so first page loads
 
-	}
+
 	if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting
 
 
@@ -222,7 +222,11 @@ void flash_read(void){     // 1kbyte for now
 				  pan=0;
 				 scene_buttons[0]=0;
 				 all_update=1;
-				 button_states[square_buttons_list[patch_save]]=0;
+
+				 button_states[patch_save+8]=0;
+				 memcpy(button_states_main,button_states,40);
+				 memcpy(button_states_save,button_states+8,32);
+				 memcpy(button_states_save+32,button_states,8);
 
 }
 void panic_delete(void){
