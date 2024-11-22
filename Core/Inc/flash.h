@@ -139,9 +139,45 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
 				  HAL_Delay(20);
 
+				  memcpy  (test_data3+4 ,button_states_loop,  256);
+						  test_data3[0]=0x06;
+						  test_data3[2]=patch_mem+3; //page6
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
+								  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
+								  HAL_Delay(20);
 
+
+								  test_data3[0]=0x02; //write ,page program
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);   // low
+								  HAL_SPI_Transmit(&hspi1, test_data3 ,260, 1000);  //address,then data
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
+								  HAL_Delay(200);
+
+								  test_data3[0]=0x04; //disable write
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0); // low
+								  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
+								  HAL_Delay(20);
 		  HAL_Delay(500);
-		//  write_once=1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		  //  write_once=1;
 		  send=0;
 		  button_states[70]=0;
 		  button_states[69]=0;
@@ -179,9 +215,9 @@ void flash_read(void){     // 1kbyte for now
 	memcpy(mute_list,all_settings+49,8);
 	memcpy(scene_volume,all_settings+57,8);
 	memcpy(midi_channel_list,all_settings+65,8);
-	memcpy(looper_list,all_settings+73,32);
-	memcpy(play_list,test_data3+516,256);   // next block
-
+	memcpy(looper_list,all_settings+73,32); // first 256bytes
+	memcpy(play_list,test_data3+516,256);   // next block (+4)
+	memcpy(button_states_loop,test_data3+772,256); // need more space
 
 	tempo=all_settings[200];
 	if (tempo==255) tempo=120;
@@ -202,6 +238,34 @@ void flash_read(void){     // 1kbyte for now
 
 	}
 	if (tempo==255)  tempo= 120;  //sets it for tempo 120 in case missing
+
+
+
+	for (n=0;n<8;n++){			//initial loop fill
+		uint16_t  loop_speed=((looper_list[(n*4)+2])+1);
+		uint8_t note_length=looper_list[(n*4)+3];
+		loop_screen_last_note[n]=16;
+
+
+		for (i=0;i<32;i++) {// loop notes fill
+
+					uint8_t data_temp2=i+(n*32);    // button + scene_select writes all on selected
+
+
+
+					if (button_states_loop[data_temp2]) {
+
+						 loop_screen_note_on[data_temp2]= ((i*loop_speed)+1)&255;    //  creates a short playlist , multiplied by speed 1-8
+						 loop_screen_note_off[data_temp2]= (loop_screen_note_on[data_temp2]+note_length+8)&255;  // note off send
+
+						 loop_screen_last_note[n]=i;
+
+					} //else loop_screen_note_on[data_temp2]=0;
+
+
+					}	}
+
+
 
 	float tempo_hold=1;  // calculate tempo look up
 	uint16_t counter;

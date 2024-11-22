@@ -7,31 +7,61 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 		uint8_t cue_counter=0;
 		uint16_t velocity=0;
-		uint8_t seq_step_mod=seq_step;
+		uint8_t seq_step_mod=seq_step_list[0];
 		uint8_t scene=scene_buttons[0];
-		 uint8_t data_temp2;
+
 		 uint8_t retrigger=0; // enable if seq_step hasn't_ moved
 		 uint8_t play_list_mute=1;
+		 uint8_t note_enable=0;
+		 uint8_t current_note;
+		 uint8_t loop_note;
+		 uint8_t i_s;
+		 uint8_t data_temp2;
 
 
 		for (i=0;i<8;i++){    // drums
 
-		//if(seq_step_enable[i]){	  // only runs on step change
+
+			seq_step_mod=seq_step_list[i]&31;
+			uint8_t long_note=(scene_memory[seq_step_mod+(i*32)]); // main screen
+			//uint16_t short_note=0;
+			uint16_t current_pos=(seq_step_fine[i]+1)&255;   // +8 to 2048 , gotta reset not much point otherwise
+			i_s=i*32;
+
+			if (long_note && (note_latch[i]) && (note_latch_pos[i]<(current_pos+16) )) note_latch_pos[i]=seq_step_fine[i]&255; //retriger but only after note change
+			if (long_note && (!note_latch[i]))  {note_latch[i]=1;note_latch_pos[i]=seq_step_fine[i]&255;} //enables loop first trigger or retrigger , constantly triggers if disabled
+
 
 			cue_counter=i*3;
-			data_temp2=(seq_step_long)+(i*32);   //8+ 0-63
+			data_temp2=(seq_step_mod)+(i_s);   //8+ 0-63
+			if(scene_pitch[data_temp2])  pitch_hold[i]=scene_pitch[data_temp2];  // remember last note pitch
+
+				if (note_latch[i]){			// trigger loop notes, ok
+				for (n=0;n<32;n++){
+					loop_note=loop_screen_note_on[n+(i_s)];  // step fine position
+
+					if	((((loop_note+note_latch_pos[i])&255)==current_pos) && (loop_note))  // if reaches seq_step_fine
+					{note_enable=1; // search for note
+					current_note=button_states_loop[(i_s)+n];
+					if (n==(loop_screen_last_note[i])) note_latch[i]=0;
+
+			}
+
+			}
+			} //end of loop
 
 
-			seq_step_mod=seq_step_list[i]&31;   // stays for now ,used only for setting keychange
-			if (seq_step_list[i]>>5) retrigger=1; else retrigger=0;    // ESSENTIAL  stop retrigger if same position
+		//	if (i!=0) note_enable=0;
+			   // stays for now ,used only for setting keychange
+		//	if (seq_step_list[i]>>5) retrigger=1; else retrigger=0;    // ESSENTIAL  stop retrigger if same position
 
 		//	if (play_list[data_temp2 ])play_list_mute=1; else play_list_mute=0;     // disable play muting if looping
 		//	scene_transpose[i]= play_list[data_temp2 ]; // replaces transpose
 
 
 
-						if ((scene_memory[seq_step_mod+(i*32)]) && (!mute_list[i]) &&  play_list_mute  	&& (!retrigger) &&
-								(loop_screen_note_on[i]==seq_step_fine[i])    // important , note on trigger now
+						if ( (!mute_list[i]) &&  play_list_mute  	&& (!retrigger) &&
+								(note_enable)    // important , note on trigger now
 
 
 						)     {    //  NOTE ON   ,disable if retrigger, plays from scene memory but only for note one
@@ -43,17 +73,17 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							midi_cue[cue_counter]=midi_channel_list[i]+144;  // get midi channel
 
 
-							midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+play_list[data_temp2 ])& 127;;  //  pitch info +transpose but only from play_list
-
-
+						//	midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)])+play_list[data_temp2 ])& 127;;  //  pitch info +transpose but only from play_list
+							//midi_cue[(cue_counter)+1]=((scene_pitch[seq_step_mod+(i*32)]))& 127;;  //  pitch info +transpose but only from play_list
+							midi_cue[(cue_counter)+1]=(current_note+pitch_hold[i]) & 127;;
 					//		if ((nrpn_cue[(cue_counter+1)])!=(midi_cue[(cue_counter)+1]))				{	nrpn_cue[cue_counter]=i+1; nrpn_cue[(cue_counter+1)]=midi_cue[(cue_counter)+1];  }// change nrpn value only if needed
 						//	else 	nrpn_cue[cue_counter]=0;
 
 							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // use drum list if set to  channel 10
 
 							if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
-							velocity=(scene_velocity[seq_step_mod+(i*32)])&127;   // use only 3 bit msb
-
+							velocity=(scene_velocity[data_temp2])&127;   // use only 3 bit msb
+							velocity=127;
 							//if (velocity>=scene_volume[i]) velocity=velocity-scene_volume[i]; else velocity=0;  // simple cutoff notes below a level
 							velocity= (velocity*scene_volume[i])>>7;
 
@@ -61,10 +91,11 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
 							midi_cue[(cue_counter)+2]=velocity&127;
 							//cue_counter++;
+						note_enable=0;
 						} else {midi_cue[cue_counter]=0;nrpn_cue[cue_counter]=0;}      // end of note on
 
 
-						seq_step_enable[i]=0;
+						seq_step_enable[i]=0;note_enable=0;
 		}   // end of loop
 		midi_cue[50]=cue_counter;
 
@@ -242,8 +273,27 @@ void cdc_send(void){     // all midi runs often , need to separate
 			if (play_screen) seq_step_mod=((play_position&3)*8) + ((play_position>>2)&7);
 		//	uint8_t button_exception1=square_buttons_list[((seq_step_mod ) & 31)]; // 0-40
 			uint8_t button_exception1=((seq_step_mod ) & 31);
+			uint8_t scene_select=scene_buttons[0];
 			uint8_t button_colour=0;
-			  if (record) button_colour=4; else button_colour=1;
+			uint8_t loop_length=loop_screen_last_note[scene_select];
+			uint8_t divider;
+
+
+			  if (loop_selector)
+			  {
+				  switch(loop_length>>2){
+
+				  case 0:  divider=7;break;
+				  case 3:divider=15;break;
+				  case 7:divider=31;break;
+				  default:divider=31;break;
+				  }
+
+				  button_exception1=(seq_step_fine[scene_select]>>3)&divider;
+				 }
+
+
+			if (record) button_colour=4; else button_colour=1;
 
 		all_update=1;
 

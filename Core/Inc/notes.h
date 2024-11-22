@@ -73,54 +73,51 @@ void main_screen(void){   // shows trigger point for loops
 
 
 }
-void loop_screen(void){
+void loop_screen(void){  // loop screen , runs always when enabled
 	//button_states_loop[33];  // stored,loop screen buttons , on/off
 	// loop_screen_note_on[33];    //calculated, keeps info on note on 2048 count
 	//loop_screen_note_off[33];
-	uint8_t position_counter; // set by loop length
+	//uint8_t position_counter; // set by loop length
 	uint8_t current_scene=scene_buttons[0]*32;
+	uint8_t selected_scene=scene_buttons[0];
+	//uint8_t loop_end=looper_list[(current_scene*4)+1];
+	uint16_t  loop_speed=((looper_list[(selected_scene*4)+2])+1);   // 8-64
 
-	uint8_t loop_end=looper_list[(current_scene*4)+1];
-	uint8_t  loop_speed=((looper_list[(current_scene*4)+2]+1)<<3);   // 8-64
+	uint16_t loop_length=looper_list[selected_scene*4]+1;
+	uint8_t note_length=looper_list[(selected_scene*4)+3]; // only for off
+	uint16_t data_temp2;
+	uint8_t offset=looper_list[selected_scene*4];
+	if(loop_selector==1) {memcpy(button_states_main+8,button_states+8,32);	}
 
-	uint16_t loop_start=looper_list[(current_scene>>3)]*loop_speed;
-	if(loop_selector==1) memcpy(button_states_main+8,button_states+8,32); // hold data once
-	loop_selector=2;
-	memcpy(button_states+8,button_states_loop+current_scene,32);
-
-
-	for (i=0;i<32;i++) {// loop notes fill
-
-					uint8_t data_temp2=i+(current_scene);    // button + scene_select writes all on selected
-				//	uint8_t data_temp3=button_states[i+8];      // change as its wrong
-				//	button_states[i+8]=button_states_loop[i+(current_scene)];  // read back notes 0-32 from loop store
-					button_states_loop[data_temp2]=button_states[i+8];
-
-				//	if   (button_states[i+8 ])		    data_temp3=5;    // this runs first , always
-					//else  data_temp3=0; 	    //write to buttons only when pressed , this i ok
+	//loop_screen_last_note[selected_scene]=loop_length; // wiil do for now
 
 
-				 // 0-255
+	for (i=0;i<32;i++) {// loop notes fill but only current scene , needs to chanee as it keeps writing to wrong scene
 
-					//if (button_states_loop[data_temp2]) button_states[i+8] = 5; else button_states[i+8] = 0;
+		data_temp2=i+(current_scene);    // this all needs to be elsewhere
 
+		if(loop_selector==1){
 
+				if (button_states_loop[data_temp2]) button_states[i+8]=5; else button_states[i+8]=0; } // read back on first select
 
-					if (position_counter<loop_end){ // for note out data
+			if (!button_states[i+8])  {button_states_loop[data_temp2]=0; loop_screen_note_on[data_temp2]=0;} //write from buttons ,test only
 
+			if (button_states_loop[data_temp2]) {
 
-					if (button_states[i+8]==5) {
+						 loop_screen_note_on[data_temp2]= ((((i*loop_speed))+1)+offset)&255;    //  creates a short playlist , multiplied by speed 1-8
+						 loop_screen_note_off[data_temp2]= ((loop_screen_note_on[data_temp2]+note_length)+1)&255;  // note off send
 
-						 loop_screen_note_on[i]= ((i*loop_speed)+loop_start)&2047;    // multiplied by speed 1-8
-					 }
-					position_counter++;
+						 loop_screen_last_note[selected_scene]=i;
+
+					}
+			//		position_counter++;
+
+					}
+					loop_selector=2;
 
 					}
 
 
-					}
-
-		}
 
 void note_buttons(void){
 	//uint8_t scene_select=0;
@@ -134,7 +131,10 @@ void note_buttons(void){
 	uint8_t current_scene=((scene_buttons[0])*32);
 	last_button = square_buttons_list[incoming_data1]+ (current_scene);   // memory location  of note pressed 0-256
 			uint8_t last_press = square_buttons_list[incoming_data1];  //0-32
+			for (i = 0; i < 40; i++){   // test for bad data
+				if (button_states[i]>10) button_states[i]=0;
 
+			}
 
 	if ((!clip_stop) && (!pan) && (!loop_selector)) {     // main screen , normal
 
@@ -152,7 +152,7 @@ void note_buttons(void){
 						scene_pitch[last_button] = last_key;
 						last_key = 0;}
 					else
-						scene_pitch[last_button] = pot_states[0] >> 2; // add pitch
+						scene_pitch[last_button] = scene_transpose[scene_buttons[0]]>>1; // add pitch only with transpose
 
 					scene_velocity[last_button] =(pot_states[1]>>6)+64;
 			} else
@@ -165,27 +165,12 @@ void note_buttons(void){
 
 			{ //  , only if enabled though ,
 
-				//if (shift) {seq_step_long=last_button&31; play_position=seq_step_long; }
+
 
 				if (button_states[last_press+8])  // if button lit but not in play screen
-					button_states_loop[last_button]=5;
-				//else button_states_loop[last_button]=0;
+					button_states_loop[last_button]=pot_states[0];   // enter pitch
 
-					//if(loop_selector ) {button_states_loop[last_button]=5;}
-					//if (button_states_loop[last_button]==5)
-
-				//if(loop_selector ) {button_states_loop[last_button]=0;}
-			 // incoming buttons 0 -32
 		}    // play screen off and patch screen off
-
-
-
-
-
-
-
-
-
 
 
 	if (clip_stop && (!pan)) {     // play mute  screen
@@ -213,7 +198,7 @@ void buttons_store(void){    // incoming data from controller
 	uint8_t status=incoming_message[0];
 	//uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
 	uint16_t clear[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
+	uint8_t current_scene=scene_buttons[0];
 	if (status == 128) // note off
 		{note_off_flag[0]=0;
 
@@ -312,7 +297,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 	if (status == 176) {// store pot
-		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot
+		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot all
 		if (pan) {
 			patch_save=pot_states[7]>>4;   // set next memory to be save d or loaded
 			patch_screen();
@@ -378,10 +363,10 @@ void buttons_store(void){    // incoming data from controller
 		} //end of pots 4-8
 		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (loop_selector))  {    // pots 4-8  with loop light on
 
-		if (incoming_data1==53)	looper_list[(scene_buttons[0]*4) ]=((pot_states[4]>>2)&31)+1;  // 1-32 start loop , not in real time just for storing
-		if (incoming_data1==54) looper_list[(scene_buttons[0]*4)+1]=(pot_states[5]>>2)&31;   // length
-		if (incoming_data1==55) looper_list[(scene_buttons[0]*4)+2]=(pot_states[6]>>5)&7; // speed
-
+		if (incoming_data1==52)	looper_list[(scene_buttons[0]*4) ]=(pot_states[4]>>4)&7;  // 1-32 start loop , not in real time just for storing
+		if (incoming_data1==53) looper_list[(scene_buttons[0]*4)+1]=(pot_states[5]>>2)&31;   // loop length
+		if (incoming_data1==54) looper_list[(scene_buttons[0]*4)+2]=(pot_states[6]>>4)&7; //  playback speed
+		if (incoming_data1==55) looper_list[(scene_buttons[0]*4)+3]=(pot_states[7]>>1)&63; // note length
 
 
 		}
@@ -424,7 +409,7 @@ void buttons_store(void){    // incoming data from controller
 
 			if ((scene_select)!=scene_buttons[0]){ // different scene selected
 
-
+					if(loop_selector) loop_selector=1;
 				if (!scene_mute)
 
 
@@ -441,13 +426,13 @@ void buttons_store(void){    // incoming data from controller
 
 
 			scene_buttons[0]=scene_select;
-			if(loop_selector) loop_screen();
+
 
 			//all_update=1;
 
 
 			 if(play_screen) {play_screen=2;   play_muting();} // needed ?
-			//if(loop_selector) {loop_screen();}
+
 			// if((!play_screen)&&(!loop_selector)) main_screen();
 
 
@@ -455,7 +440,7 @@ void buttons_store(void){    // incoming data from controller
 //  buttons from scene memory , ok , data seems to get lost here
 
 			 current_midi=midi_channel_list[scene_buttons[0]];
-			}
+			} //end of scene select
 
 	
 		scene_select=0;
@@ -463,7 +448,7 @@ void buttons_store(void){    // incoming data from controller
 	}
 
 	buffer_clear = 1;
-
+	if(loop_selector) loop_screen();
 	if (buffer_clear)
 		memcpy(cdc_buffer, clear, 3);
 

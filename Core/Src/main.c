@@ -181,7 +181,7 @@ int main(void)
 	other_buttons=1; // nothing
 
 	lcd_start();
-	// panic_delete();
+	// panic_delete();                 WATCH FOR WEIRD APC SENDS , IE UP ARROW PLUS BOTTOM ROW 3 SENDS CONSTANT CONTROLLER 50 INFO  ?
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -207,24 +207,22 @@ int main(void)
 
 				  for (i=0;i<8;i++){				// controls steps needs better res
 
-				//	  step_end=((looper_list[(i*4)+1]+looper_list[(i*4)])&31);  // end of loop position , not needed
+					  seq_step_fine[i] = (seq_step_fine[i]+1)&2047;   // long and slow , only 1/8 a note so 256 notes in total normal speed
 
-
-					  seq_step_fine[i] = (seq_step_fine[i]+8)&2047;   // slow speed option change  +8 normal speed  0-255 ,default
-
-
-					  step_temp=(( seq_step_fine[i]>>6)&31);  // reads fine position
-					  if(seq_step_list[i]!=step_temp) seq_step_enable[i]=1; // flips on change of step
+					  step_temp=(( seq_step_fine[i]>>4)&31);  // reads fine position , one note length is 64 count
+					//  if(seq_step_list[i]!=step_temp) seq_step_enable[i]=1; // flips on change of step
 
 					//  if ((step_temp==step_end) && (step_temp))  { seq_step_fine[i] =looper_list[(i*4)]<<6; seq_step_reset[i]=(seq_step_reset[i]+1)&31; } // jump to start of loop, too early
 
 
-					  if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   //  copy back unless repeating then enable bit 6 , to stop retriggering notes
-
-
+					//  if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   //  copy back unless repeating then enable bit 6 , to stop retriggering notes
+					//  if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;
+					  seq_step_list[i] =step_temp;
 				  }}
 
-			  if (!pause)		 {midi_send();note_off();}   // midi data calculate
+			//  if (!pause)		 {midi_send();note_off();}   // midi data calculate
+			  if (!pause)		 {midi_send();}   // midi data calculate
+
 			  cdc_send(); // all midi compiled for send
 
 			 // send_buffer_sent=1;
@@ -265,11 +263,11 @@ int main(void)
 
 
 
-
+			  			 if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info
 			  if (cdc_len) {CDC_Transmit_FS(cdc_send_cue, cdc_len);cdc_len=0;  } // USB send
 
 
-			  if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info
+
 
 
 			  if(pause  || down_arrow) {  //play notes  during pause or down arrow from keyboard , need to be elsewhere
@@ -299,7 +297,7 @@ int main(void)
 
 
 
-		  if ((s_temp) != (seq_pos>>3)) {			// normal sending
+		  if ((s_temp) != (seq_pos>>3)) {			// normal sending , very slow atm
 
 
 
@@ -317,7 +315,8 @@ int main(void)
 			  seq_step_mod=seq_step_list[selected_scene]&31;
 			  seq_current_step=seq_step_mod;
 			  loop_current_length=looper_list[(selected_scene*4)+1];
-			  loop_current_start=looper_list[(selected_scene*4)];
+			  loop_current_offset=looper_list[(selected_scene*4)];
+			  loop_current_speed=looper_list[(selected_scene*4)+2];
 
 			  //else seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
 			  //	  }
@@ -352,11 +351,11 @@ int main(void)
  				printf("   %d\n ",lcd_pos);
  */
 
-			  for (i=0;i<40;i++){	printf(" %d",button_states[i] );
+			  for (i=0;i<16;i++){	printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
 
 			  }
 
-			  printf("   %d\n ",lcd_pos);
+			  printf(" loop=%d ",loop_selector);  printf(" step=%d ",seq_step_list[0]);printf("   %d\n ",seq_step_fine[0]&255);
 
 
  				// print section

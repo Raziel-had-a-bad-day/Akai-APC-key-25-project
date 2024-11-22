@@ -102,10 +102,11 @@ uint8_t other_buttons_hold[20]; // keeps track of buttons
 uint8_t send_buffer_sent;
 uint8_t button_states_save[100]; // reference for button changes for controller
 uint8_t button_states_loop[256];  // stored,loop screen buttons , on/off
-uint16_t  loop_screen_note_on[33];    //calculated(speed+button_states_loop), keeps info on note on 2048 count
-uint16_t loop_screen_note_off[33]; 		// calculated, note off record also 2048 count
+uint16_t  loop_screen_note_on[256];    //calculated(speed+button_states_loop), keeps info on note on 2048 count ,relative needs to add current scene_memory
+uint16_t loop_screen_note_off[256]; 		// calculated, note off record also 2048 count
 uint8_t button_states_main[64]; // button states on main screen , copied
-
+uint8_t loop_current_speed;
+uint8_t pitch_hold[10]; //holds last not eplayed
 uint8_t seq_step_mem;  // mem for looper
 
 uint8_t pot_tracking[33] ; // record pot movements , maybe after 1 bar ,only transpose for now
@@ -131,7 +132,10 @@ uint8_t seq_current_step; // current position on selected from seq_step_list
 uint8_t seq_step_reset[10];  // tracks when seq_step_list reset to start
 uint8_t seq_step_long; // 32*32
 uint8_t seq_step_enable[9]; // step change tracking
-
+uint8_t loop_screen_scene;
+uint8_t loop_screen_last_note[9]; //holds last enabled loop screen note
+uint8_t note_latch[10]; // stays on when triggered
+uint16_t note_latch_pos[10]; // holds pos of note latch
 
 uint8_t serial_out[50];
 uint8_t serial_len;
@@ -151,7 +155,7 @@ uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
 uint8_t play_list_write=0; // keeps writing while shift is held down
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
 uint8_t looper_list[33]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start 2=length 3=gap between repeats 4=speed (default 0,32,0,8)
-uint8_t loop_current_start;
+uint8_t loop_current_offset;
 uint8_t loop_current_length;
 uint8_t step_record; // works in stop mode
 
