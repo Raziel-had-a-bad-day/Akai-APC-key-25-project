@@ -86,6 +86,7 @@ void loop_screen(void){  // loop screen , runs always when enabled
 	uint16_t loop_length=looper_list[selected_scene*4]+1;
 	uint8_t note_length=looper_list[(selected_scene*4)+3]; // only for off
 	uint16_t data_temp2;
+	uint8_t fast_bit;
 	uint8_t offset=looper_list[selected_scene*4];
 	if(loop_selector==1) {memcpy(button_states_main+8,button_states+8,32);	}
 
@@ -95,19 +96,22 @@ void loop_screen(void){  // loop screen , runs always when enabled
 	for (i=0;i<32;i++) {// loop notes fill but only current scene , needs to chanee as it keeps writing to wrong scene
 
 		data_temp2=i+(current_scene);    // this all needs to be elsewhere
-
+		fast_bit=i*8;
 		if(loop_selector==1){
 
 				if (button_states_loop[data_temp2]) button_states[i+8]=5; else button_states[i+8]=0; } // read back on first select
 
-			if (!button_states[i+8])  {button_states_loop[data_temp2]=0; loop_screen_note_on[data_temp2]=0;} //write from buttons ,test only
-
+			if (!button_states[i+8])  {button_states_loop[data_temp2]=0; loop_screen_note_on[fast_bit]=loop_screen_note_on[fast_bit] & ~ (1<<selected_scene);} //write from buttons ,test only
+			//if (!button_states[i+8])  button_states_loop[data_temp2]=0;
 			if (button_states_loop[data_temp2]) {
 
-						 loop_screen_note_on[data_temp2]= ((((i*loop_speed))+1)+offset)&255;    //  creates a short playlist , multiplied by speed 1-8
-						 loop_screen_note_off[data_temp2]= ((loop_screen_note_on[data_temp2]+note_length)+1)&255;  // note off send
+					//	 loop_screen_note_on[data_temp2]= ((((i*loop_speed))+1)+offset)&255;    //  creates a short playlist , multiplied by speed 1-8  0-255
+					//	 loop_screen_note_off[data_temp2]= ((loop_screen_note_on[data_temp2]+note_length)+1)&255;  // note off send    0-255
+				loop_screen_note_on[fast_bit]=loop_screen_note_on[fast_bit] | (1<<selected_scene);  // turn on bit , follows seq_pos
 
-						 loop_screen_last_note[selected_scene]=i;
+
+
+				loop_screen_last_note[selected_scene]=i;
 
 					}
 			//		position_counter++;
@@ -130,7 +134,8 @@ void note_buttons(void){
 	//uint8_t status=incoming_message[0];
 	uint8_t current_scene=((scene_buttons[0])*32);
 	last_button = square_buttons_list[incoming_data1]+ (current_scene);   // memory location  of note pressed 0-256
-			uint8_t last_press = square_buttons_list[incoming_data1];  //0-32
+	uint8_t last_button_current=square_buttons_list[incoming_data1]&31;
+	uint8_t last_press = square_buttons_list[incoming_data1];  //0-32
 			for (i = 0; i < 40; i++){   // test for bad data
 				if (button_states[i]>10) button_states[i]=0;
 
@@ -155,6 +160,9 @@ void note_buttons(void){
 						scene_pitch[last_button] = scene_transpose[scene_buttons[0]]>>1; // add pitch only with transpose
 
 					scene_velocity[last_button] =(pot_states[1]>>6)+64;
+					{if (scene_velocity[last_button]>96) note_accent[scene_buttons[0]]=note_accent[scene_buttons[0]]&(1<<last_button_current); }// flip accent
+
+
 			} else
 			{scene_memory[last_button] = 0;scene_velocity[last_button]=0;}
 
@@ -363,7 +371,7 @@ void buttons_store(void){    // incoming data from controller
 		} //end of pots 4-8
 		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (loop_selector))  {    // pots 4-8  with loop light on
 
-		if (incoming_data1==52)	looper_list[(scene_buttons[0]*4) ]=(pot_states[4]>>4)&7;  // 1-32 start loop , not in real time just for storing
+		if (incoming_data1==52)	looper_list[(scene_buttons[0]*4) ]=(pot_states[4]>>3)&15;  // 1-32 start loop , not in real time just for storing
 		if (incoming_data1==53) looper_list[(scene_buttons[0]*4)+1]=(pot_states[5]>>2)&31;   // loop length
 		if (incoming_data1==54) looper_list[(scene_buttons[0]*4)+2]=(pot_states[6]>>4)&7; //  playback speed
 		if (incoming_data1==55) looper_list[(scene_buttons[0]*4)+3]=(pot_states[7]>>1)&63; // note length

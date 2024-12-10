@@ -250,13 +250,19 @@ void flash_read(void){     // 1kbyte for now
 		for (i=0;i<32;i++) {// loop notes fill
 
 					uint8_t data_temp2=i+(n*32);    // button + scene_select writes all on selected
-
+					//uint16_t loop_pos=(i*8)
 
 
 					if (button_states_loop[data_temp2]) {
 
-						 loop_screen_note_on[data_temp2]= ((i*loop_speed)+1)&255;    //  creates a short playlist , multiplied by speed 1-8
-						 loop_screen_note_off[data_temp2]= (loop_screen_note_on[data_temp2]+note_length+8)&255;  // note off send
+						// loop_screen_note_on[data_temp2]= ((i*loop_speed)+1)&255;    //  creates a short playlist , multiplied by speed 1-8
+						 loop_screen_note_on[i*8]=loop_screen_note_on[i*8] | (1<<n);  // turn on bit, basic for now
+
+
+						 // loop_screen_note_on[data_temp2]=loop_screen_note_on[data_temp2] & ~ (1<<selected_scene);} //write from buttons ,test only
+
+
+						 //loop_screen_note_off[data_temp2]= (loop_screen_note_on[data_temp2]+note_length+8)&255;  // note off send
 
 						 loop_screen_last_note[n]=i;
 

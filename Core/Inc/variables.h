@@ -102,10 +102,12 @@ uint8_t other_buttons_hold[20]; // keeps track of buttons
 uint8_t send_buffer_sent;
 uint8_t button_states_save[100]; // reference for button changes for controller
 uint8_t button_states_loop[256];  // stored,loop screen buttons , on/off
-uint16_t  loop_screen_note_on[256];    //calculated(speed+button_states_loop), keeps info on note on 2048 count ,relative needs to add current scene_memory
+uint8_t  loop_screen_note_on[256];    //changed , 1 bit per note on , simply stores trigger info per 256 count for loop
 uint16_t loop_screen_note_off[256]; 		// calculated, note off record also 2048 count
 uint8_t button_states_main[64]; // button states on main screen , copied
 uint8_t loop_current_speed;
+uint8_t loop_lfo_out[30];  // used for some level of lfo using pot7 for now 0-255
+
 uint8_t pitch_hold[10]; //holds last not eplayed
 uint8_t seq_step_mem;  // mem for looper
 
@@ -148,7 +150,7 @@ uint8_t midi_cc[9]; // enabled if sending midi cc
 uint8_t midi_cc_cue[20];  //  0=part+1 ,1 is value
 uint8_t midi_extra_cue[30] ; // extra stuff to be sent that ins't regular [28] is length
 uint8_t current_midi; // holds selected channel
-
+uint32_t note_accent[9];  // stores accent data for tracks on/off
 uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part, change to hold transpose
 uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1

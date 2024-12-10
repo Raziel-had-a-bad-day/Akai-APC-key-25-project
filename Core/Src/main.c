@@ -113,7 +113,7 @@ void lcd_menu_vars(void);
 void nrpn_send(void);
 void loop_screen(void);// loop screen change
 void note_buttons(void); // all note functions from buttons
-
+void loop_lfo(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -207,16 +207,10 @@ int main(void)
 
 				  for (i=0;i<8;i++){				// controls steps needs better res
 
-					  seq_step_fine[i] = (seq_step_fine[i]+1)&2047;   // long and slow , only 1/8 a note so 256 notes in total normal speed
+					  seq_step_fine[i] = (seq_step_fine[i]+1)&255;   // long and slow , only 1/8 a note so 256 notes in total normal speed
 
 					  step_temp=(( seq_step_fine[i]>>4)&31);  // reads fine position , one note length is 64 count
-					//  if(seq_step_list[i]!=step_temp) seq_step_enable[i]=1; // flips on change of step
-
-					//  if ((step_temp==step_end) && (step_temp))  { seq_step_fine[i] =looper_list[(i*4)]<<6; seq_step_reset[i]=(seq_step_reset[i]+1)&31; } // jump to start of loop, too early
-
-
-					//  if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;   //  copy back unless repeating then enable bit 6 , to stop retriggering notes
-					//  if ( (seq_step_list[i]&31) ==(step_temp))   seq_step_list[i]=step_temp+32;  else     seq_step_list[i] =step_temp;
+					  step_temp=seq_pos>>3;  // ditch for now
 					  seq_step_list[i] =step_temp;
 				  }}
 
@@ -335,7 +329,7 @@ int main(void)
 
 
 			  if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
-
+			  if ((s_temp&7)==7) loop_lfo();
 
 ////
 
@@ -351,7 +345,14 @@ int main(void)
  				printf("   %d\n ",lcd_pos);
  */
 
-			  for (i=0;i<16;i++){	printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
+
+			  printf(" %d",loop_lfo_out[(selected_scene)+20] );
+			  for (i=0;i<16;i++){
+
+				//  printf(" %d",scene_pitch[(selected_scene*32)+i] );
+				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
+
+
 
 			  }
 
