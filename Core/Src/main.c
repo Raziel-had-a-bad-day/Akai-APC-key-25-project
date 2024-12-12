@@ -193,8 +193,11 @@ int main(void)
 
 	  if (seq_enable) {
 		  uint16_t step_temp=0;
-		  uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
-		  uint8_t step_end;
+		  //uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
+		  uint8_t seq_step_mod=(seq_pos>>3)&31;
+
+
+		  //uint8_t step_end;
 		//  uint8_t step_length;
 		  uint8_t selected_scene=scene_buttons[0];
 		//  uint8_t step_start;
@@ -222,14 +225,7 @@ int main(void)
 			 // send_buffer_sent=1;
 			  if (send_buffer_sent==1)                  {    // moving light send and button change , quick
 
-				    // track only this
-//			  				  send_buffer[0] =144;
-//			  			  send_buffer[1] = square_buttons_list[seq_step_mem];   // for displaying 0-32 , reset previous light then new on , should be based on memory
-//			  			  send_buffer[2]=button_states[send_buffer[1]]; // last state
-//			  			  send_buffer[3] =144;
-//			  			  send_buffer[4] = square_buttons_list[((seq_step_mod ) & 31)] ;  // set new light on , mostly for green moving button
-//
-//			  			  if (record) send_buffer[5] = 4; else send_buffer[5] = 1; //colour
+
 			  			seq_step_mem=seq_step_mod;
 			  			  send_buffer_sent=2;
 			  					}
@@ -241,7 +237,6 @@ int main(void)
 			  								  if (other_buttons_hold[i]!= button_states[buttons_list[i]]) {counter_a=i;
 			  								  other_buttons_hold[i]= button_states[buttons_list[i]];}
 			  							  	  	  }
-
 
 
 			  			  if (counter_a) {
@@ -257,7 +252,7 @@ int main(void)
 
 
 
-			  			 if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info
+			  			 if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info, sent seq_pos
 			  if (cdc_len) {CDC_Transmit_FS(cdc_send_cue, cdc_len);cdc_len=0;  } // USB send
 
 
@@ -299,27 +294,13 @@ int main(void)
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
 			 if (play_list_write) play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;    // keep writing if enabled
 
-			  //  if((bar_looping) && (scene_buttons[0]==(bar_looping-1)) )
-			  //	  {
-
-			  //  if (loop_selector<2)
-			  //  seq_step_mod=((seq_step&7)+(looper_list[scene_buttons[0]<<2]))&31;
-
 			  uint8_t selected_scene=scene_buttons[0];
 			  seq_step_mod=seq_step_list[selected_scene]&31;
 			  seq_current_step=seq_step_mod;
 			  loop_current_length=looper_list[(selected_scene*4)+1];
 			  loop_current_offset=looper_list[(selected_scene*4)];
 			  loop_current_speed=looper_list[(selected_scene*4)+2];
-
-			  //else seq_step_mod=((seq_step&7)+((loop_selector-2)*8))&31;
-			  //	  }
-
-
-			  // looper visual only when in scene though
-
-			  //step_start=looper_list[(selected_scene*4)+1];
-			  step_end=((looper_list[(selected_scene*4)+1]+looper_list[(selected_scene*4)])&31);
+			  lfo=loop_lfo_out[selected_scene+20];
 
 				play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
@@ -347,11 +328,13 @@ int main(void)
 
 
 			  printf(" %d",loop_lfo_out[(selected_scene)+20] );
-			  for (i=0;i<16;i++){
+			  printf(" midi = %d",midi_cue[i] );
 
-				//  printf(" %d",scene_pitch[(selected_scene*32)+i] );
+			  for (i=0;i<4;i++){
+
+				//  printf(" %d",midi_cue[(selected_scene*32)+i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
-
+				  printf(" midi = %d ",test_byte[+i] );
 
 
 			  }
