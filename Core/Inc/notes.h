@@ -119,8 +119,8 @@ void loop_screen(void){  // loop screen , runs always when enabled
 
 
 
-void note_buttons(void){
-    uint8_t pitch=(pot_states[0]>>2)+32;
+void note_buttons(void){  // always running
+    uint8_t pitch=1;
 	uint8_t incoming_message[3];
 	memcpy(incoming_message,cdc_buffer, 3); // works off only receiving buffer
 
@@ -147,10 +147,7 @@ void note_buttons(void){
 
 
 
-					if (pause) {
-						scene_pitch[last_button] = last_key;
-						last_key = 0;}
-					else
+
 						scene_pitch[last_button] = scene_transpose[scene_buttons[0]]>>1; // add pitch only with transpose
 
 					scene_velocity[last_button] =(pot_states[1]>>6)+64;
@@ -167,14 +164,14 @@ void note_buttons(void){
 
 			{ //  , only if enabled though ,
 
-
-
+		if (pause) pitch=keyboard[1]+32;  // during pause pitch comes from keyboard
+		pitch=keyboard[1]+32;  // 32+25
 				 // if button lit but not in play screen
 
 				switch(button_states[last_press+8]){    // change state
 							case 0 :button_states_loop[last_button]=0 ;   break;
 							case 3 :button_states_loop[last_button]=button_states_loop[last_button]|(1<<7) ;   break;		// add accent
-							case 5 :button_states_loop[last_button]=button_states_loop[last_button]|pitch; break;		// enter pitch
+							case 5 :button_states_loop[last_button]=(button_states_loop[last_button]&128)+pitch; break;		// enter pitch
 
 
 				}
@@ -205,7 +202,7 @@ void buttons_store(void){    // incoming data from controller
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
 	//uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
-	uint16_t clear[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t current_scene=scene_buttons[0];
 	if (status == 128) // note off
 		{note_off_flag[0]=0;
@@ -236,10 +233,10 @@ void buttons_store(void){    // incoming data from controller
 		if ((incoming_data1>40)&&(incoming_data1 <99) && (!clip_stop) ){				// button lights extras
 			alt_list=	 button_states[incoming_data1 ];
 			switch(alt_list){    // change state
-			case 0 :alt_list = 5;break;   // normal lights , yellow
-			case 3 :alt_list= 0;break;		// green
-			case 5 :alt_list = 0;  ;break;}
-			//case 5 :button_states[incoming_data1 ] = 3;break; }
+			case 0 :alt_list = 1;break;   // normal lights , yellow
+			case 5 :alt_list= 0;break;		// green
+			case 1 :alt_list = 0;  ;break;
+			case 7 :alt_list = 0; ;break; }
 
 
 			button_states[incoming_data1 ]=alt_list;
@@ -356,12 +353,14 @@ void buttons_store(void){    // incoming data from controller
 				scene_volume[((incoming_data1-52)*2)+1]=127;} //1,3,5,7
 
 		} //end of pots 4-8
-		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (loop_selector))  {    // pots 4-8  with loop light on
+		if ((incoming_data1<56)&&(incoming_data1>51)&& (loop_selector))  {    // pots 4-8  with loop light on
 
-		if (incoming_data1==52)	looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop , not in real time just for storing
-		if (incoming_data1==53) looper_list[(current_scene*4)+1]=(pot_states[5]>>2)&31;   // loop length
-		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  playback speed
-		if (incoming_data1==55) note_accent[current_scene]=pot_states[7]; // note length
+		if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>2;   // works ok  sets loop length 0-32
+		else looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop  fine offset 8/note  ,
+		}
+		if (incoming_data1==53) looper_list[(current_scene*4)+1]=(pot_states[5]>>2)&31;   // vel position offset
+		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
+		if ((incoming_data1==55)&&(!shift)) note_accent[current_scene]=pot_states[7];  // accent also used for tempo with shift
 
 
 		}
@@ -386,7 +385,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 	//if((keyboard[0]) )  {pot_tracking[(seq_step_list[scene_buttons[0]]>>3)+(current_scene>>3)]=(keyboard[0]);keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
-	if((keyboard[0]) && (!pause) && (!down_arrow))  {scene_transpose[scene_buttons[0]]=(keyboard[0]+19)&63 ;keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
+	//if((keyboard[0]) && (!pause) && (!down_arrow))  {scene_transpose[scene_buttons[0]]=(keyboard[0]+19)&63 ;keyboard[0]=0; }  // use keyboard and shift to enter transpose info ,replaced pot info
 
 
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
@@ -403,7 +402,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 			if ((scene_select)!=scene_buttons[0]){ // different scene selected
-
+				first_message=2;
 					if(loop_selector) loop_selector=1;
 				if (!scene_mute)
 

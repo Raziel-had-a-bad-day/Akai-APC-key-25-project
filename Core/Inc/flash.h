@@ -91,6 +91,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 			memcpy(all_settings+57,scene_volume,8);
 			memcpy(all_settings+65,midi_channel_list,8);
 			memcpy(all_settings+73,looper_list,32);
+			memcpy(all_settings+105,loop_length_set,8); // first 256bytes
 
 
 			memcpy  (test_data3+4 ,all_settings,  200); // copy
@@ -163,20 +164,6 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 		  //  write_once=1;
 		  send=0;
 		  button_states[70]=0;
@@ -186,8 +173,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		 all_update=1;
 		  other_buttons=1;
 		  button_states[square_buttons_list[patch_save]]=0;
-
-
+		 first_message=2;
 	  }
 
 }
@@ -215,7 +201,11 @@ void flash_read(void){     // 1kbyte for now
 	memcpy(mute_list,all_settings+49,8);
 	memcpy(scene_volume,all_settings+57,8);
 	memcpy(midi_channel_list,all_settings+65,8);
+
+
 	memcpy(looper_list,all_settings+73,32); // first 256bytes
+	memcpy(loop_length_set,all_settings+105,8); // first 256bytes
+
 	memcpy(play_list,test_data3+516,256);   // next block (+4)
 	memcpy(button_states_loop,test_data3+772,256); // need more space
 
@@ -226,8 +216,7 @@ void flash_read(void){     // 1kbyte for now
 	for (i=0;i<32;i++)
 		//pot_tracking[i>>1] =scene_transpose[3+(i>>3)];
 
-	if (scene_memory[i]) button_states[i+8]=5; // needs this to run first so first page loads
-
+		if (scene_memory[i]) button_states[i+8]=5; // needs this to run first so first page loads
 
 	if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting
 
@@ -275,19 +264,30 @@ void flash_read(void){     // 1kbyte for now
 
 
 	float tempo_hold=1;  // calculate tempo look up
-	uint16_t counter;
-	 float period= cpu_clock/prescaler; //  24584 hz 1/120   /128
-	 float d;
 
-		  	for (d=1;d<250;d++) {     // calculate ARR vales for TIM10
-		  		tempo_hold=0.533333*d; // hz
-		  		tempo_hold=period/tempo_hold; //
-		  		counter=d;
-		  	bpm_table[counter]=tempo_hold;
+	 float period= cpu_clock/prescaler; //  24584 hz 1/120   /128
+	uint8_t d;
+
+
+	 for (d=1;d<250;d++) {     // calculate ARR vales for TIM10
+
+		  		if (d<40) tempo_hold=23437;  // 40bpm
+
+		  		else tempo_hold=(period/(0.0166667*d*ppq_set));   // 500khz or 191 prescaler   , 32 ppq maybe do 96ppq  count
+
+
+
+		  		bpm_table[d]=tempo_hold;
 		  	}
-		  	timer_value=bpm_table[tempo];  // starting bpm
+		  	timer_value=bpm_table[tempo]-1;  // starting bpm -1
 		  //	timer_value=511;
-			  send=0;
+
+		  	TIM2->PSC=prescaler-1;
+		  	TIM2->ARR=timer_value;
+
+		  //	TIM2->CCR1=(timer_value/2) ;
+
+		  	send=0;
 				  button_states[70]=0;
 				  button_states[69]=0;
 				  pan=0;
@@ -298,6 +298,7 @@ void flash_read(void){     // 1kbyte for now
 				 memcpy(button_states_main,button_states,40);
 				 memcpy(button_states_save,button_states+8,32);
 				 memcpy(button_states_save+32,button_states,8);
+				 first_message=2;
 
 }
 void panic_delete(void){

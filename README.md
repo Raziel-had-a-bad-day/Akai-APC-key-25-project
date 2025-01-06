@@ -15,8 +15,9 @@ send = write to flash ,
 send + shift = reload 
 solo = solo current selected part only , 
 mute = select any part to mute, 
-up arrow = enables loop controls, enter loop notes,  pot5=start offset , pot6=velocity/accent  pot 7=lfo gain on time offset   
-keyboard = transpose change on selected part  
+up arrow = enables loop controls, enter loop notes,  pot5=note start offset fine  8/note  ,pot6=offset velocities in time to move accent, pot 7=lfo gain on time offset  ,  pot8=velocity/accent   
+shift + pot 5 = loop length
+keyboard = sets pitch for programming notes , also play 
 Stop all clips = stops and jumps to start 
 clip stop = a muting menu , mute very 8 notes 8*32 in total per part 
 shift and pot2 = while holding shift will modify velocity values for current part 

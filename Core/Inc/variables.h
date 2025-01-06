@@ -1,9 +1,15 @@
 
 #define cpu_clock    96000000
-#define prescaler 3905    // TIM10 values
+#define prescaler 192   // TIM10 values
+#define ppq_set 192   // TIM10 values
 
 uint16_t bpm_table[256];  // lut values for temp TIM10 ARR
 uint8_t tempo; // tempo value
+uint8_t ppq_count; // ppq_count for seq_pos
+uint16_t skip_counter; // keeps track of ppq skip
+volatile uint8_t ppq_send; // ppq_counter
+volatile uint8_t skip_enable; // allow ppq toggle skip
+volatile uint8_t skip_setting; // slow or faster 3,1,0
 
 //buttons
 uint8_t volume; // volume button
@@ -68,8 +74,8 @@ uint8_t lfo; // temp storage
 // play 91 . stop all clip =81 ,record 93 ,shift button 98 ,82 clip stop
 // round horizontal 64-71
 // velocity  1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
-static uint8_t square_buttons_list [40]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7}; // just reads buttons in top.down order
-static uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
+const uint8_t square_buttons_list [40]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7}; // just reads buttons in top.down order
+const uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
 uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 3 bits 7-5 , pitch 5 bits LSB 0-4
 uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , 8-40 (0-32)  is out of order to make it easier on operations
@@ -79,7 +85,7 @@ uint8_t pot_states[8]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current stat
 uint8_t note_off_flag[3]; // use this to detect held buttons 0 is on off ,1 is last button detected
 uint8_t all_update=1; // update all buttons from button_states , 40 for now
 uint8_t keyboard[3];  // store keys
-static uint8_t drum_list[8] ={20,21,22,23,24,25,26,27}; // notes played for drum scenes
+const uint8_t drum_list[8] ={20,21,22,23,24,25,26,27}; // notes played for drum scenes
 uint8_t midi_cue[50];  // data cue for midi max 8 notes [25] = message length
 uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length
 uint32_t sys_cnt[3];
@@ -89,7 +95,7 @@ uint8_t counter_a;
 // SPI stuff
 uint8_t spi_send[10];
 uint8_t status_reg[2];
-
+uint8_t first_message=0; // flag to clear once a button is pressed
 
 uint8_t flash_flag=0;
 uint8_t flash_read_block2[260] ={1,1,1,1,1,1,1,0}; // this should clearif flash read works
@@ -99,7 +105,7 @@ uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1
 uint8_t spi_hold[260]={0,10,0,0};
 uint8_t all_settings[200];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
-uint8_t other_buttons_hold[20]; // keeps track of buttons
+uint8_t other_buttons_hold[28]; // keeps track of buttons
 uint8_t send_buffer_sent;
 uint8_t button_states_save[100]; // reference for button changes for controller
 uint8_t button_states_loop[256];  // stored,loop screen buttons ,  pitch+accent (MSB),always on , 1 for empty
@@ -113,6 +119,7 @@ uint8_t loop_lfo_out[30];  // used for some level of lfo using pot7 for now 0-25
 
 uint8_t pitch_hold[10]; //holds last not eplayed
 uint8_t seq_step_mem;  // mem for looper
+uint8_t retrigger_countdown[9];
 
 uint8_t pot_tracking[33] ; // record pot movements , maybe after 1 bar ,only transpose for now
 uint8_t mute_list[9]; //track scene mutes
@@ -141,7 +148,8 @@ uint8_t loop_screen_scene;
 uint8_t loop_screen_last_note[9]; //holds last enabled loop screen note
 uint8_t note_latch[10]; // stays on when triggered
 uint16_t note_latch_pos[10]; // holds pos of note latch
-
+uint8_t loop_length;
+uint8_t loop_length_set[10]={7,7,7,7,7,7,7,7,7,7}; // loop length
 uint8_t serial_out[50];
 uint8_t serial_len;
 uint8_t midi_channel_list[21]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
@@ -161,9 +169,10 @@ uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
 uint8_t play_list_write=0; // keeps writing while shift is held down
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
 uint8_t looper_list[33]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start 2=length 3=gap between repeats 4=speed (default 0,32,0,8)
+uint8_t looper_list_mem[10];  // keeps track of previous values for ppq skip
 uint8_t loop_current_offset;
 uint8_t loop_current_length;
 uint8_t step_record; // works in stop mode
 
 
-uint8_t test_byte[6];
+uint8_t test_byte[20];

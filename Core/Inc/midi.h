@@ -11,9 +11,10 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		uint8_t scene=scene_buttons[0];
 		uint8_t looper_list_temp[33];
 		uint8_t lfo_out[10];
+		uint16_t loop_note_temp[8];
 		memcpy (looper_list_temp,looper_list,33); // need this
 		memcpy(lfo_out,loop_lfo_out+20,8);
-
+		memcpy(loop_note_temp,loop_note_list,16);
 
 		// uint8_t retrigger=0; // enable if seq_step hasn't_ moved
 		// uint8_t play_list_mute=1;
@@ -36,19 +37,21 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 
 			offset_lfo= lfo_out[i]; // 0-4
+			if (retrigger_countdown[i]) retrigger_countdown[i]=retrigger_countdown[i]-1;// space out notes, always run, blocks playback for a minimum amount of time
+			//offset2=((32-looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8
+			offset2=((looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8
 
-			offset2=((32-looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8
-			offset=(offset2+current_pos)&255;   // seq_pos+offset 0-255
-
+			offset=((256-offset2)+current_pos)&255;   // seq_pos+offset 0-255
 
 			i_s=i*32;
 				cue_counter=i*3;
 
+				//if (!offset) loop_note_list[i]=31;  // reset to start , rough but works
 
+			if ((loop_screen_note_on[offset] & (1<<i)) && (!retrigger_countdown[i]))
 
-				if (!offset) loop_note_list[i]=31;  // reset to start , rough but works
-			if ((loop_screen_note_on[offset] & (1<<i))) {note_enable=1;        // always triggered now
-			loop_note_list[i]=(loop_note_list[i]+1)&31; } // works for notes only
+			{note_enable=1;        // always triggered now
+			if (loop_note_temp[i]>= loop_length_set[i]) loop_note_temp[i]=0; else loop_note_temp[i]++; } // works for notes only
 
 						if ( (!mute_list[i])  	&&
 								(note_enable)    // important , note on trigger now
@@ -59,48 +62,44 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 
 
-							offset_pitch=loop_note_list[i]; // this is ok
+							offset_pitch=loop_note_temp[i]; // this is ok
 							data_temp2=(offset_pitch)+(i_s);   //0-255
-							offset_vel=((32-looper_list_temp[(i*4)+1])+offset_pitch)&31;   // vel offset 0-31
+							offset_vel=((32-looper_list_temp[(i*4)+1])+offset_pitch)&31;   // vel position time offset 0-31
 
 							data_temp3=offset_vel+i_s;
 							//if(i==6)  offset_vel=(looper_list[(i*4)+1]+offset_pitch+offset_lfo)&31;   // vel offset 0-31 + lfo
+							midi_cue[cue_counter]=0; // start with mute just in case
 
 
+							if ((button_states_loop[data_temp2]!=1))
+								 {retrigger_countdown[i]=4;    // start countdown to avoid fast note repeats
 
-							if (button_states_loop[data_temp2]==1)midi_cue[cue_counter]=0;  else midi_cue[cue_counter]=midi_channel_list[i]+144;  // get midi channel
+								midi_cue[cue_counter]=midi_channel_list[i]+144; } // get midi channel
 
 							if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
 
 							if (button_states_loop[data_temp3]>>7) velocity=note_accent[i ]; else velocity=64;
-							//if (button_states_loop[data_temp2]>>7) velocity=note_accent[i ]; else velocity=64;
-							//velocity= (velocity*scene_volume[i])>>7;   // might change this to accent control
 
+							midi_cue[(cue_counter)+1]=((button_states_loop[data_temp2]))& 63;  //  pitch info +transpose but only from play_list
 
-							midi_cue[(cue_counter)+1]=((button_states_loop[data_temp2]))& 127;  //  pitch info +transpose but only from play_list
 							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // use drum list if set to  channel 10
 
-							// if( midi_cue_noteoff[cue_counter+1]==0)  midi_cue_noteoff[cue_counter+1]=midi_cue[(cue_counter)+1];  // stored but without channel info
-
 							if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
-							if(note_enable==2) velocity=0;
+
+
 							if (!velocity) midi_cue[cue_counter]=0;  // simply disable
 
 							midi_cue[(cue_counter)+2]=velocity&127;
 
-
-
-
-							//cue_counter++;
 						note_enable=0;
-						} else {midi_cue[cue_counter]=0;nrpn_cue[cue_counter]=0;}      // end of note on
+						}
 
 
-						seq_step_enable[i]=0;note_enable=0;
+
 		}   // end of loop
 		midi_cue[50]=cue_counter; // doesnt do anything
 
-
+		memcpy(loop_note_list,loop_note_temp,16);
 		}
 
 
@@ -169,7 +168,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 			cc_temp[20]=0;
 			//memcpy(cue_temp,midi_cue,25);
 
-			memcpy(test_byte,midi_cue+18,5);
+			memcpy(test_byte,midi_cue,9);
 
 			cue_counter=0;
 			for (i=0;i<8;i++){  // short , ready to send notes only
@@ -276,14 +275,15 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 			if (play_screen) seq_step_mod=((play_position&3)*8) + ((play_position>>2)&7);
 		//	uint8_t button_exception1=square_buttons_list[((seq_step_mod ) & 31)]; // 0-40
-			uint8_t button_exception1=((seq_step_mod ) & 31);
+
 			uint8_t scene_select=scene_buttons[0];
+			uint8_t button_exception1=loop_note_list[scene_select];
 			uint8_t button_colour=0;
 			uint8_t loop_length=loop_screen_last_note[scene_select];
 			uint8_t divider;
 
 
-			  if (loop_selector)
+			/*  if (loop_selector)
 			  {
 				  switch(loop_length>>2){
 
@@ -294,7 +294,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 				  }
 
 				  button_exception1=seq_step_mod; // green moving button
-				 }
+				 }*/
 
 
 			if (record) button_colour=4; else button_colour=1;

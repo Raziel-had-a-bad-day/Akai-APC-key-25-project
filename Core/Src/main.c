@@ -56,7 +56,7 @@ SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_rx;
 DMA_HandleTypeDef hdma_spi1_tx;
 
-TIM_HandleTypeDef htim10;
+TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
 
@@ -86,10 +86,10 @@ return len;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_TIM10_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 void note_handling(uint8_t incoming_data);
 void note_replace(uint8_t note_replace);
@@ -151,11 +151,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_TIM10_Init();
   MX_USB_DEVICE_Init();
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   MX_SPI1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   // USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS);
 
@@ -163,9 +163,14 @@ int main(void)
   HAL_DMA_Init(&hdma_spi1_rx);
   	HAL_DMA_Init(&hdma_spi1_tx);
   //	HAL_I2C_Init(&hi2c1);
+  //	HAL_TIM_Base_Start(&htim2);
+  //	HAL_TIM_Base_Start(&htim2);
+  //	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
+  //	TIM2->CNT=32000;
 
 
-    HAL_TIM_Base_Start_IT(&htim10);
+
+    HAL_TIM_Base_Start_IT(&htim2);
    // HAL_UART_Receive_IT(&huart1, &serial1_temp, 1);		// midi irq
     HAL_UART_Receive_DMA(&huart1, serial1_hold2,1);    //
   //CDC_Transmit_FS("Hello\r\n",7);
@@ -178,9 +183,13 @@ int main(void)
 //	flash_write();
 	//  get flash data
 	flash_read();
-	other_buttons=1; // nothing
+	//other_buttons=1; // nothing
+	//uint16_t arr_cnt=(bpm_table[tempo]*1.333333)-1;
+	//TIM2->ARR= arr_cnt;   // -1
+  	//TIM2->CCR1=(arr_cnt/2) ;   // 90-4v   50-1.5v 20- 0.6v   -1
 
-	lcd_start();
+	//TIM2->CCMR1 = 0;
+			lcd_start();
 	// panic_delete();                 WATCH FOR WEIRD APC SENDS , IE UP ARROW PLUS BOTTOM ROW 3 SENDS CONSTANT CONTROLLER 50 INFO  ?
   /* USER CODE END 2 */
 
@@ -190,8 +199,8 @@ int main(void)
   {
 
 
-
-	  if (seq_enable) {
+	 // HAL_GPIO_WritePin(PPQ_GPIO_Port, PPQ_Pin, (ppq_send|1));
+	  //if (seq_enable) {
 		  uint16_t step_temp=0;
 		  //uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
 		  uint8_t seq_step_mod=(seq_pos>>3)&31;
@@ -202,7 +211,33 @@ int main(void)
 		  uint8_t selected_scene=scene_buttons[0];
 		//  uint8_t step_start;
 		//  uint8_t play_total; // different for each note
-		  uint8_t buttons_list[20]={0,64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98};  //extra buttons  slow
+		  uint8_t buttons_list[28]={0,64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98,0,1,2,3,4,5,6,7};  //extra buttons  slow
+
+
+		  if ((looper_list_mem[7]<looper_list[7*4]) && (!skip_counter))  {    // catch up with loop slide + for now
+			  skip_counter=((looper_list[7*4]-looper_list_mem[7])*6);
+			  looper_list_mem[7]=looper_list[7*4];
+		  skip_setting=3;
+		  }
+
+
+
+		  if ((looper_list_mem[7]>looper_list[7*4])&& (!skip_counter)) {   // 384 max or 32 steps max , one big skip instead of gradual
+			  skip_counter=((looper_list_mem[7]-looper_list[7*4])*6);
+			  looper_list_mem[7]=looper_list[7*4];
+			  skip_setting=0;
+
+		  }
+
+		  if ((skip_counter) &&  (!skip_enable)){ skip_counter--; }  // count down
+
+		  if ((!skip_counter) &&  (!skip_enable)) skip_setting=1;  // default speed
+
+
+
+
+
+
 
 		  if (seq_pos_mem!=seq_pos){     // runs  8 times /step  , control sequencer counting
 
@@ -214,7 +249,7 @@ int main(void)
 
 					  step_temp=(( seq_step_fine[i]>>4)&31);  // reads fine position , one note length is 64 count
 					  step_temp=seq_pos>>3;  // ditch for now
-					  seq_step_list[i] =step_temp;
+					  seq_step_list[i] =step_temp;     // meaningless
 				  }}
 
 			//  if (!pause)		 {midi_send();note_off();}   // midi data calculate
@@ -222,7 +257,7 @@ int main(void)
 
 			  cdc_send(); // all midi compiled for send
 
-			 // send_buffer_sent=1;
+			//  send_buffer_sent=1;
 			  if (send_buffer_sent==1)                  {    // moving light send and button change , quick
 
 
@@ -233,9 +268,9 @@ int main(void)
 			  			 //// extra buttons
 
 			  				counter_a=0;
-			  							  for (i=1;i<19;i++) {   // test for extra button changes and set counter_a, quick
-			  								  if (other_buttons_hold[i]!= button_states[buttons_list[i]]) {counter_a=i;
-			  								  other_buttons_hold[i]= button_states[buttons_list[i]];}
+			  							  for (i=0;i<27;i++) {   // test for extra button changes and set counter_a, quick
+			  								  if ((other_buttons_hold[i]!= button_states[buttons_list[i]]) && (!counter_a)) {counter_a=i+1;
+			  								  other_buttons_hold[i]= button_states[buttons_list[i]];}  // can be used to reset all these buttons
 			  							  	  	  }
 
 
@@ -243,8 +278,8 @@ int main(void)
 
 
 			  			  send_buffer[6] = 144;
-			  			  send_buffer[7] = buttons_list[counter_a]&127;
-			  			  send_buffer[8] = button_states[buttons_list[counter_a]]&127;  // not all will light up :/
+			  			  send_buffer[7] = buttons_list[counter_a-1]&127;
+			  			  send_buffer[8] = button_states[buttons_list[counter_a-1]]&127;  // not all will light up :/
 
 			  			  } else
 			  				  send_buffer[6] = 0;
@@ -259,26 +294,28 @@ int main(void)
 
 
 
-			  if(pause  || down_arrow) {  //play notes  during pause or down arrow from keyboard , need to be elsewhere
+		//	  if(pause  || down_arrow) {  //play notes  during pause or down arrow from keyboard , need to be elsewhere
 
 						  if (keyboard[0])  {
 							  last_key=keyboard[0];   //store key
-
-							  if (midi_channel_list[selected_scene]==9)
+							  keyboard[1]=last_key;
+							  if (midi_channel_list[selected_scene]==9)   // drums send
 							  {  midi_extra_cue[0]=153;         // use drumlist for now
 
-							  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=3;
+							  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=3;   // send midi
 
-							  {	nrpn_cue[selected_scene*3]=selected_scene+1; nrpn_cue[(selected_scene*3)+1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;  } // pitch data
+							  //{	nrpn_cue[selected_scene*3]=selected_scene+1; nrpn_cue[(selected_scene*3)+1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;  } // pitch data
 							  keyboard[0]=0;}
-							  else  {midi_extra_cue[0]=144+midi_channel_list[selected_scene];  midi_extra_cue[1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;
-							  midi_extra_cue[2]=127; midi_extra_cue[28]=3;keyboard[0]=0;}
+							  else  {midi_extra_cue[0]=144+midi_channel_list[selected_scene];  midi_extra_cue[1]=((keyboard[0]+32))&127 ;
+							  midi_extra_cue[2]=127; midi_extra_cue[28]=3;keyboard[0]=0;}  // send normal then keyboard off
 
 						  }
 
-						  else   { if     (   midi_extra_cue[2])       {midi_extra_cue[2]=0;midi_extra_cue[28]=3; midi_cue_noteoff[50]=0;}   else midi_extra_cue[28]=0;}
+						//  else   { if     (   midi_extra_cue[2])       {midi_extra_cue[2]=0;midi_extra_cue[28]=3; midi_cue_noteoff[50]=0;}
+
+						  else midi_extra_cue[28]=0;
 						  	  keyboard[0]=0;
-					  }
+				//	  }
 
 
 			 seq_pos_mem=seq_pos;
@@ -295,7 +332,7 @@ int main(void)
 			 if (play_list_write) play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;    // keep writing if enabled
 
 			  uint8_t selected_scene=scene_buttons[0];
-			  seq_step_mod=seq_step_list[selected_scene]&31;
+			  seq_step_mod=seq_pos>>3;
 			  seq_current_step=seq_step_mod;
 			  loop_current_length=looper_list[(selected_scene*4)+1];
 			  loop_current_offset=looper_list[(selected_scene*4)];
@@ -306,7 +343,7 @@ int main(void)
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
 
-			  if (seq_step_mem!=seq_step_mod)		{send_buffer_sent=1;}
+			//  if (seq_step_mem!=seq_step_mod)		{send_buffer_sent=1;}
 
 
 			  if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
@@ -327,21 +364,28 @@ int main(void)
  */
 
 
-			  printf(" %d",loop_lfo_out[(selected_scene)+20] );
-			  printf(" midi = %d",midi_cue[i] );
+			 // printf(" %d",loop_lfo_out[(selected_scene)+20] );
+			  printf(" loop =%d ",looper_list_mem[7] );
 
-			  for (i=0;i<4;i++){
+			  for (i=0;i<1;i++){
 
 				//  printf(" %d",midi_cue[(selected_scene*32)+i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
-				  printf(" midi = %d ",test_byte[+i] );
+				  printf(" =%d ",test_byte[+i] );
 
 
 			  }
 
 			  printf(" loop=%d ",loop_selector);  printf(" step=%d ",seq_step_list[0]);printf("   %d\n ",seq_step_fine[0]&255);
 
+			  if (first_message==2){
+				  uint8_t clear[30]={7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7};  // doesnt do anything
+				 				 		  memcpy(other_buttons_hold,clear,28);
+				  first_message=1;
 
+
+
+			  }
  				// print section
 
  				lcd_menu_vars();
@@ -371,7 +415,7 @@ int main(void)
  				//  trigger_mem=button_send_trigger>>3;
  			}   // blink steps , end of send trigger
 
- 		}  // end of seq_enable
+ 		//}  // end of seq_enable
 
 
 
@@ -618,33 +662,47 @@ static void MX_SPI1_Init(void)
 }
 
 /**
-  * @brief TIM10 Initialization Function
+  * @brief TIM2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_TIM10_Init(void)
+static void MX_TIM2_Init(void)
 {
 
-  /* USER CODE BEGIN TIM10_Init 0 */
+  /* USER CODE BEGIN TIM2_Init 0 */
 
-  /* USER CODE END TIM10_Init 0 */
+  /* USER CODE END TIM2_Init 0 */
 
-  /* USER CODE BEGIN TIM10_Init 1 */
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE END TIM10_Init 1 */
-  htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 3905;
-  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 512;
-  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 191;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 5000;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM10_Init 2 */
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
 
-  /* USER CODE END TIM10_Init 2 */
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
@@ -721,7 +779,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, PPQ_Pin|CS1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LED_Pin */
   GPIO_InitStruct.Pin = LED_Pin;
@@ -729,6 +787,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PPQ_Pin */
+  GPIO_InitStruct.Pin = PPQ_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(PPQ_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CS1_Pin */
   GPIO_InitStruct.Pin = CS1_Pin;
@@ -765,14 +830,26 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 	//memcpy((serial_hold+8),(serial_hold2+8),8);
 }
+
+
+
+
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)    // unreliable
 	{
-		if(TIM10==htim->Instance){     // send spi to display , ok
+		if(TIM2==htim->Instance){     // send spi to display , ok
 
 			//button_send_trigger=(button_send_trigger+1)&255; // sets interval for buttons
-			 seq_pos++;
-			if (seq_pos>=256) seq_pos=0;
-			 TIM10->ARR=timer_value;
+
+			if (!skip_enable)HAL_GPIO_TogglePin(GPIOA,PPQ_Pin);
+
+			if (!skip_enable) skip_enable=skip_setting; else {skip_enable--;} // 48 ppq here
+
+			if (ppq_count>5) {ppq_count=0; seq_pos=(seq_pos+1)&255;}   // 32 ppq
+			 ppq_count++;
+			 if (ppq_send>95) ppq_send=0;  else ppq_send++;   // 96 ppq
+
+
 		}
 	}
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef * hspi)   // when finished sending
@@ -796,8 +873,8 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef * hspi)   // when finished sendi
 
 void stop_start(void)             {
   //  if (TIM10==htim ->Instance)
-    if  (stop_toggle ==1) {HAL_TIM_Base_Stop_IT(&htim10);stop_toggle =2;}
-    if  (stop_toggle ==4) {HAL_TIM_Base_Start_IT(&htim10);stop_toggle=0;}
+    if  (stop_toggle ==1) {HAL_TIM_Base_Stop_IT(&htim2);stop_toggle =2;}
+    if  (stop_toggle ==4) {HAL_TIM_Base_Start_IT(&htim2);stop_toggle=0;}
 
 }
 void all_notes_off(void){
