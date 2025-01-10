@@ -52,7 +52,7 @@ uint8_t send_all[128]; //scene sends
 uint8_t send_buffer[34]={144,5,3,144,5,3,144,0,0}; // light off, light on , scene light off ,only for controller,then midi
 volatile uint16_t seq_pos;  // 16 bit  , 24/quater or 8/step  on 1/16th , sequencer clock, rarely used might change
 uint16_t s_temp;
-uint16_t seq_pos_mem;
+uint16_t seq_pos_mem=1;
 uint16_t mtc_tick=0;  // incoming realtime clock counter
 uint8_t seq_enable=1;  // start stop sequencer
 uint8_t seq_step; // 0-32 steps
@@ -63,7 +63,7 @@ volatile uint16_t timer_value=512; // sets timer ccr  def is 1100 for now
 uint16_t seq_tmp;
 uint8_t cdc_buffer[12];  // receive buffer on sub , check usbd_cdc_if.c and h for more
 uint8_t cdc_send_cue[260];   //hold from cdc
-uint8_t cdc_len;
+uint8_t cdc_len=1;
 uint32_t Len;
 volatile uint8_t button_send_trigger;  // send button midi repeat
 uint8_t trigger_mem;
@@ -78,7 +78,7 @@ const uint8_t square_buttons_list [40]= {32,33,34,35,36,37,38,39,24,25,26,27,28,
 const uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
 uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 3 bits 7-5 , pitch 5 bits LSB 0-4
-uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , 8-40 (0-32)  is out of order to make it easier on operations
+uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , 8-40 (0-32)  is out of order to make it easier on operations ,bad idea -reversed
 uint8_t scene_pitch[260]; // stores a pitch value per field 8*32 , stored in order
 uint8_t scene_velocity[260]; // stores a pitch value per field 8*32
 uint8_t pot_states[8]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current state
@@ -109,9 +109,9 @@ uint8_t other_buttons_hold[28]; // keeps track of buttons
 uint8_t send_buffer_sent;
 uint8_t button_states_save[100]; // reference for button changes for controller
 uint8_t button_states_loop[256];  // stored,loop screen buttons ,  pitch+accent (MSB),always on , 1 for empty
-uint8_t  loop_screen_note_on[256];    //changed , 1 bit per note on , simply stores trigger info per 256 count for loop, always triggers on a step
+uint8_t  loop_screen_note_on[2048];    //changed , 1 bit per note on , 128*16 =2048 for 8 notes
 uint16_t loop_screen_note_off[256]; 		// calculated, note off record also 2048 count
-uint16_t loop_note_list[10]; //tracks playback note
+uint16_t loop_note_list[10]; //tracks currently playing note position
 uint8_t button_states_main[64]; // button states on main screen , copied
 uint8_t loop_note_count[10];  // keeps track of number of notes in a loop
 uint8_t loop_current_speed;
@@ -134,7 +134,7 @@ uint8_t scene_mute; // muting
 uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
-uint8_t loop_selector;  //enables loop controls pot 4-8 when up arrow is on
+uint8_t loop_selector=1;  //enables loop controls pot 4-8 when up arrow is on
 uint8_t play_speed[20]={8,8,8,8,8,8,8,8,8,8,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
 uint8_t speed_default[12]={8,4,2,1,8,4,2,1,0,0,0};     // play speed deafults   [8] hholds last value selected
 
@@ -152,7 +152,7 @@ uint8_t loop_length;
 uint8_t loop_length_set[10]={7,7,7,7,7,7,7,7,7,7}; // loop length
 uint8_t serial_out[50];
 uint8_t serial_len;
-uint8_t midi_channel_list[21]={2,2,2,2,3,4,5,6 };   //holds midi channel settings 0=1 (midi channels 1-16)
+uint8_t midi_channel_list[21]={9,9,9,9,3,9,9,9 };   //holds midi channel settings 0=1 (midi channels 1-16)
 uint8_t nrpn_cue[80]={186,99,5,186,98,16,186,6,32};  // stores message for nrpn on es1 only needs 1 initial c99=5  then only  2 bytes repeating  CC 98 =NRPN LSB and CC 6 =value , for now 9 bytes though  , initial normal 3 bytes then convrted to 9
 uint8_t pitch_lut[127] ={0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127};   // es1 pitch table  4 octaves
 uint8_t es_filter[9]; // track es1 filters  old and new values  say 4+4
@@ -173,6 +173,6 @@ uint8_t looper_list_mem[10];  // keeps track of previous values for ppq skip
 uint8_t loop_current_offset;
 uint8_t loop_current_length;
 uint8_t step_record; // works in stop mode
-
-
+uint8_t drum_store_one[256]; // holds drum notes 2 bit , note one and accent
+uint8_t pattern_select=0; //
 uint8_t test_byte[20];

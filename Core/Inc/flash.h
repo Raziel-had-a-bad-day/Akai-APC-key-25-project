@@ -19,15 +19,15 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 */
 
 
-			for (i=0;i<256;i++){
+			/*for (i=0;i<256;i++){
 				if (scene_velocity[i])  scene_memory[i]=	((scene_velocity [i]&112)<<1)+	(scene_pitch [i]&31) ;   //merge into scene memory
 
 
-			}
+			}*/
 
 		 		  test_data3[2]=patch_mem;
 
-		 		  memcpy  (test_data3+4 ,scene_memory,  256);
+		 		  memcpy  (test_data3+4 ,scene_memory,  256);   // maybe drum data
 
 
 		 		 test_data3[0]=0x06; //enable write each time
@@ -119,7 +119,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 
 
-		  memcpy  (test_data3+4 ,play_list,  256);
+		  memcpy  (test_data3+4 ,drum_store_one,  256);  // drums
 		  test_data3[0]=0x06;
 		  test_data3[2]=patch_mem+2; //page5
 				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
@@ -140,7 +140,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
 				  HAL_Delay(20);
 
-				  memcpy  (test_data3+4 ,button_states_loop,  256);
+				  memcpy  (test_data3+4 ,button_states_loop,  256);    // key notes
 						  test_data3[0]=0x06;
 						  test_data3[2]=patch_mem+3; //page6
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
@@ -200,73 +200,77 @@ void flash_read(void){     // 1kbyte for now
 	memcpy(pot_tracking,all_settings+17,32);
 	memcpy(mute_list,all_settings+49,8);
 	memcpy(scene_volume,all_settings+57,8);
-	memcpy(midi_channel_list,all_settings+65,8);
+	//memcpy(midi_channel_list,all_settings+65,8);  // temp disable
 
 
 	memcpy(looper_list,all_settings+73,32); // first 256bytes
 	memcpy(loop_length_set,all_settings+105,8); // first 256bytes
 
-	memcpy(play_list,test_data3+516,256);   // next block (+4)
+	memcpy(drum_store_one,test_data3+516,256);   // next block (+4)
 	memcpy(button_states_loop,test_data3+772,256); // need more space
 
 	tempo=all_settings[150];
 	if (tempo==255) tempo=120;
 	if (!tempo) tempo=120;
 
-	for (i=0;i<32;i++)
+	for (i=0;i<40;i++){
 		//pot_tracking[i>>1] =scene_transpose[3+(i>>3)];
+		button_states[i]=3;
+		//if (scene_memory[i]) button_states[i+8]=5; // needs this to run first so first page loads
 
-		if (scene_memory[i]) button_states[i+8]=5; // needs this to run first so first page loads
-
-	if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting
-
-
+	//if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting
+		}
+/*
 	for (i=0;i<255;i++){
 		scene_velocity [i]=(scene_memory[i]>>1)&112;    //needs to update velocities or lost , shifted
 		scene_pitch [i]=(scene_memory[i])&31;   // pitch ?
 
-	}
+	}*/
+
+	uint8_t d;
 
 
 
-	uint8_t data_temp2=0;
-	uint16_t loop_pos=0;
-	for (n=0;n<8;n++){			//initial loop fill
+	//uint8_t data_temp2=0;
+	//uint16_t loop_pos=0;
+	for (n=0;n<4;n++){			//initial loop fill
 		//uint16_t  loop_speed=((looper_list[(n*4)+2])+1);
 		//uint8_t note_length=looper_list[(n*4)+3];
 		loop_screen_last_note[n]=16;
+		scene_buttons[0]=n;
 
+		for (d=0;d<16;d++) {// loop notes fill
 
-		for (i=0;i<32;i++) {// loop notes fill
-
-					data_temp2=i+(n*32);    // button + scene_select writes all on selected
-					loop_pos=(i*8);
-
-					if (!button_states_loop[data_temp2]) button_states_loop[data_temp2]=1;
-					if (button_states_loop[data_temp2]) {
+				//	data_temp2=i+(n*32);    // button + scene_select writes all on selected
+					//loop_pos=(i*8);
+					pattern_select=d;
+					//loop_selector=1;
+					loop_screen();
+					//if (!button_states_loop[data_temp2]) button_states_loop[data_temp2]=1;
+					//if (button_states_loop[data_temp2]) {
 
 						// loop_screen_note_on[data_temp2]= ((i*loop_speed)+1)&255;    //  creates a short playlist , multiplied by speed 1-8
-						 loop_screen_note_on[loop_pos]=loop_screen_note_on[loop_pos] | (1<<n);  // turn on bit, basic for now
-
+						// loop_screen_note_on[loop_pos]=loop_screen_note_on[loop_pos] | (1<<n);  // turn on bit, basic for now
+						// loop_screen_note_on[loop_pos]=loop_screen_note_on[loop_pos] | (1<<n);  // turn on bit, basic for now
 
 						 // loop_screen_note_on[data_temp2]=loop_screen_note_on[data_temp2] & ~ (1<<selected_scene);} //write from buttons ,test only
 
 
-						 loop_screen_note_off[(loop_pos+3)&255]= loop_screen_note_on[loop_pos];  // note off send, works
+					//	 loop_screen_note_off[(loop_pos+3)&255]= loop_screen_note_on[loop_pos];  // note off send, works
 
-						 loop_screen_last_note[n]=i;
+						 loop_screen_last_note[n]=d;
 
-					} else loop_screen_note_on[data_temp2]=0;
+					}
 
 
-					}	}
+					}
 
 
 
 	float tempo_hold=1;  // calculate tempo look up
 
 	 float period= cpu_clock/prescaler; //  24584 hz 1/120   /128
-	uint8_t d;
+
 
 
 	 for (d=1;d<250;d++) {     // calculate ARR vales for TIM10
@@ -295,9 +299,9 @@ void flash_read(void){     // 1kbyte for now
 				 all_update=1;
 
 				 button_states[patch_save+8]=0;
-				 memcpy(button_states_main,button_states,40);
-				 memcpy(button_states_save,button_states+8,32);
-				 memcpy(button_states_save+32,button_states,8);
+			//	 memcpy(button_states_main,button_states,40);
+			//	 memcpy(button_states_save,button_states+8,32);
+			//	 memcpy(button_states_save+32,button_states,8);
 				 first_message=2;
 
 }

@@ -4,7 +4,7 @@ void stop_start(void);
 
 
 
-void play_muting(void){    // all muting stuff here , sometimes it loses data
+void play_muting(void){    // all muting stuff here , sometimes it loses data , disable
 
 	uint8_t square_buttons_play [33]= {32,24,16,8,33,25,17,9,34,26,18,10,35,27,19,11,36,28,20,12,37,29,21,13,38,30,22,14,39,31,23,15};  // follows play steps
 
@@ -41,7 +41,7 @@ void patch_screen(void)		{     // shows last loaded patch and save patch as well
 			//all_update=1;
 	}
 
-void main_screen(void){   // shows trigger point for loops
+void main_screen(void){   // shows trigger point for loops  , might remove
 
 	uint8_t temp_select = midi_channel_list[scene_buttons[0]]; // midicannel> button list
 	uint8_t data_temp;
@@ -73,35 +73,45 @@ void main_screen(void){   // shows trigger point for loops
 
 
 }
-void loop_screen(void){  // loop screen , runs always when enabled
+void loop_screen(void){  // loop screen ,always on now , 16 notes and 16 patterns
 
-	uint8_t current_scene=scene_buttons[0]*32;
-	uint8_t selected_scene=scene_buttons[0];
+	//uint16_t current_scene=scene_buttons[0]*256;  // pattern select
+	uint8_t selected_scene=scene_buttons[0];  // this wiil change to pattern select 0-15
+	//uint8_t current_scene_drums=((scene_buttons[0]&3)*4) + (pattern_select*16);  // pattern location
 
 	uint16_t data_temp2;
-	uint8_t fast_bit;
+	uint8_t accent_temp;
+	uint16_t fast_bit;
 	uint8_t note_counter=0;
-	//uint8_t offset=looper_list[selected_scene*4];
-	if(loop_selector==1) {memcpy(button_states_main+8,button_states+8,32);	}
+	uint8_t drums=0;
+	//uint32_t drum_pattern;   // holds 4 bytes
+	//pattern_select=0;
+	uint8_t drum_byte_select;
+	uint8_t drum_byte;
 
-	//loop_screen_last_note[selected_scene]=loop_length; // wiil do for now
 
-	loop_note_count[selected_scene]=0;
-	for (i=0;i<32;i++) {// loop notes fill but only current scene , needs to chanee as it keeps writing to wrong scene
+	if ((midi_channel_list[selected_scene]==9)&& (selected_scene<4)) drums=1;    // drums 1-4
 
-		data_temp2=i+(current_scene);    // this all needs to be elsewhere
-		fast_bit=i*8;
+	//if(loop_selector==1) {memcpy(button_states_main+8,button_states+8,32);	}
+
+
+
+	//loop_note_count[selected_scene]=0;
+
+	if ((!drums)&& (selected_scene==9)){
+	for (i=0;i<16;i++) {// loop notes fill but only current scene ,  stays old for keys for now
+
+		data_temp2=i+(pattern_select*16);    // only one keys  data for now
+		fast_bit=(i*8)+(pattern_select*128);
 		if(loop_selector==1){
 
-		//	if (button_states_loop[data_temp2]) button_states[i+8]=5; else button_states[i+8]=0; } // read back on first select
 
-		//button_states[i+8]=0;
-			if (button_states_loop[data_temp2]!=1)    // read back on first loop select
-				{if (button_states_loop[data_temp2]>>7) button_states[i+8]=3 ;  else button_states[i+8]=5 ;}
-				 else button_states[i+8]=0;
+			//if (button_states_loop[data_temp2]!=1)    // read back on first loop select
+			//	{if (button_states_loop[data_temp2]>>7) button_states[i+8]=3 ;  else button_states[i+8]=5 ;}
+			//	 else button_states[i+8]=0;
 		}
 
-		if (!button_states[i+8])  {button_states_loop[data_temp2]=1; loop_screen_note_on[fast_bit]=loop_screen_note_on[fast_bit] & ~ (1<<selected_scene);} //write from buttons ,test only
+		//if (!button_states[square_buttons_list[i]])  {button_states_loop[data_temp2]=1; loop_screen_note_on[fast_bit]=loop_screen_note_on[fast_bit] & ~ (1<<selected_scene);} //write from buttons ,test only
 
 		//	if (button_states_loop[data_temp2]!=1) { //
 
@@ -112,9 +122,47 @@ void loop_screen(void){  // loop screen , runs always when enabled
 					//}
 			//		position_counter++;
 
-					}
+					}}  // end of keys
+	if (drums){
+
+
+
+		for (i=0;i<16;i++) {// drums fill
+
+		drum_byte_select= (i>>2)+(selected_scene*4)+(pattern_select*16);  // select byte position
+		drum_byte=drum_store_one[drum_byte_select];  // get data
+
+
+
+		if (drum_byte & (1<<((i&3)*2))) data_temp2=1; else data_temp2=0;     // note test ok
+		if (drum_byte & (1<<((i&3)+1))) accent_temp=1; else accent_temp=0;  // accent test
+
+		fast_bit=(i*8)+(pattern_select*128);
+		if(loop_selector==1){
+
+
+			if (data_temp2)    // read back on first loop select   , change button state colour
+				{if (accent_temp) button_states[square_buttons_list[i]]=3 ;  else button_states[square_buttons_list[i]]=5 ;}
+				 else button_states[square_buttons_list[i]]=0;
+		}
+
+		//if(!data_temp2)  { loop_screen_note_on[fast_bit]=loop_screen_note_on[fast_bit] & ~ (1<<selected_scene);} //write from buttons ,test only
+
+
+
+			//if(data_temp2) 	loop_screen_note_on[fast_bit]=loop_screen_note_on[fast_bit] | (1<<selected_scene);  // turn on bit , follows seq_pos  sound 0-7 on
+			loop_screen_note_on[fast_bit]=loop_screen_note_on[fast_bit] | (1<<selected_scene);  // always triggered on ,don't disable
+				loop_screen_last_note[selected_scene]=i;
+				note_counter++;
+
+
+
+					}} // end of drums
+
+
+
 					loop_selector=2;
-					loop_note_count[selected_scene]=note_counter;
+					//loop_note_count[selected_scene]=note_counter;
 					}
 
 
@@ -123,18 +171,25 @@ void note_buttons(void){  // always running
     uint8_t pitch=1;
 	uint8_t incoming_message[3];
 	memcpy(incoming_message,cdc_buffer, 3); // works off only receiving buffer
-
+	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t incoming_data1 = incoming_message[1]&127;
 
-	uint8_t current_scene=((scene_buttons[0])*32);
-	last_button = square_buttons_list[incoming_data1]+ (current_scene);   // memory location  of note pressed 0-256
-	//uint8_t last_button_current=square_buttons_list[incoming_data1]&31;
+
+
+	last_button = square_buttons_list[incoming_data1];   // memory location  of note pressed 0-256(0-3 (16notes)   + sounds*4+(pattern_select*16)
+
 	uint8_t last_press = square_buttons_list[incoming_data1];  //0-32
+
+	uint8_t drum_byte_select= (last_press>>2)+((scene_buttons[0]&3)*4)+(pattern_select*16);  // only for drums
+	uint8_t drum_byte=drum_store_one[drum_byte_select];  // get data
+
+
 			for (i = 0; i < 40; i++){   // test for bad data
 				if (button_states[i]>10) button_states[i]=0;
 
 			}
 
+/*
 	if ((!clip_stop) && (!pan) && (!loop_selector)) {     // main screen , normal
 
 		{ //  , only if enabled though ,
@@ -159,33 +214,53 @@ void note_buttons(void){  // always running
 
 		} // incoming buttons 0 -32
 	}    // play screen off and patch screen off
+*/
 
-	if ((!clip_stop) && (!pan) && (loop_selector))      // loop screen , normal
+	if ((!clip_stop) && (!pan) && (scene_buttons[0]<4) && (last_press<16) )      // loop screen , normal , only for drum satm
 
 			{ //  , only if enabled though ,
 
-		if (pause) pitch=keyboard[1]+32;  // during pause pitch comes from keyboard
+	//	if (pause) pitch=keyboard[1]+32;  // during pause pitch comes from keyboard
 		pitch=keyboard[1]+32;  // 32+25
 				 // if button lit but not in play screen
 
-				switch(button_states[last_press+8]){    // change state
-							case 0 :button_states_loop[last_button]=0 ;   break;
-							case 3 :button_states_loop[last_button]=button_states_loop[last_button]|(1<<7) ;   break;		// add accent
-							case 5 :button_states_loop[last_button]=(button_states_loop[last_button]&128)+pitch; break;		// enter pitch
+				switch(button_states[incoming_data1]){    // change state
+							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));   break;   // clear note and accent ,works
+						//	case 3 :drum_byte=drum_byte | (1<<((((last_press-(drum_byte_select*4))*2))+1));  break;		// add accent
+							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2)); break;		// note ok
 
+	/*switch(button_states[last_press+8]){    // change state
+								case 0 :button_states_loop[last_button]=0 ;   break;
+								case 3 :button_states_loop[last_button]=button_states_loop[last_button]|(1<<7) ;   break;		// add accent
+								case 5 :button_states_loop[last_button]=(button_states_loop[last_button]&128)+pitch; break;		// e*/
 
 				}
+
+
+				drum_store_one[drum_byte_select]=drum_byte; //write back info
+
 			}
 
+				if(last_press>15){
+				//uint8_t pattern=pattern_select;
+				uint8_t new_pattern=(last_press-16);
+				for (i =8 ; i < 40; i++) {button_states[i]=0;}  // this is ok
 
-	if (clip_stop && (!pan)) {     // play mute  screen
+					//button_states[square_buttons_list[pattern+16]]=0;
+					button_states[square_buttons_list[new_pattern+16]]=5;
+					pattern_select=new_pattern;
+					memcpy(loop_note_list,clear,16);
+					loop_selector=1;
+				}
+
+/*	if (clip_stop && (!pan)) {     // play mute  screen , remove this
 
 		if ((incoming_data1 > 7) && (incoming_data1 < 40)) { //  , only if enabled though ,
 			last_button = square_buttons_list[incoming_data1 - 8]
 											  + (current_scene) - 8;   // memory location 0-256
 		}
 
-	}
+	}*/
 
 		}
 
@@ -230,7 +305,7 @@ void buttons_store(void){    // incoming data from controller
 		note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
 		if (incoming_data1==98) shift=1;
 
-		if ((incoming_data1>40)&&(incoming_data1 <99) && (!clip_stop) ){				// button lights extras
+		if ((incoming_data1>40)&&(incoming_data1 <99) && (!clip_stop) ){				// button lights, extras
 			alt_list=	 button_states[incoming_data1 ];
 			switch(alt_list){    // change state
 			case 0 :alt_list = 1;break;   // normal lights , yellow
@@ -241,26 +316,43 @@ void buttons_store(void){    // incoming data from controller
 
 			button_states[incoming_data1 ]=alt_list;
 		}
-		if ((incoming_data1>7)&&(incoming_data1 <40) && (!clip_stop) ){				// button lights notes
-			alt_list=button_states[(square_buttons_list[incoming_data1])+8];
+		if ((incoming_data1>23)&&(incoming_data1 <40) && (!clip_stop) ){				// button lights, notes
+			alt_list=button_states[incoming_data1];
+
 			switch(alt_list){    // change state
 			case 0 :alt_list = 5;break;   // normal lights , yellow
-			case 3 :alt_list= 0;break;		// green
-			case 5 :alt_list = 3;  ;break;					}
-			//case 5 :button_states[incoming_data1 ] = 3;break; }
+			default:alt_list= 0;break;
 
-			button_states[(square_buttons_list[incoming_data1])+8]=alt_list;
+			//case 5 :alt_list= 0;break;		// green
+			//case 3 :alt_list = 0;  ;break;
+			//case 5 :button_states[incoming_data1 ] = 3;break; }
+			}
+			button_states[incoming_data1]=alt_list;
 
 		}
+		if ((incoming_data1>7)&&(incoming_data1 <24) && (!clip_stop) ){				// button lights, pattern select
+			//alt_list=button_states[incoming_data1];
 
 
-		 if (!button_states[64] && (loop_selector)) {loop_selector=0;main_screen();}
-		 if (button_states[64] && (!loop_selector)) {loop_selector=1;loop_screen();}
+				//button_states[incoming_data1]=alt_list;
+
+			}
+
+
+
+
+
+
+
+
+
+		//	 if (!button_states[64] && (loop_selector)) {loop_selector=0;main_screen();}
+	//	 if (button_states[64] && (!loop_selector)) {loop_selector=1;loop_screen();}
 
 
 		 if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
 		if (button_states[67])  {right_arrow=1;     }  //shift notes right
-		if (button_states[86])  {select=1;main_screen();} else select=0;  // select enable
+		if (button_states[86])  {select=1;} else select=0;  // select enable
 
 		if (button_states[65]) {down_arrow=1;  	   }		else down_arrow=0;
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
@@ -269,10 +361,10 @@ void buttons_store(void){    // incoming data from controller
 		if (button_states[68])  volume=1; else volume=0;
 		if (button_states[69])  { pan=1; patch_screen()  ;   }   else pan=0;
 		if (button_states[70])  send=1; else send=0;
-		if (button_states[71])  {device=1;main_screen();  }else {device=0; }
+		if (button_states[71])  {device=1;  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;memcpy(loop_note_list,clear,10); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
-	//	if ((button_states[82]) && (!clip_stop) && (!play_screen))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen
-		if ((!button_states[82])  && (clip_stop))    {clip_stop=0; play_screen=0;  main_screen(); }
+	//	if ((button_states[82]) && (!clip_stop) && (!play_screen))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen, disable
+		if ((!button_states[82])  && (clip_stop))    {clip_stop=0; play_screen=0;  }
 	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
 
 			button_pressed=incoming_data1; // important  , only after note on
@@ -355,7 +447,7 @@ void buttons_store(void){    // incoming data from controller
 		} //end of pots 4-8
 		if ((incoming_data1<56)&&(incoming_data1>51)&& (loop_selector))  {    // pots 4-8  with loop light on
 
-		if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>2;   // works ok  sets loop length 0-32
+		if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>3;   // works ok  sets loop length 0-16
 		else looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop  fine offset 8/note  ,
 		}
 		if (incoming_data1==53) looper_list[(current_scene*4)+1]=(pot_states[5]>>2)&31;   // vel position offset

@@ -8,12 +8,13 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		uint8_t cue_counter=0;
 		uint16_t velocity=0;
 		//uint16_t seq_step_mod=seq_step_list[0];
-		uint8_t scene=scene_buttons[0];
+		uint8_t scene=scene_buttons[0]&3; // only for drums atm
+		if(scene_buttons[0]>3) scene=0;  // keys,this has to change
 		uint8_t looper_list_temp[33];
 		uint8_t lfo_out[10];
 		uint16_t loop_note_temp[8];
 		memcpy (looper_list_temp,looper_list,33); // need this
-		memcpy(lfo_out,loop_lfo_out+20,8);
+		memcpy(lfo_out,loop_lfo_out+20,8);  // time adjust , maybe change to controller data
 		memcpy(loop_note_temp,loop_note_list,16);
 
 		// uint8_t retrigger=0; // enable if seq_step hasn't_ moved
@@ -21,19 +22,20 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		 uint8_t note_enable=0;
 		// uint8_t current_note;
 		// uint8_t note_length= pot_states[3]>>4;
-		 uint8_t i_s;
-		 uint16_t data_temp2;
-		 uint16_t data_temp3;
-		 uint16_t current_pos=seq_pos&255;   // +8 to 2048 , gotta reset not much point otherwise
+		// uint8_t i_s;
+		// uint16_t data_temp2;
+		 //uint16_t data_temp3;
+		 uint16_t current_pos=seq_pos&127;   // +8 to 2048 , gotta reset not much point otherwise
 		 uint16_t offset=0;   // time offset
 		 uint8_t offset_pitch=0;
-		 uint8_t offset_vel=0; // velocity offset compared to notes
+		 //uint8_t offset_vel=0; // velocity offset compared to notes
 		 uint8_t offset_lfo=0;
 		 uint16_t offset2=0;
+		 uint16_t pattern=pattern_select;
 
 
 
-		for (i=0;i<8;i++){    //  this really needs to go away
+		for (i=0;i<4;i++){    //  this really needs to go away
 
 
 			offset_lfo= lfo_out[i]; // 0-4
@@ -41,16 +43,17 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 			//offset2=((32-looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8
 			offset2=((looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8
 
-			offset=((256-offset2)+current_pos)&255;   // seq_pos+offset 0-255
+			offset=(((128-offset2)+current_pos)&127)+(pattern*128);   // seq_pos+offset 0-255
 
-			i_s=i*32;
+			//i_s=i*32;
 				cue_counter=i*3;
-
+				//offset=current_pos;
 				//if (!offset) loop_note_list[i]=31;  // reset to start , rough but works
 
 			if ((loop_screen_note_on[offset] & (1<<i)) && (!retrigger_countdown[i]))
 
 			{note_enable=1;        // always triggered now
+
 			if (loop_note_temp[i]>= loop_length_set[i]) loop_note_temp[i]=0; else loop_note_temp[i]++; } // works for notes only
 
 						if ( (!mute_list[i])  	&&
@@ -62,25 +65,34 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 
 
-							offset_pitch=loop_note_temp[i]; // this is ok
-							data_temp2=(offset_pitch)+(i_s);   //0-255
-							offset_vel=((32-looper_list_temp[(i*4)+1])+offset_pitch)&31;   // vel position time offset 0-31
+							offset_pitch=loop_note_temp[i]; // note position, 0-16 this is ok
+							//data_temp2=(offset_pitch)+(i_s);   //0-255
+							//offset_vel=((32-looper_list_temp[(i*4)+1])+offset_pitch)&31;   // vel position time offset 0-31
 
-							data_temp3=offset_vel+i_s;
+							//data_temp3=offset_vel+i_s;
 							//if(i==6)  offset_vel=(looper_list[(i*4)+1]+offset_pitch+offset_lfo)&31;   // vel offset 0-31 + lfo
 							midi_cue[cue_counter]=0; // start with mute just in case
 
 
-							if ((button_states_loop[data_temp2]!=1))
-								 {retrigger_countdown[i]=4;    // start countdown to avoid fast note repeats
+							//if ((button_states_loop[data_temp2]!=1))   // keys
+
+							uint8_t drum_byte_select= (offset_pitch>>2)+(i*4)+(pattern*16);
+							uint8_t drum_byte=drum_store_one[drum_byte_select];
+							if (drum_byte & (1<<((offset_pitch&3)*2)))
+
+
+							{retrigger_countdown[i]=3;    // start countdown to avoid fast note repeats
 
 								midi_cue[cue_counter]=midi_channel_list[i]+144; } // get midi channel
 
+
+
+
 							if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
 
-							if (button_states_loop[data_temp3]>>7) velocity=note_accent[i ]; else velocity=64;
-
-							midi_cue[(cue_counter)+1]=((button_states_loop[data_temp2]))& 63;  //  pitch info +transpose but only from play_list
+							//if (button_states_loop[data_temp3]>>7) velocity=note_accent[i ]; else velocity=64; // always velocity
+							velocity=127;
+							//midi_cue[(cue_counter)+1]=((button_states_loop[data_temp2]))& 63;  //  pitch info +transpose but only from play_list
 
 							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // use drum list if set to  channel 10
 
@@ -245,7 +257,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 			 // start of serial send
 			 memcpy(serial_out + midi_extra_cue[28], send_temp, serial_len);
 			 serial_len = serial_len + midi_extra_cue[28];
-			 midi_extra_cue[28] = 0;
+			 midi_extra_cue[28] = 0;  // reset
 			 memcpy(serial_out + serial_len, nrpn_temp, nrpn_temp[80]); // temp only !  add nrpn
 			 serial_len = serial_len + nrpn_temp[80];
 			 nrpn_temp[80] = 0;
@@ -279,8 +291,8 @@ void cdc_send(void){     // all midi runs often , need to separate
 			uint8_t scene_select=scene_buttons[0];
 			uint8_t button_exception1=loop_note_list[scene_select];
 			uint8_t button_colour=0;
-			uint8_t loop_length=loop_screen_last_note[scene_select];
-			uint8_t divider;
+			//uint8_t loop_length=loop_screen_last_note[scene_select];
+			//uint8_t divider;
 
 
 			/*  if (loop_selector)
@@ -301,12 +313,12 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 		all_update=1;
 
-		if((all_update==1)){   // update all square scene lights on main screen
+		if((all_update==1)){   //  test and update all square scene lights on main screen
 
 			  for (i=0;i<32;i++)  {
-
-				  uint8_t display_button=button_states[i+8]; // just holds normal 0-32 number value
 				  uint8_t alt_list=square_buttons_list[i];
+				  uint8_t display_button=button_states[alt_list]; // just holds normal 0-32 number value
+
 
 			  if (((button_states_save[i]) != display_button) && (i!=button_exception1))  // send if changed
 			  {
@@ -405,7 +417,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 		memcpy(cdc_send_cue, send_temp, len);    // copy for cdc
 		cdc_len = len;
-	}
+	} // end of cdc_len
 
 
 

@@ -302,18 +302,18 @@ int main(void)
 							  if (midi_channel_list[selected_scene]==9)   // drums send
 							  {  midi_extra_cue[0]=153;         // use drumlist for now
 
-							  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=3;   // send midi
+							  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;   // send midi
 
 							  //{	nrpn_cue[selected_scene*3]=selected_scene+1; nrpn_cue[(selected_scene*3)+1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;  } // pitch data
 							  keyboard[0]=0;}
 							  else  {midi_extra_cue[0]=144+midi_channel_list[selected_scene];  midi_extra_cue[1]=((keyboard[0]+32))&127 ;
-							  midi_extra_cue[2]=127; midi_extra_cue[28]=3;keyboard[0]=0;}  // send normal then keyboard off
+							  midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;keyboard[0]=0;}  // send normal then keyboard off
 
 						  }
 
 						//  else   { if     (   midi_extra_cue[2])       {midi_extra_cue[2]=0;midi_extra_cue[28]=3; midi_cue_noteoff[50]=0;}
 
-						  else midi_extra_cue[28]=0;
+						  else //midi_extra_cue[28]=0;
 						  	  keyboard[0]=0;
 				//	  }
 
@@ -325,11 +325,32 @@ int main(void)
 
 		  if ((s_temp) != (seq_pos>>3)) {			// normal sending , very slow atm
 
+			  if ((seq_pos>>5)&1)   // send cc
+			  {
+				 uint8_t extras=midi_extra_cue[28];
+				 midi_extra_cue[extras]=178;  // cc ch3
+				 midi_extra_cue[extras+1]=74;  // filter cutoff ,correct
+				 midi_extra_cue[extras+2]=((loop_lfo_out[21]*2)+32)&127;  // lfo out
+				// midi_extra_cue[extras+2]=64;
+				 midi_extra_cue[28]=extras+3;
+
+
+
+
+
+
+			  }
+
+
+
+
+
+
 
 
 		//  if((button_send_trigger>>3)!=trigger_mem){      //
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
-			 if (play_list_write) play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;    // keep writing if enabled
+			// if (play_list_write) play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;    // keep writing if enabled,disabled
 
 			  uint8_t selected_scene=scene_buttons[0];
 			  seq_step_mod=seq_pos>>3;
@@ -365,18 +386,18 @@ int main(void)
 
 
 			 // printf(" %d",loop_lfo_out[(selected_scene)+20] );
-			  printf(" loop =%d ",looper_list_mem[7] );
+			//  printf(" loop =%d ",looper_list_mem[7] );
 
-			  for (i=0;i<1;i++){
+			  for (i=0;i<4;i++){
 
 				//  printf(" %d",midi_cue[(selected_scene*32)+i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
-				  printf(" =%d ",test_byte[+i] );
+				  printf(" ds=%d ",drum_store_one[i+(scene_buttons[0]*4)] );
 
 
 			  }
 
-			  printf(" loop=%d ",loop_selector);  printf(" step=%d ",seq_step_list[0]);printf("   %d\n ",seq_step_fine[0]&255);
+			  printf(" incoming=%d ",square_buttons_list[test_byte[11]]);  printf(" step=%d ",seq_step_list[0]);printf(" scn=%d\n ",scene_buttons[0]);
 
 			  if (first_message==2){
 				  uint8_t clear[30]={7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7};  // doesnt do anything
@@ -508,26 +529,26 @@ int main(void)
 
  	  if (cdc_buffer[0]) {      //  when cdc buffer incoming
  		  seq_enable=1; // wont start till midi in
+ 		  test_byte[11] =cdc_buffer[1];
+
+ 		//  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
+ 			//	uint8_t data_temp=i+(scene_buttons[0]*32);
 
 
- 		  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
- 				uint8_t data_temp=i+(scene_buttons[0]*32);
+ 			//	if ((!play_screen) &&(!loop_selector)) {main_screen();
 
-
- 				if ((!play_screen) &&(!loop_selector)) {main_screen();
-
- 			if (button_states [i+8] )  scene_memory[data_temp]	= ((scene_velocity [data_temp])&112)+scene_pitch[data_temp]; } // only for current
+ 			//if (button_states [i+8] )  scene_memory[data_temp]	= ((scene_velocity [data_temp])&112)+scene_pitch[data_temp]; } // only for current
 
  			//	if (!play_screen &&(loop_selector==2)){
  				 		//	if (button_states [i+8] )  button_states[i+8]	= button_states_loop [data_temp]; }
 
 
 
- 		  }
+ 		//  }
  			//	}  // play list  muting
 
 
- 	  if(play_screen) {play_screen=3;   play_muting();} // only reads, on receive
+ 	//  if(play_screen) {play_screen=3;   play_muting();} // only reads, on receive
  		  buttons_store();   // only runs after receive
 
 
@@ -845,7 +866,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)    // unreliable
 
 			if (!skip_enable) skip_enable=skip_setting; else {skip_enable--;} // 48 ppq here
 
-			if (ppq_count>5) {ppq_count=0; seq_pos=(seq_pos+1)&255;}   // 32 ppq
+			if (ppq_count>5) {ppq_count=0; seq_pos=(seq_pos+1)&127;}   // 32 ppq
 			 ppq_count++;
 			 if (ppq_send>95) ppq_send=0;  else ppq_send++;   // 96 ppq
 
