@@ -27,7 +27,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 		 		  test_data3[2]=patch_mem;
 
-		 		  memcpy  (test_data3+4 ,scene_memory,  256);   // maybe drum data
+		 		  memcpy  (test_data3+4 ,drum_store_one+256,  256);   // maybe drum data
 
 
 		 		 test_data3[0]=0x06; //enable write each time
@@ -140,7 +140,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 				  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
 				  HAL_Delay(20);
 
-				  memcpy  (test_data3+4 ,button_states_loop,  256);    // key notes
+				  memcpy  (test_data3+4 ,drum_store_one+512,  256);    // key notes
 						  test_data3[0]=0x06;
 						  test_data3[2]=patch_mem+3; //page6
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
@@ -160,7 +160,38 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 								  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
 								  HAL_Delay(20);
-		  HAL_Delay(500);
+  memcpy  (test_data3+4 ,drum_store_one+768,  256);    // key notes
+						  test_data3[0]=0x06;
+						  test_data3[2]=patch_mem+4; //page6
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
+								  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);
+								  HAL_Delay(20);
+
+
+								  test_data3[0]=0x02; //write ,page program
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);   // low
+								  HAL_SPI_Transmit(&hspi1, test_data3 ,260, 1000);  //address,then data
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
+								  HAL_Delay(200);
+
+								  test_data3[0]=0x04; //disable write
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0); // low
+								  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
+								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
+								  HAL_Delay(20);
+
+
+
+
+
+
+
+
+
+
+
+								  HAL_Delay(500);
 
 
 
@@ -182,7 +213,7 @@ void flash_read(void){     // 1kbyte for now
 	HAL_Delay(100);
 
 	uint8_t test_data2[1028]={0,10,0,0};
-	uint8_t test_data3[1028]={0,10,0,0};
+	uint8_t test_data3[2048]={0,10,0,0};
 	uint8_t patch_mem=(patch_save&15)<<4;    // 16*16 (4kbyte)   start location
 
 	test_data2[0]=0x03; //read ok , get notes
@@ -192,7 +223,7 @@ void flash_read(void){     // 1kbyte for now
 	HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
 	HAL_Delay(100);
 
-	memcpy(scene_memory,test_data3+4,256);    // buttons data
+	memcpy(drum_store_one+256,test_data3+4,256);    // buttons data
 
 	memcpy(all_settings,test_data3+260,200); // copy back settings block
 	memcpy(scene_transpose,all_settings,9);
@@ -207,7 +238,7 @@ void flash_read(void){     // 1kbyte for now
 	memcpy(loop_length_set,all_settings+105,8); // first 256bytes
 
 	memcpy(drum_store_one,test_data3+516,256);   // next block (+4)
-	memcpy(button_states_loop,test_data3+772,256); // need more space
+	memcpy(drum_store_one+512,test_data3+772,512); // need more space
 
 	tempo=all_settings[150];
 	if (tempo==255) tempo=120;
@@ -233,7 +264,7 @@ void flash_read(void){     // 1kbyte for now
 
 	//uint8_t data_temp2=0;
 	//uint16_t loop_pos=0;
-	for (n=0;n<4;n++){			//initial loop fill
+	for (n=0;n<8;n++){			//initial loop fill
 		//uint16_t  loop_speed=((looper_list[(n*4)+2])+1);
 		//uint8_t note_length=looper_list[(n*4)+3];
 		loop_screen_last_note[n]=16;
@@ -245,7 +276,7 @@ void flash_read(void){     // 1kbyte for now
 					//loop_pos=(i*8);
 					pattern_select=d;
 					//loop_selector=1;
-					loop_screen();
+					//loop_screen();
 					//if (!button_states_loop[data_temp2]) button_states_loop[data_temp2]=1;
 					//if (button_states_loop[data_temp2]) {
 
@@ -265,7 +296,7 @@ void flash_read(void){     // 1kbyte for now
 
 					}
 
-
+	pattern_select=0;
 
 	float tempo_hold=1;  // calculate tempo look up
 

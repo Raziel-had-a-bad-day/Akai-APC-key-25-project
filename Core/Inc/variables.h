@@ -2,6 +2,9 @@
 #define cpu_clock    96000000
 #define prescaler 192   // TIM10 values
 #define ppq_set 192   // TIM10 values
+#define drum_store 64  // scene_select  *4
+#define sound_set 16   // define selectable sounds for scene_buttons[0]  , important
+
 
 uint16_t bpm_table[256];  // lut values for temp TIM10 ARR
 uint8_t tempo; // tempo value
@@ -85,7 +88,7 @@ uint8_t pot_states[8]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current stat
 uint8_t note_off_flag[3]; // use this to detect held buttons 0 is on off ,1 is last button detected
 uint8_t all_update=1; // update all buttons from button_states , 40 for now
 uint8_t keyboard[3];  // store keys
-const uint8_t drum_list[8] ={20,21,22,23,24,25,26,27}; // notes played for drum scenes
+const uint8_t drum_list[sound_set] ={20,21,22,23,24,25,26,27,28,29,30,30,30,30,30,30}; // notes played for drum scenes
 uint8_t midi_cue[50];  // data cue for midi max 8 notes [25] = message length
 uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length
 uint32_t sys_cnt[3];
@@ -111,22 +114,22 @@ uint8_t button_states_save[100]; // reference for button changes for controller
 uint8_t button_states_loop[256];  // stored,loop screen buttons ,  pitch+accent (MSB),always on , 1 for empty
 uint8_t  loop_screen_note_on[2048];    //changed , 1 bit per note on , 128*16 =2048 for 8 notes
 uint16_t loop_screen_note_off[256]; 		// calculated, note off record also 2048 count
-uint16_t loop_note_list[10]; //tracks currently playing note position
+uint16_t loop_note_list[sound_set]; //tracks currently playing note position
 uint8_t button_states_main[64]; // button states on main screen , copied
-uint8_t loop_note_count[10];  // keeps track of number of notes in a loop
+uint8_t loop_note_count[sound_set];  // keeps track of number of notes in a loop
 uint8_t loop_current_speed;
-uint8_t loop_lfo_out[30];  // used for some level of lfo using pot7 for now 0-255
+uint8_t loop_lfo_out[sound_set*3];  // used for some level of lfo using pot7 for now 0-255
 
-uint8_t pitch_hold[10]; //holds last not eplayed
+uint8_t pitch_hold[sound_set]; //holds last not eplayed
 uint8_t seq_step_mem;  // mem for looper
-uint8_t retrigger_countdown[9];
+uint8_t retrigger_countdown[sound_set];
 
 uint8_t pot_tracking[33] ; // record pot movements , maybe after 1 bar ,only transpose for now
-uint8_t mute_list[9]; //track scene mutes
+uint8_t mute_list[sound_set]; //track scene mutes
 uint8_t noteoff_list[25]; //track note offs sorted 0-7 , empty when not in use
 //notes
-uint8_t scene_transpose[9];
-uint8_t scene_volume[9];  // use it to control velocity only on midi out
+uint8_t scene_transpose[sound_set];
+uint8_t scene_volume[sound_set];  // use it to control velocity only on midi out
 uint8_t last_button;
 uint8_t bar_looping; // loop 8 notes on cueent scene if enabled
 uint8_t bar_count; // relates to looping
@@ -135,44 +138,45 @@ uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
 uint8_t loop_selector=1;  //enables loop controls pot 4-8 when up arrow is on
-uint8_t play_speed[20]={8,8,8,8,8,8,8,8,8,8,1,1,1,1,1,1,0};  // sets playback speed using seq_pos multiply 1/4 1/2 1/1 2/1 maybe 4/1 only notes for now ,also sets repeat bars 1-4 times
-uint8_t speed_default[12]={8,4,2,1,8,4,2,1,0,0,0};     // play speed deafults   [8] hholds last value selected
+
+
 
 uint8_t seq_step_list[20]; //store seq_step position per part  .for now just notes 4-8
-uint16_t seq_step_fine[10];  // holds high count for seq_step_list   *8 res
+uint16_t seq_step_fine[sound_set];  // holds high count for seq_step_list   *8 res
 uint8_t seq_current_step; // current position on selected from seq_step_list
-uint8_t seq_step_reset[10];  // tracks when seq_step_list reset to start
+uint8_t seq_step_reset[sound_set];  // tracks when seq_step_list reset to start
 uint8_t seq_step_long; // 32*32
-uint8_t seq_step_enable[9]; // step change tracking
+uint8_t seq_step_enable[sound_set]; // step change tracking
 uint8_t loop_screen_scene;
-uint8_t loop_screen_last_note[9]; //holds last enabled loop screen note
-uint8_t note_latch[10]; // stays on when triggered
-uint16_t note_latch_pos[10]; // holds pos of note latch
+uint8_t loop_screen_last_note[sound_set]; //holds last enabled loop screen note
+uint8_t note_latch[sound_set]; // stays on when triggered
+uint16_t note_latch_pos[sound_set]; // holds pos of note latch
 uint8_t loop_length;
-uint8_t loop_length_set[10]={7,7,7,7,7,7,7,7,7,7}; // loop length
+uint8_t loop_length_set[sound_set]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15}; // loop length
 uint8_t serial_out[50];
 uint8_t serial_len;
-uint8_t midi_channel_list[21]={9,9,9,9,3,9,9,9 };   //holds midi channel settings 0=1 (midi channels 1-16)
+uint8_t midi_channel_list[21]={9,9,9,9,9,9,9,9,9,9,9,9,3,3,3,3,3,3 };   //holds midi channel settings 0=1 (midi channels 1-16)
 uint8_t nrpn_cue[80]={186,99,5,186,98,16,186,6,32};  // stores message for nrpn on es1 only needs 1 initial c99=5  then only  2 bytes repeating  CC 98 =NRPN LSB and CC 6 =value , for now 9 bytes though  , initial normal 3 bytes then convrted to 9
 uint8_t pitch_lut[127] ={0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,0,2,4,6,8,10,12,14,16,18,20,22,24,27,30,33,36,39,42,45,48,51,54,57,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127,64,70,73,76,79,82,85,88,91,94,97,100,103,105,107,109,111,113,115,117,119,121,123,125,127};   // es1 pitch table  4 octaves
 uint8_t es_filter[9]; // track es1 filters  old and new values  say 4+4
 uint8_t es_filter_cue[20];   // hold filter data for nrpn
-uint8_t midi_cc[9]; // enabled if sending midi cc
+uint8_t midi_cc[sound_set]; // enabled if sending midi cc
 uint8_t midi_cc_cue[20];  //  0=part+1 ,1 is value
 uint8_t midi_extra_cue[30] ; // extra stuff to be sent that ins't regular [28] is length
 uint8_t current_midi; // holds selected channel
-uint8_t note_accent[9]={127,127,127,127,127,127,127,127,127};  // stores accent data for tracks on/off
+uint8_t note_accent[sound_set]={127,127,127,127,127,127,127,127,127};  // stores accent data for tracks on/off
 
 uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part, change to hold transpose
 uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
 uint8_t play_list_write=0; // keeps writing while shift is held down
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
-uint8_t looper_list[33]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start 2=length 3=gap between repeats 4=speed (default 0,32,0,8)
-uint8_t looper_list_mem[10];  // keeps track of previous values for ppq skip
+uint8_t looper_list[sound_set*4]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start offset 2=vel offset 3=lfo level  4=speed
+uint8_t looper_list_mem[20];  // keeps track of previous values for ppq skip
 uint8_t loop_current_offset;
 uint8_t loop_current_length;
 uint8_t step_record; // works in stop mode
-uint8_t drum_store_one[256]; // holds drum notes 2 bit , note one and accent
+uint8_t drum_store_one[1024]; // holds drum notes 2 bit , note one and accent
 uint8_t pattern_select=0; //
 uint8_t test_byte[20];
+uint8_t second_scene=0;  // select second set of sounds

@@ -212,6 +212,7 @@ int main(void)
 		//  uint8_t step_start;
 		//  uint8_t play_total; // different for each note
 		  uint8_t buttons_list[28]={0,64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98,0,1,2,3,4,5,6,7};  //extra buttons  slow
+/*
 
 
 		  if ((looper_list_mem[7]<looper_list[7*4]) && (!skip_counter))  {    // catch up with loop slide + for now
@@ -233,6 +234,7 @@ int main(void)
 
 		  if ((!skip_counter) &&  (!skip_enable)) skip_setting=1;  // default speed
 
+*/
 
 
 
@@ -335,16 +337,7 @@ int main(void)
 				 midi_extra_cue[28]=extras+3;
 
 
-
-
-
-
 			  }
-
-
-
-
-
 
 
 
@@ -388,11 +381,11 @@ int main(void)
 			 // printf(" %d",loop_lfo_out[(selected_scene)+20] );
 			//  printf(" loop =%d ",looper_list_mem[7] );
 
-			  for (i=0;i<4;i++){
+			  for (i=0;i<10;i++){
 
-				//  printf(" %d",midi_cue[(selected_scene*32)+i] );
+				  printf(" %d",test_byte[i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
-				  printf(" ds=%d ",drum_store_one[i+(scene_buttons[0]*4)] );
+				 // printf(" ds=%d ",drum_store_one[i+(scene_buttons[0]*4)] );
 
 
 			  }
@@ -529,7 +522,6 @@ int main(void)
 
  	  if (cdc_buffer[0]) {      //  when cdc buffer incoming
  		  seq_enable=1; // wont start till midi in
- 		  test_byte[11] =cdc_buffer[1];
 
  		//  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
  			//	uint8_t data_temp=i+(scene_buttons[0]*32);
