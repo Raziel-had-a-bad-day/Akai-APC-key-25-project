@@ -1,5 +1,30 @@
 
+void settings_storage(void){   // runs to store setting and backh
 
+			uint8_t *settings[8]={ 	scene_transpose,pot_states,pot_tracking,mute_list,scene_volume,midi_channel_list,looper_list,loop_length_set};
+			uint8_t settings_multi[8]={1,1,4,1,1,1,4,1};   // sets length,  sound_set*x
+			uint8_t settings_temp[64];
+			uint8_t settings_total=0;  //adds up position
+			uint8_t length=0;
+
+			for (i=0;i<8;i++){
+
+				length=(settings_multi[i]*sound_set);
+				if(settings_write_flag) {		memcpy(settings_temp,settings[i],length);	// copy to temp
+				memcpy(all_settings+settings_total,settings_temp,length);}
+				else {
+
+					memcpy(settings_temp,all_settings+settings_total,length);  // copy value
+					memcpy(settings[i],settings_temp,length);                }  //
+
+		settings_total=settings_total+length;
+
+			}
+
+			for (i=0;i<250;i++){if (all_settings[i]>127) all_settings[i]=0;}  // just in case
+			settings_write_flag=0;
+
+}
 
 void flash_write(void){					// too much crap needs to simplify , easy mistakes
 	  if ((send) & (write_once==0)&&(!shift)          ){
@@ -10,20 +35,6 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		 	uint8_t patch_mem=(patch_save&15)<<4;    // 16*16 (4kbyte)   start location
 
 
-		 		  //  uint8_t temp_data;
-/*
-		 		  for(i=0;i<256;i++){
-		 			  test_data3[i+4]=255;
-
-		 		  }
-*/
-
-
-			/*for (i=0;i<256;i++){
-				if (scene_velocity[i])  scene_memory[i]=	((scene_velocity [i]&112)<<1)+	(scene_pitch [i]&31) ;   //merge into scene memory
-
-
-			}*/
 
 		 		  test_data3[2]=patch_mem;
 
@@ -83,18 +94,12 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		  HAL_Delay(20);
 
 
-		  	  all_settings[150]=tempo;
-			memcpy(all_settings,scene_transpose,9); // copy settings
-			memcpy(all_settings+9,pot_states,8);
-			memcpy(all_settings+17,pot_tracking,32);
-			memcpy(all_settings+49,mute_list,8);
-			memcpy(all_settings+57,scene_volume,8);
-			memcpy(all_settings+65,midi_channel_list,8);
-			memcpy(all_settings+73,looper_list,32);
-			memcpy(all_settings+105,loop_length_set,8); // first 256bytes
+		  	  all_settings[250]=tempo;
 
+		  	  settings_write_flag=1;
+			settings_storage();
 
-			memcpy  (test_data3+4 ,all_settings,  200); // copy
+			memcpy  (test_data3+4 ,all_settings,  256); // copy
 
 
 		  test_data3[0]=0x06;
@@ -107,7 +112,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 		  test_data3[0]=0x02; //write ,page program
 		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);   // low
-		  HAL_SPI_Transmit(&hspi1, test_data3 ,204, 1000);  //address,then data
+		  HAL_SPI_Transmit(&hspi1, test_data3 ,260, 1000);  //address,then data
 		  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);  // high end
 		  HAL_Delay(200);
 
@@ -160,7 +165,8 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 								  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
 								  HAL_Delay(20);
-  memcpy  (test_data3+4 ,drum_store_one+768,  256);    // key notes
+
+								  memcpy  (test_data3+4 ,drum_store_one+768,  256);    // key notes
 						  test_data3[0]=0x06;
 						  test_data3[2]=patch_mem+4; //page6
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);
@@ -180,15 +186,6 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 								  HAL_SPI_Transmit(&hspi1, test_data3, 1, 100);
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
 								  HAL_Delay(20);
-
-
-
-
-
-
-
-
-
 
 
 								  HAL_Delay(500);
@@ -225,22 +222,14 @@ void flash_read(void){     // 1kbyte for now
 
 	memcpy(drum_store_one+256,test_data3+4,256);    // buttons data
 
-	memcpy(all_settings,test_data3+260,200); // copy back settings block
-	memcpy(scene_transpose,all_settings,9);
-	memcpy(pot_states,all_settings+9,8);
-	memcpy(pot_tracking,all_settings+17,32);
-	memcpy(mute_list,all_settings+49,8);
-	memcpy(scene_volume,all_settings+57,8);
-	//memcpy(midi_channel_list,all_settings+65,8);  // temp disable
+	memcpy(all_settings,test_data3+260,256); // copy back settings block
 
-
-	memcpy(looper_list,all_settings+73,32); // first 256bytes
-	memcpy(loop_length_set,all_settings+105,8); // first 256bytes
+	settings_storage();
 
 	memcpy(drum_store_one,test_data3+516,256);   // next block (+4)
 	memcpy(drum_store_one+512,test_data3+772,512); // need more space
 
-	tempo=all_settings[150];
+	tempo=all_settings[250];
 	if (tempo==255) tempo=120;
 	if (!tempo) tempo=120;
 
@@ -251,12 +240,7 @@ void flash_read(void){     // 1kbyte for now
 
 	//if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting
 		}
-/*
-	for (i=0;i<255;i++){
-		scene_velocity [i]=(scene_memory[i]>>1)&112;    //needs to update velocities or lost , shifted
-		scene_pitch [i]=(scene_memory[i])&31;   // pitch ?
 
-	}*/
 
 	uint8_t d;
 

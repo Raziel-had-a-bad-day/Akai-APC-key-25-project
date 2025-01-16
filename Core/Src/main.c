@@ -114,6 +114,7 @@ void nrpn_send(void);
 void loop_screen(void);// loop screen change
 void note_buttons(void); // all note functions from buttons
 void loop_lfo(void);
+void settings_storage(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -236,11 +237,6 @@ int main(void)
 
 */
 
-
-
-
-
-
 		  if (seq_pos_mem!=seq_pos){     // runs  8 times /step  , control sequencer counting
 
 			  if(!pause) {
@@ -330,9 +326,9 @@ int main(void)
 			  if ((seq_pos>>5)&1)   // send cc
 			  {
 				 uint8_t extras=midi_extra_cue[28];
-				 midi_extra_cue[extras]=178;  // cc ch3
+				 midi_extra_cue[extras]=176+midi_channel_list[12];  // cc ch3
 				 midi_extra_cue[extras+1]=74;  // filter cutoff ,correct
-				 midi_extra_cue[extras+2]=((loop_lfo_out[21]*2)+32)&127;  // lfo out
+				 midi_extra_cue[extras+2]=((loop_lfo_out[44]*2)+32)&127;  // lfo out
 				// midi_extra_cue[extras+2]=64;
 				 midi_extra_cue[28]=extras+3;
 
@@ -351,7 +347,7 @@ int main(void)
 			  loop_current_length=looper_list[(selected_scene*4)+1];
 			  loop_current_offset=looper_list[(selected_scene*4)];
 			  loop_current_speed=looper_list[(selected_scene*4)+2];
-			  lfo=loop_lfo_out[selected_scene+20];
+			  lfo=loop_lfo_out[selected_scene+32];
 
 				play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
@@ -368,22 +364,17 @@ int main(void)
 
 			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
- 			//	 if (send_buffer[9]) printf(" send_buffer[9]=%d\n ",send_buffer[9]);
- /*
- 				printf("step_long= %d ", (seq_step_long+(selected_scene*32)));printf("button=%d ", button_states[square_buttons_list[seq_step_long]]);printf(" %d ", serial_out[3]);
- 				printf(" %d ", serial_out[4]);printf("pitch=%d ", scene_pitch[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);
- 				printf(" transps=%d ",scene_transpose[selected_scene]);
- 				printf("    vel=%d ", scene_velocity[(selected_scene*32)+(seq_step_list[selected_scene]&31)]);printf("  txt=%*s",3,lcd_char );printf("   %d\n ",lcd_pos);
- 				printf("   %d\n ",lcd_pos);
- */
 
 
 			 // printf(" %d",loop_lfo_out[(selected_scene)+20] );
 			//  printf(" loop =%d ",looper_list_mem[7] );
 
+			  uint8_t crap[64];
+
+
 			  for (i=0;i<10;i++){
 
-				  printf(" %d",test_byte[i] );
+				  printf(" %d",crap[i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
 				 // printf(" ds=%d ",drum_store_one[i+(scene_buttons[0]*4)] );
 
@@ -415,15 +406,6 @@ int main(void)
  				//  arrows();
  				  if (!pause) seq_step = seq_pos>> 3; else seq_step=seq_step;
 
-// 				  if(pause) {// keyboard midi send during pause
-// 					  { if (keyboard[0]&&(scene_buttons[0]>3))  {;midi_cue[0]=143+scene_buttons[0];
-// 					  midi_cue[1]=((keyboard[0])+scene_transpose[scene_buttons[0]])&127 ;midi_cue[2]=127;}
-// 					  midi_cue[50]=3;}
-// 					// midi_cue[50]=0;
-//
-//
-// 				  }
-
 
  				  s_temp = seq_pos>>3;
  				//  trigger_mem=button_send_trigger>>3;
@@ -431,28 +413,6 @@ int main(void)
 
  		//}  // end of seq_enable
 
-
-
-//	  if((all_update>2) & (all_update<8)){   // update selected line  square scene lights 3-7
-//
-//
-//
-//		  uint8_t select_line=(((all_update-3))*8)&31;
-//
-//		  select_line= square_buttons_list [select_line];
-//
-//		  temp=select_line;
-//
-//
-//		  for (i=0;i<8;i++)  {
-//			  send_all[i*3]=144;
-//			  send_all[(i*3)+1]=i+select_line;    // button
-//			  send_all[(i*3)+2]=button_states[i+select_line];   // button value
-//		  }
-//
-//		  all_update=10;}
-//
-//
 
 
 /*
@@ -507,15 +467,9 @@ int main(void)
  	  }  // end of midi in
 */
 		if((device) && (select) )   {														///   Midi channel  , maybe elsewhere
+			midi_channel_list[scene_buttons[0]]=pot_states[7]>>3;    // add pot value
+			 current_midi=midi_channel_list[scene_buttons[0]];
 
-				//	button_pressed=square_buttons_list[pot_states[7]>>3]; // last data
-			//		button_states[square_buttons_list[midi_channel_list[20]]]=0;
-			//		button_states[square_buttons_list[midi_channel_list[scene_buttons[0]]]]=3;  //
-				//	midi_channel_list[scene_buttons[0]]=pot_states[7]>>3;
-
-
-			//		button_states[square_buttons_list[pot_states[7]>>3]]=3;
-				//all_update=3+(pot_states[7]>>6);  // 3+0-4
 				}
 
 
@@ -523,24 +477,7 @@ int main(void)
  	  if (cdc_buffer[0]) {      //  when cdc buffer incoming
  		  seq_enable=1; // wont start till midi in
 
- 		//  for (i=0;i<32;i++) {// scene memory fill from buttons each time a button is pressed
- 			//	uint8_t data_temp=i+(scene_buttons[0]*32);
 
-
- 			//	if ((!play_screen) &&(!loop_selector)) {main_screen();
-
- 			//if (button_states [i+8] )  scene_memory[data_temp]	= ((scene_velocity [data_temp])&112)+scene_pitch[data_temp]; } // only for current
-
- 			//	if (!play_screen &&(loop_selector==2)){
- 				 		//	if (button_states [i+8] )  button_states[i+8]	= button_states_loop [data_temp]; }
-
-
-
- 		//  }
- 			//	}  // play list  muting
-
-
- 	//  if(play_screen) {play_screen=3;   play_muting();} // only reads, on receive
  		  buttons_store();   // only runs after receive
 
 

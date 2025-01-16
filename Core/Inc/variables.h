@@ -84,7 +84,7 @@ uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 
 uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , 8-40 (0-32)  is out of order to make it easier on operations ,bad idea -reversed
 uint8_t scene_pitch[260]; // stores a pitch value per field 8*32 , stored in order
 uint8_t scene_velocity[260]; // stores a pitch value per field 8*32
-uint8_t pot_states[8]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current state
+uint8_t pot_states[sound_set]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current state
 uint8_t note_off_flag[3]; // use this to detect held buttons 0 is on off ,1 is last button detected
 uint8_t all_update=1; // update all buttons from button_states , 40 for now
 uint8_t keyboard[3];  // store keys
@@ -93,6 +93,7 @@ uint8_t midi_cue[50];  // data cue for midi max 8 notes [25] = message length
 uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length
 uint32_t sys_cnt[3];
 uint8_t note_off_enable;
+uint8_t settings_write_flag=0;
 
 uint8_t counter_a;
 // SPI stuff
@@ -106,7 +107,7 @@ uint8_t send_spi2[260];
 uint8_t write_once; // allow only a single flash write for now
 uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1,0,1};
 uint8_t spi_hold[260]={0,10,0,0};
-uint8_t all_settings[200];  // store all extra settings:  transpose , pots
+uint8_t all_settings[256];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
 uint8_t other_buttons_hold[28]; // keeps track of buttons
 uint8_t send_buffer_sent;
@@ -171,7 +172,7 @@ uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
 uint8_t play_list_write=0; // keeps writing while shift is held down
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
-uint8_t looper_list[sound_set*4]={0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start offset 2=vel offset 3=lfo level  4=speed
+uint8_t looper_list[sound_set*4]={0,31,0,8,0,31,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start offset 2=vel offset 3=lfo level  4=speed
 uint8_t looper_list_mem[20];  // keeps track of previous values for ppq skip
 uint8_t loop_current_offset;
 uint8_t loop_current_length;

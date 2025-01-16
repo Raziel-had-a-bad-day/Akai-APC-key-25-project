@@ -340,12 +340,6 @@ void buttons_store(void){    // incoming data from controller
 
 
 
-
-
-
-
-
-
 		 if ((!button_states[64]) && (scene_buttons[0]>7)) {scene_buttons[0]=scene_buttons[0]-8;second_scene=0;loop_selector=1;loop_screen();}
 		 if (button_states[64] && (scene_buttons[0]<8)) 	{scene_buttons[0]=scene_buttons[0]+8;second_scene=8;loop_selector=1;loop_screen();}
 
@@ -416,27 +410,6 @@ void buttons_store(void){    // incoming data from controller
 		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (!loop_selector))  {    // pots 4-8
 
 
-		if((device) && (select) )   {														///   Midi channel  , maybe elsewhere
-
-		//	button_pressed=square_buttons_list[pot_states[7]>>3]; // last data
-
-		//	midi_channel_list[20]=midi_channel_list[scene_buttons[0]];
-			button_states[midi_channel_list[current_scene]+8]=0 ;  // turn off
-			//midi_channel_list[20]=midi_channel_list[scene_buttons[0]];   // store last setting
-
-
-		midi_channel_list[current_scene]=pot_states[7]>>3;    // add pot value
-			button_states[(pot_states[7]>>3)+8]=3;			// turn on light
-
-
-		//	all_update=3+(pot_states[7]>>6);  // 3+0-4
-		//all_update=2;
-
-		  // input midichannel
-
-		//if (scene_buttons[0]>3) scene_volume[incoming_data1-48]= pot_states [incoming_data1-48]; else scene_volume[incoming_data1-52]= pot_states [incoming_data1-48]; // velocity mod on midi out
-
-		}  // end of midi selection
 		if ((incoming_message[2] <64))      // crossfade mode
 		{	scene_volume[(incoming_data1-52)*2]= 127;      // 0,2,4,6,
 		scene_volume[((incoming_data1-52)*2)+1]= 127-((63-incoming_message[2])<<1);} //1,3,5,7
@@ -513,19 +486,10 @@ void buttons_store(void){    // incoming data from controller
 
 			scene_buttons[0]=scene_select;
 
-
-			//all_update=1;
-
-
-			 //if(play_screen) {play_screen=2;   play_muting();} // needed ?
-
-			// if((!play_screen)&&(!loop_selector)) main_screen();
-
-
-			   // reset play screen
-//  buttons from scene memory , ok , data seems to get lost here
-
 			 current_midi=midi_channel_list[scene_buttons[0]];
+
+
+
 			} //end of scene select
 
 	
