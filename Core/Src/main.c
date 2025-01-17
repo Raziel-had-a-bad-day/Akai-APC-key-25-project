@@ -256,31 +256,30 @@ int main(void)
 			  cdc_send(); // all midi compiled for send
 
 			//  send_buffer_sent=1;
-			  if (send_buffer_sent==1)                  {    // moving light send and button change , quick
+					if (send_buffer_sent == 1) { // moving light send and button change , current
 
+						seq_step_mem = seq_step_mod;
+						send_buffer_sent = 2;
+					}
+					//// extra buttons
+					counter_a = 0;
+					for (i = 0; i < 27; i++) { // test for extra button changes and set counter_a, quick
+						if ((other_buttons_hold[i] != button_states[buttons_list[i]])
+								&& (!counter_a)) {
+							counter_a = i + 1;
+							other_buttons_hold[i] = button_states[buttons_list[i]];
+						}  // can be used to reset all these buttons
+					}
 
-			  			seq_step_mem=seq_step_mod;
-			  			  send_buffer_sent=2;
-			  					}
+					if (counter_a) {
 
-			  			 //// extra buttons
+						send_buffer[6] = 144;
+						send_buffer[7] = buttons_list[counter_a - 1] & 127;
+						send_buffer[8] = button_states[buttons_list[counter_a - 1]]
+								& 127;  // not all will light up :/
 
-			  				counter_a=0;
-			  							  for (i=0;i<27;i++) {   // test for extra button changes and set counter_a, quick
-			  								  if ((other_buttons_hold[i]!= button_states[buttons_list[i]]) && (!counter_a)) {counter_a=i+1;
-			  								  other_buttons_hold[i]= button_states[buttons_list[i]];}  // can be used to reset all these buttons
-			  							  	  	  }
-
-
-			  			  if (counter_a) {
-
-
-			  			  send_buffer[6] = 144;
-			  			  send_buffer[7] = buttons_list[counter_a-1]&127;
-			  			  send_buffer[8] = button_states[buttons_list[counter_a-1]]&127;  // not all will light up :/
-
-			  			  } else
-			  				  send_buffer[6] = 0;
+					} else
+						send_buffer[6] = 0;
 
 
 
@@ -290,29 +289,30 @@ int main(void)
 
 
 
+						  if (keyboard[0])  {    // keyboard play live
 
+							 uint8_t note_flag=144;
+							  if (keyboard[0]>>7)  note_flag=128;
 
-		//	  if(pause  || down_arrow) {  //play notes  during pause or down arrow from keyboard , need to be elsewhere
-
-						  if (keyboard[0])  {
-							  last_key=keyboard[0];   //store key
+							  last_key=keyboard[0]&127;   //store key
 							  keyboard[1]=last_key;
+
 							  if (midi_channel_list[selected_scene]==9)   // drums send
-							  {  midi_extra_cue[0]=153;         // use drumlist for now
+							  {  midi_extra_cue[0]=(note_flag+9);         // use drumlist for now
 
 							  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;   // send midi
 
 							  //{	nrpn_cue[selected_scene*3]=selected_scene+1; nrpn_cue[(selected_scene*3)+1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;  } // pitch data
 							  keyboard[0]=0;}
-							  else  {midi_extra_cue[0]=144+midi_channel_list[selected_scene];  midi_extra_cue[1]=((keyboard[0]+32))&127 ;
+							  else  {midi_extra_cue[0]=note_flag+midi_channel_list[selected_scene];  midi_extra_cue[1]=((last_key+32))&127 ;
 							  midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;keyboard[0]=0;}  // send normal then keyboard off
 
 						  }
 
-						//  else   { if     (   midi_extra_cue[2])       {midi_extra_cue[2]=0;midi_extra_cue[28]=3; midi_cue_noteoff[50]=0;}
 
-						  else //midi_extra_cue[28]=0;
-						  	  keyboard[0]=0;
+
+						 // else //midi_extra_cue[28]=0;
+						  //	  keyboard[0]=0;
 				//	  }
 
 
@@ -328,7 +328,7 @@ int main(void)
 				 uint8_t extras=midi_extra_cue[28];
 				 midi_extra_cue[extras]=176+midi_channel_list[12];  // cc ch3
 				 midi_extra_cue[extras+1]=74;  // filter cutoff ,correct
-				 midi_extra_cue[extras+2]=((loop_lfo_out[44]*2)+32)&127;  // lfo out
+				 midi_extra_cue[extras+2]=(((loop_lfo_out[44]*2)+32)+pot_states[0])&127;  // lfo out , use pot 0 for offset
 				// midi_extra_cue[extras+2]=64;
 				 midi_extra_cue[28]=extras+3;
 
@@ -353,7 +353,7 @@ int main(void)
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
 
-			//  if (seq_step_mem!=seq_step_mod)		{send_buffer_sent=1;}
+
 
 
 			  if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
@@ -372,7 +372,7 @@ int main(void)
 			  uint8_t crap[64];
 
 
-			  for (i=0;i<10;i++){
+			  for (i=0;i<1;i++){
 
 				  printf(" %d",crap[i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
@@ -466,17 +466,15 @@ int main(void)
 
  	  }  // end of midi in
 */
-		if((device) && (select) )   {														///   Midi channel  , maybe elsewhere
-			midi_channel_list[scene_buttons[0]]=pot_states[7]>>3;    // add pot value
-			 current_midi=midi_channel_list[scene_buttons[0]];
 
-				}
 
 
 
  	  if (cdc_buffer[0]) {      //  when cdc buffer incoming
- 		  seq_enable=1; // wont start till midi in
 
+
+
+ 		 // printf(" 1=%d ",cdc_buffer[0] ); printf(" 2=%d ",cdc_buffer[1] ); printf(" 3=%d \n ",cdc_buffer[2] );
 
  		  buttons_store();   // only runs after receive
 
@@ -492,7 +490,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
   } // while loop
   /* USER CODE END 3 */
-}
+}  // main
 
 /**
   * @brief System Clock Configuration

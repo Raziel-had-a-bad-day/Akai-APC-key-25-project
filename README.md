@@ -9,19 +9,21 @@ Mute and solo works , saves mute on restart. Press keyboard ,turn pot 2 for velo
 Pot 3 = Transpose, disabled 
 
 Pot 5-8 = crossfade  velocity between 1-2,3-4 etc  , disabled
-Shift + Pot 8 = tempo , select+pot1 or pot2  to enter pitch and velocity or press on keyboard while pressing buttons, 
-device + select = midi settings for parts using bottom row part buttons and pot 8 of entry red light shows current midi channel, 
+
+device + shift =     pot8=temp , pot7= midi channel,
 send = write to flash , 
 send + shift = reload 
 solo = solo current selected part only , 
 mute = select any part to mute, 
 up arrow = enable sounds 8-15, 
 pot5=note start offset fine  8/note  ,pot6=offset velocities in time to move accent, pot 7=lfo gain on time offset  ,  pot8=velocity/accent   
-shift + pot 5 = loop length
+shift + pot 5 = set part currently playing  length 0-15 
 keyboard = sets pitch for programming notes , also play 
 Stop all clips = stops and jumps to start 
+clip_stop = enables all pots to set pitch for 8x2 notes  except drums
 
   
 pan = shows current loaded patch  , pot 8 to set load/save position 
  
-pattern select = row 3 and 4 ,1-16 
+pattern select = row 3 and 4 ,1-16
+press pattern twice to play once then return to previous  

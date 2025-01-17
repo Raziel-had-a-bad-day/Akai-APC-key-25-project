@@ -100,6 +100,8 @@ uint8_t counter_a;
 uint8_t spi_send[10];
 uint8_t status_reg[2];
 uint8_t first_message=0; // flag to clear once a button is pressed
+uint8_t previous_pattern[2];
+
 
 uint8_t flash_flag=0;
 uint8_t flash_read_block2[260] ={1,1,1,1,1,1,1,0}; // this should clearif flash read works
@@ -120,6 +122,9 @@ uint8_t button_states_main[64]; // button states on main screen , copied
 uint8_t loop_note_count[sound_set];  // keeps track of number of notes in a loop
 uint8_t loop_current_speed;
 uint8_t loop_lfo_out[sound_set*3];  // used for some level of lfo using pot7 for now 0-255
+// uint8_t lfo_settings[sound_set*3];  // lfo 0-8   rate , gain,offset, target
+uint8_t alt_pots[sound_set]; // stores a set of alt pot settings , 2 sets for now
+
 
 uint8_t pitch_hold[sound_set]; //holds last not eplayed
 uint8_t seq_step_mem;  // mem for looper

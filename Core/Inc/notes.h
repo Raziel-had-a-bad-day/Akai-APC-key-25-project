@@ -216,7 +216,7 @@ void note_buttons(void){  // always running
 	}    // play screen off and patch screen off
 */
 
-	if ((!clip_stop) && (!pan) && (last_press<16) )      // loop screen , normal , only for drum satm
+	if ((!pan) && (last_press<16) )      // loop screen , normal , only for drum satm
 
 			{ //  , only if enabled though ,
 
@@ -244,9 +244,14 @@ void note_buttons(void){  // always running
 				if(last_press>15){    // pattern selection
 				//uint8_t pattern=pattern_select;
 				uint8_t new_pattern=(last_press-16);
-				for (i =8 ; i < 40; i++) {button_states[i]=0;}  // this is ok
+				for (i =8 ; i < 40; i++) {button_states[i]=0;}  // clear all ,  this is ok
 
 					//button_states[square_buttons_list[pattern+16]]=0;
+
+
+			//	if (button_states[square_buttons_list[new_pattern+16]])    {button_states[square_buttons_list[new_pattern+16]]=3; previous_pattern[2]=2;} // deosnt work yet
+
+					//else { button_states[square_buttons_list[new_pattern+16]]=5; previous_pattern[2]=1; }
 					button_states[square_buttons_list[new_pattern+16]]=5;
 					pattern_select=new_pattern;
 					memcpy(loop_note_list,clear,16);   // reset on pattern select
@@ -280,14 +285,14 @@ void buttons_store(void){    // incoming data from controller
 	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t current_scene=scene_buttons[0];
 	if (status == 128) // note off
-		{note_off_flag[0]=0;
+		{  note_off_flag[0]=0;
 
 
 		if (incoming_data1==98)    // shift related functions
 			{shift=0;
 			play_list_write=0;
 			write_velocity=0;}
-			}
+			}   // note off buttons
 
 		  // skip for now
 
@@ -295,28 +300,28 @@ void buttons_store(void){    // incoming data from controller
 									scene_select=incoming_data1 +1+second_scene;}  //enable scene_select section
 
 	if (status == 145)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47);}  // store last key pressed mainly , 48-72 default setting(24)  0-24 13 in th emiddle
+	if (status == 129)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47)+128;}  // note off keyboard
 
 
 
-//	if ((status==129))  { keyboard[0]=0;}  // store last key pressed mainly
 
-	if (status == 144){  // Note on
+	if (status == 144){  // Note on  ,buttons
 
 		note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
 		if (incoming_data1==98) shift=1;
 
-		if ((incoming_data1>40)&&(incoming_data1 <99) && (!clip_stop) ){				// button lights, extras
+		if ((incoming_data1>40)&&(incoming_data1 <99)  ){				// button lights, extras
 			alt_list=	 button_states[incoming_data1 ];
 			switch(alt_list){    // change state
 			case 0 :alt_list = 1;break;   // normal lights , yellow
 			case 5 :alt_list= 0;break;		// green
 			case 1 :alt_list = 0;  ;break;
-			case 7 :alt_list = 0; ;break; }
+			default:alt_list = 0; ;break; }
 
 
 			button_states[incoming_data1 ]=alt_list;
 		}
-		if ((incoming_data1>23)&&(incoming_data1 <40) && (!clip_stop) ){				// button lights, notes
+		if ((incoming_data1>23)&&(incoming_data1 <40)  ){				// button lights, notes
 			alt_list=button_states[incoming_data1];
 
 			switch(alt_list){    // change state
@@ -330,11 +335,7 @@ void buttons_store(void){    // incoming data from controller
 			button_states[incoming_data1]=alt_list;
 
 		}
-		if ((incoming_data1>7)&&(incoming_data1 <24) && (!clip_stop) ){				// button lights, pattern select
-			//alt_list=button_states[incoming_data1];
-
-
-				//button_states[incoming_data1]=alt_list;
+		if ((incoming_data1>7)&&(incoming_data1 <24) ){				// button lights, pattern select
 
 			}
 
@@ -358,7 +359,7 @@ void buttons_store(void){    // incoming data from controller
 		if (button_states[71])  {device=1;  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;memcpy(loop_note_list,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
 	//	if ((button_states[82]) && (!clip_stop) && (!play_screen))  {clip_stop=1; play_screen=2;   play_muting();all_update=1; }  // play screen, disable
-		if ((!button_states[82])  && (clip_stop))    {clip_stop=0; play_screen=0;  }
+		if ((button_states[82])  )    {clip_stop=1;   } else clip_stop=0;
 	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
 
 			button_pressed=incoming_data1; // important  , only after note on
@@ -368,14 +369,26 @@ void buttons_store(void){    // incoming data from controller
 
 
 		    // not very useful
+	if ((status == 176) && (clip_stop)){
+
+
+	alt_pots[incoming_data1  - 48] =(incoming_message[2]&127);
+
+		status=0; // clear
+	}
+
+
+	if (status == 176) {//  controller data , store pot
 
 
 
-	if (status == 176) {// store pot
+		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot all  // not always ok
 
 
 
-		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot all
+
+
+
 		if (pan) {
 			patch_save=pot_states[7]>>4;   // set next memory to be save d or loaded
 			patch_screen();
@@ -404,7 +417,19 @@ void buttons_store(void){    // incoming data from controller
 
 		if ((incoming_data1==49) && shift && (!keyboard[0]) )  write_velocity=(((pot_states[1]&63))+63); // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
 
-		if ((incoming_data1==55) &&(shift)&& (!loop_selector)) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
+
+
+
+		if ((shift) && (device)){   // pots alt functions set , tempo , midi
+
+			if (incoming_data1==54)   {midi_channel_list[current_scene]=(incoming_message[2]>>3);current_midi=midi_channel_list[current_scene];}   // set midi
+
+			if (incoming_data1==55) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
+
+
+
+		}
+
 
 
 		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (!loop_selector))  {    // pots 4-8
@@ -418,7 +443,7 @@ void buttons_store(void){    // incoming data from controller
 				scene_volume[((incoming_data1-52)*2)+1]=127;} //1,3,5,7
 
 		} //end of pots 4-8
-		if ((incoming_data1<56)&&(incoming_data1>51)&& (loop_selector))  {    // pots 4-8  with loop light on
+		if ((incoming_data1<56)&&(incoming_data1>51)&& (!device))  {    // pots 4-8  , with device button off
 
 		if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>3;   // works ok  sets loop length 0-16
 		else looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop  fine offset 8/note  ,

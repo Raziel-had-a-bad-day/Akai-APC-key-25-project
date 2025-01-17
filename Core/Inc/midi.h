@@ -9,7 +9,12 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		uint16_t velocity=0;
 		//uint16_t seq_step_mod=seq_step_list[0];
 		uint8_t scene=scene_buttons[0]; // only for drums atm
-		uint8_t random_list[16]={12,12,12,12,12,12,12,12,12,12,12,12,46,65,23,45};
+		uint8_t random_list[16]={12,12,12,12,12,12,12,12,12,12,12,12,46,65,23,45}; // random notes for now
+		memcpy (random_list,alt_pots,8);
+		memcpy (random_list+8,alt_pots,8);
+
+
+
 		uint8_t looper_list_temp[sound_set*4];
 		uint8_t lfo_out[sound_set];
 		uint16_t loop_note_temp[sound_set];
@@ -94,7 +99,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							velocity=127;
 							//midi_cue[(cue_counter)+1]=((button_states_loop[data_temp2]))& 63;  //  pitch info +transpose but only from play_list
 
-							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i]; else midi_cue[(cue_counter)+1]=random_list[i];  // use drum list if set to  channel 10
+							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i]; else midi_cue[(cue_counter)+1]=random_list[loop_note_temp[i]];  // use drum list if set to  channel 10
 
 							if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
 
@@ -197,7 +202,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 				}
 
-				if (midi_cue[counterb]){						  // note send if true
+				if (midi_cue[counterb]){						  // most data ,  note send if true
 
 					note_midi[cue_counter]=midi_cue[counterb];
 					note_midi[(cue_counter)+1]=midi_cue[counterb+1];
@@ -215,7 +220,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 				//memcpy(cue_temp,midi_cue_noteoff,25);
 				cue_counter=0;
-				for (i=0;i<8;i++){  // short , ready to send notes off only
+				for (i=0;i<sound_set;i++){  // short , ready to send notes off only
 					counterb=i*3;
 
 					if (midi_cue_noteoff[counterb]){

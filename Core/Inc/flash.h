@@ -1,8 +1,8 @@
 
 void settings_storage(void){   // runs to store setting and backh
 
-			uint8_t *settings[8]={ 	scene_transpose,pot_states,pot_tracking,mute_list,scene_volume,midi_channel_list,looper_list,loop_length_set};
-			uint8_t settings_multi[8]={1,1,4,1,1,1,4,1};   // sets length,  sound_set*x
+			uint8_t *settings[9]={ 	scene_transpose,pot_states,pot_tracking,mute_list,scene_volume,midi_channel_list,looper_list,loop_length_set,alt_pots};
+			uint8_t settings_multi[9]={1,1,4,1,1,1,4,1,1};   // sets length,  sound_set*x
 			uint8_t settings_temp[64];
 			uint8_t settings_total=0;  //adds up position
 			uint8_t length=0;
