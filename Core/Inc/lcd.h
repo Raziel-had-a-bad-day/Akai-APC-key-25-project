@@ -12,9 +12,9 @@ uint8_t lcd_pos;
 char lcd_char[32];    // string   to print
 I2C_HandleTypeDef hi2c1;
 
-uint8_t *lcd_page1[20]={   &pot_states[0],&seq_step_long,&seq_current_step,&current_midi,&loop_current_length,&loop_current_speed,&tempo,&loop_current_offset,&lfo,&loop_length,
-													0,0,0,0,0,0,0,0,0,0};			// lcd pointers menu page 1 list  , start position + variable+ length
-uint8_t lcd_page1_ref[]={1,3,8,2,11,2,30,2,24,2,27,2,16,3,21,2,14,2,0,0,0,0};   // start and length of *lcd_page1 references ,last entry can be trouble,  keep 0 at the end to finish
+uint8_t *lcd_page1[20]={   &pot_states[0],&pattern_offset,&seq_step_long,&seq_current_step,&current_midi,&loop_current_length,&loop_current_speed,&tempo,&loop_current_offset,&lfo,&loop_length,
+													0,0,0,0,0,0,0,0,0};			// lcd pointers menu page 1 list  , start position + variable+ length
+uint8_t lcd_page1_ref[]={1,3,4,2,8,2,11,2,30,2,24,2,27,2,16,3,21,2,14,2,0,0,0,0};   // start and length of *lcd_page1 references ,last entry can be trouble,  keep 0 at the end to finish
 uint8_t page_up_counter; // tracks menu search
 int8_t var_size; // track size of variables for lcd
 int dec_hold;

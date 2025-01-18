@@ -94,14 +94,25 @@ uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message l
 uint32_t sys_cnt[3];
 uint8_t note_off_enable;
 uint8_t settings_write_flag=0;
+uint8_t cdc_start=0;  // checks for extra messages
+
 
 uint8_t counter_a;
 // SPI stuff
 uint8_t spi_send[10];
 uint8_t status_reg[2];
 uint8_t first_message=0; // flag to clear once a button is pressed
-uint8_t previous_pattern[2];
 
+
+uint8_t last_pattern_select;
+uint8_t pattern_rewind;  // +1
+uint8_t new_pattern_select;
+uint8_t pattern_select=0; //
+uint8_t pattern_offset_list[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};   // list of offset for a single part (keys) on each pattern , handy
+uint8_t pattern_offset; // for lcd
+
+
+uint8_t last_note_played[16]; // stores note for note off
 
 uint8_t flash_flag=0;
 uint8_t flash_read_block2[260] ={1,1,1,1,1,1,1,0}; // this should clearif flash read works
@@ -183,6 +194,6 @@ uint8_t loop_current_offset;
 uint8_t loop_current_length;
 uint8_t step_record; // works in stop mode
 uint8_t drum_store_one[1024]; // holds drum notes 2 bit , note one and accent
-uint8_t pattern_select=0; //
+
 uint8_t test_byte[20];
 uint8_t second_scene=0;  // select second set of sounds

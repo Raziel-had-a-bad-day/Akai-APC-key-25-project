@@ -91,7 +91,7 @@ static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-void note_handling(uint8_t incoming_data);
+
 void note_replace(uint8_t note_replace);
 //void USB_CDC_RxHandler(uint8_t*, uint32_t);
 void patch_screen(void);
@@ -106,7 +106,7 @@ void arrows(void);
 void cdc_send(void);
 void all_notes_off(void);
 void play_muting(void);
-void main_screen(void);
+
 void lcd_start(void);
 void lcd_print(uint8_t  pos , char print);  // position 0-39 , character
 void lcd_menu_vars(void);
@@ -115,6 +115,7 @@ void loop_screen(void);// loop screen change
 void note_buttons(void); // all note functions from buttons
 void loop_lfo(void);
 void settings_storage(void);
+void pattern_settings(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -191,6 +192,8 @@ int main(void)
 
 	//TIM2->CCMR1 = 0;
 			lcd_start();
+
+			loop_screen();
 	// panic_delete();                 WATCH FOR WEIRD APC SENDS , IE UP ARROW PLUS BOTTOM ROW 3 SENDS CONSTANT CONTROLLER 50 INFO  ?
   /* USER CODE END 2 */
 
@@ -335,7 +338,7 @@ int main(void)
 
 			  }
 
-
+			  pattern_settings();
 
 		//  if((button_send_trigger>>3)!=trigger_mem){      //
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
@@ -348,10 +351,14 @@ int main(void)
 			  loop_current_offset=looper_list[(selected_scene*4)];
 			  loop_current_speed=looper_list[(selected_scene*4)+2];
 			  lfo=loop_lfo_out[selected_scene+32];
+			  pattern_offset=pattern_offset_list[pattern_select];
 
 				play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
+
+
+
 
 
 
@@ -370,9 +377,9 @@ int main(void)
 			//  printf(" loop =%d ",looper_list_mem[7] );
 
 			  uint8_t crap[64];
+			  memcpy(crap,cdc_buffer,9);
 
-
-			  for (i=0;i<1;i++){
+			  for (i=0;i<9;i++){
 
 				  printf(" %d",crap[i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
@@ -470,8 +477,10 @@ int main(void)
 
 
 
- 	  if (cdc_buffer[0]) {      //  when cdc buffer incoming
-
+ 	  if (cdc_buffer[0] | cdc_buffer[3] |   cdc_buffer[6]                   ) {      //  when cdc buffer incoming
+ 		 if (cdc_buffer[6] )cdc_start=6;
+ 		 	if (cdc_buffer[3] )cdc_start=3;
+ 		 	if (cdc_buffer[0] )cdc_start=0;
 
 
  		 // printf(" 1=%d ",cdc_buffer[0] ); printf(" 2=%d ",cdc_buffer[1] ); printf(" 3=%d \n ",cdc_buffer[2] );

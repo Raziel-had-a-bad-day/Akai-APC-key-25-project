@@ -26,4 +26,6 @@ clip_stop = enables all pots to set pitch for 8x2 notes  except drums
 pan = shows current loaded patch  , pot 8 to set load/save position 
  
 pattern select = row 3 and 4 ,1-16
-press pattern twice to play once then return to previous  
+press shift and pattern  (turns red) to play  then return to previous pattern  
+
+shift pitch and note for keys by pattern using pot6 
