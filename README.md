@@ -22,6 +22,8 @@ keyboard = sets pitch for programming notes , also play
 Stop all clips = stops and jumps to start 
 clip_stop = enables all pots to set pitch for 8x2 notes  except drums
 
+shift+pot 1 =program change 
+
   
 pan = shows current loaded patch  , pot 8 to set load/save position 
  

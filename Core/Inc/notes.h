@@ -359,6 +359,15 @@ void buttons_store(void){    // incoming data from controller
 		}
 
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
+
+
+			if ((incoming_data1==48) && (shift)){     // change program pot 1
+				if (scene_buttons[0]<12) program_change[0]=pot_states[0]>>3;   else program_change[1]=pot_states[0]>>3;
+
+
+
+			}
+
 		if ((incoming_data1==50) && (!keyboard[0]))  // if held down
 
 		{

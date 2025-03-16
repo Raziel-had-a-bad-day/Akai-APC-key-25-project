@@ -27,8 +27,13 @@
 #include <stdlib.h>
 #include "string.h"
 #include "variables.h"
-#include "usbd_cdc.h"
-#include "usbd_cdc_if.h"
+#include "usbd_midi.h"
+extern USBD_HandleTypeDef hUsbDeviceFS;
+
+
+// change HID to MIDI in usb_device.c  and usbd_conf.c     !!!!
+//#include "usbd_cdc.h"
+//#include "usbd_cdc_if.h"
 #include "midi.h"
 #include "notes.h"
 #include "lcd.h"
@@ -116,6 +121,9 @@ void note_buttons(void); // all note functions from buttons
 void loop_lfo(void);
 void settings_storage(void);
 void pattern_settings(void);
+void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_length);
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -215,7 +223,7 @@ int main(void)
 		  uint8_t selected_scene=scene_buttons[0];
 		//  uint8_t step_start;
 		//  uint8_t play_total; // different for each note
-		  uint8_t buttons_list[28]={0,64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98,0,1,2,3,4,5,6,7};  //extra buttons  slow
+
 /*
 
 
@@ -258,41 +266,13 @@ int main(void)
 
 			  cdc_send(); // all midi compiled for send
 
-			//  send_buffer_sent=1;
-					if (send_buffer_sent == 1) { // moving light send and button change , current
-
-						seq_step_mem = seq_step_mod;
-						send_buffer_sent = 2;
-					}
-					//// extra buttons
-					counter_a = 0;
-					for (i = 0; i < 27; i++) { // test for extra button changes and set counter_a, quick
-						if ((other_buttons_hold[i] != button_states[buttons_list[i]])
-								&& (!counter_a)) {
-							counter_a = i + 1;
-							other_buttons_hold[i] = button_states[buttons_list[i]];
-						}  // can be used to reset all these buttons
-					}
-
-					if (counter_a) {
-
-						send_buffer[6] = 144;
-						send_buffer[7] = buttons_list[counter_a - 1] & 127;
-						send_buffer[8] = button_states[buttons_list[counter_a - 1]]
-								& 127;  // not all will light up :/
-
-					} else
-						send_buffer[6] = 0;
-
-
-
 
 			  			 if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info, sent seq_pos
-			  if (cdc_len) {CDC_Transmit_FS(cdc_send_cue, cdc_len);cdc_len=0;  } // USB send
 
 
+			  			// USB_send();
 
-						  if (keyboard[0])  {    // keyboard play live
+			  			if (keyboard[0])  {    // keyboard play live
 
 							 uint8_t note_flag=144;
 							  if (keyboard[0]>>7)  note_flag=128;
@@ -335,6 +315,19 @@ int main(void)
 				// midi_extra_cue[extras+2]=64;
 				 midi_extra_cue[28]=extras+3;
 
+		if (scene_buttons[0]<12)	{ midi_extra_cue[extras+3]=192+midi_channel_list[0];
+		 	 	 	 	 midi_extra_cue[extras+4]=program_change[0];
+						 midi_extra_cue[extras+5]=program_change[0];
+						 midi_extra_cue[28]=extras+6;}
+
+
+
+
+		else  {midi_extra_cue[extras+3]=192+midi_channel_list[12];   // test progrma change
+		 			 midi_extra_cue[extras+4]=program_change[1];
+				 midi_extra_cue[extras+5]=program_change[1];
+				 midi_extra_cue[28]=extras+6;}
+
 
 			  }
 
@@ -356,13 +349,6 @@ int main(void)
 				play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
-
-
-
-
-
-
-
 			  if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
 			  if ((s_temp&7)==7) loop_lfo();
 
@@ -371,13 +357,12 @@ int main(void)
 
 			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
 
-
-
 			 // printf(" %d",loop_lfo_out[(selected_scene)+20] );
 			//  printf(" loop =%d ",looper_list_mem[7] );
 
 			  uint8_t crap[64];
-			  memcpy(crap,cdc_buffer,9);
+			  memcpy (crap,test_byte,6);
+
 
 			  for (i=0;i<9;i++){
 
@@ -388,14 +373,12 @@ int main(void)
 
 			  }
 
-			  printf(" incoming=%d ",square_buttons_list[test_byte[11]]);  printf(" step=%d ",seq_step_list[0]);printf(" scn=%d\n ",scene_buttons[0]);
-
+		//	  printf(" incoming=%d ",square_buttons_list[test_byte[11]]);  printf(" step=%d ",seq_step_list[0]);
+			  printf(" cdc=%d\n ",cdc_len_temp);
 			  if (first_message==2){
 				  uint8_t clear[30]={7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7};  // doesnt do anything
 				 				 		  memcpy(other_buttons_hold,clear,28);
 				  first_message=1;
-
-
 
 			  }
  				// print section
@@ -475,6 +458,7 @@ int main(void)
 */
 
 
+		  if( (USBD_MIDI_GetState(&hUsbDeviceFS) == MIDI_IDLE) )  USB_send();
 
 
  	  if (cdc_buffer[0] | cdc_buffer[3] |   cdc_buffer[6]                   ) {      //  when cdc buffer incoming
@@ -499,7 +483,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
   } // while loop
   /* USER CODE END 3 */
-}  // main
+}
 
 /**
   * @brief System Clock Configuration

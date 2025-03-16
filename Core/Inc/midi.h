@@ -1,7 +1,59 @@
 
+void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_length)   // first byte is extra info then normal midi bytes
+{
+
+
+	 while (usb_rx_buffer_length && *usb_rx_buffer != 0x00)
+	  {
+		 memcpy(test_byte,usb_rx_buffer,usb_rx_buffer_length);
+
+		 memcpy(cdc_buffer,usb_rx_buffer+1,9);
+
+		 memset(usb_rx_buffer,0,usb_rx_buffer_length);
+
+
+	  }
 
 
 
+}
+void USB_send(void){
+
+
+
+	uint8_t buttons_list[28]={0,64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98,0,1,2,3,4,5,6,7};  //extra buttons  slow
+	  uint8_t seq_step_mod=(seq_pos>>3)&31;
+	  uint8_t send_temp[]={9,144,7,3};  // test
+
+	if (send_buffer_sent == 1) { // moving light send and button change , current
+
+		seq_step_mem = seq_step_mod;
+		send_buffer_sent = 2;
+	}
+	//// extra buttons
+	counter_a = 0;
+	for (i = 0; i < 27; i++) { // test for extra button changes and set counter_a, quick
+		if ((other_buttons_hold[i] != button_states[buttons_list[i]])
+				&& (!counter_a)) {
+			counter_a = i + 1;
+			other_buttons_hold[i] = button_states[buttons_list[i]];
+		}  // can be used to reset all these buttons
+	}
+
+	if (counter_a) {
+
+		send_buffer[6] = 144;
+		send_buffer[7] = buttons_list[counter_a - 1] & 127;
+		send_buffer[8] = button_states[buttons_list[counter_a - 1]]
+				& 127;  // not all will light up :/
+
+	} else
+		//send_buffer[6] = 0;
+
+	  			 if ((cdc_len>2)   )
+	  			 {  memcpy (send_temp+1,cdc_send_cue+(cdc_len-3),3); USBD_MIDI_SendReport(&hUsbDeviceFS,send_temp,4); cdc_len=cdc_len-3;}  else cdc_len=0;  // usb send
+
+		}
 
 void midi_send(void){  // produces midi data from notes etc ,only for midi music no info return ,  runs 8x per step
 
@@ -227,7 +279,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 
 				}}
-			memcpy(test_byte,note_midi,9);
+			//memcpy(test_byte,note_midi,9);
 			note_midi[50]=cue_counter;
 
 			nrpn_temp[80]=0;   //disable nrpn for now

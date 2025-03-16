@@ -14,6 +14,8 @@ volatile uint8_t ppq_send; // ppq_counter
 volatile uint8_t skip_enable; // allow ppq toggle skip
 volatile uint8_t skip_setting; // slow or faster 3,1,0
 
+
+
 //buttons
 uint8_t volume; // volume button
 uint8_t pan;
@@ -195,5 +197,8 @@ uint8_t loop_current_length;
 uint8_t step_record; // works in stop mode
 uint8_t drum_store_one[1024]; // holds drum notes 2 bit , note one and accent
 
-uint8_t test_byte[20];
+uint8_t test_byte[64];
+uint8_t test_byteB[64];
 uint8_t second_scene=0;  // select second set of sounds
+uint8_t cdc_len_temp;
+uint8_t program_change[2]; // hold current prograam change for 2 channels
