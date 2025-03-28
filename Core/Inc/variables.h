@@ -110,7 +110,7 @@ uint8_t last_pattern_select;
 uint8_t pattern_rewind;  // +1
 uint8_t new_pattern_select;
 uint8_t pattern_select=0; //
-uint8_t pattern_offset_list[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};   // list of offset for a single part (keys) on each pattern , handy
+uint8_t pattern_offset_list[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};   // list of offset for a single part (keys only ) on each pattern , handy
 uint8_t pattern_offset; // for lcd
 
 
@@ -202,3 +202,4 @@ uint8_t test_byteB[64];
 uint8_t second_scene=0;  // select second set of sounds
 uint8_t cdc_len_temp;
 uint8_t program_change[2]; // hold current prograam change for 2 channels
+uint8_t green_position[20];

@@ -166,7 +166,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 1);   // high end
 								  HAL_Delay(20);
 
-								  memcpy  (test_data3+4 ,drum_store_one+768,  256);    // key notes
+								  memcpy  (test_data3+4 ,drum_store_one+768,  256);    // key notes 2
 						  test_data3[0]=0x06;
 						  test_data3[2]=patch_mem+4; //page6
 								  HAL_GPIO_WritePin(CS1_GPIO_Port, CS1_Pin, 0);

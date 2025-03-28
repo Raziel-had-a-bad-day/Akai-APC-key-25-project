@@ -70,7 +70,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		uint8_t looper_list_temp[sound_set*4];
 		uint8_t lfo_out[sound_set];
 		uint16_t loop_note_temp[sound_set];
-		memcpy (looper_list_temp,looper_list,sound_set*4); // need this
+		memcpy (looper_list_temp,looper_list,sound_set*4); // need this only for fine time offset
 		memcpy(lfo_out,loop_lfo_out+32,sound_set);  // time adjust , maybe change to controller data
 		memcpy(loop_note_temp,loop_note_list,sound_set*2); // 16 bit
 
@@ -130,15 +130,16 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 							midi_cue[cue_counter]=0; // start with mute just in case
 							//offset_vel=((looper_list_temp[(i*4)+1])+loop_note_temp[i])&15;
-							offset_vel=(pattern_offset_list[pattern_select]+loop_note_temp[i])&15;
+							offset_vel=(pattern_offset_list[pattern_select]+loop_note_temp[i])&15;  // modify note position for keys
 
 
-							if (midi_channel_list[i]!=9)offset_pitch=offset_vel; // force trigger to mvoe as well
 
+							if (midi_channel_list[i]!=9)offset_pitch=offset_vel; // only on keys
+							green_position[i]=offset_pitch; // set running green light position
 
 							//if ((button_states_loop[data_temp2]!=1))   // keys
 
-							uint16_t drum_byte_select= (offset_pitch>>2)+(i*4)+(pattern*drum_store);
+							uint16_t drum_byte_select= (offset_pitch>>2)+(i*4)+(pattern*drum_store);   // selects a trigger 16 + (i*4) 16*64 ... 0-256
 							uint8_t drum_byte=drum_store_one[drum_byte_select];
 
 
@@ -158,13 +159,17 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							velocity=127;
 
 
-							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];
+							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // select note for drum sound
 
 							else{
 								midi_cue_noteoff[cue_counter]=midi_cue[cue_counter]; // note off channel
 								midi_cue_noteoff[cue_counter+1]=last_note_played[i]; // note off
-								midi_cue[(cue_counter)+1]=random_list[offset_vel];  // use drum list if set to  channel 10
-							last_note_played[i]= midi_cue[(cue_counter)+1]; // save note on the same channel
+
+
+								midi_cue[(cue_counter)+1]=(random_list[offset_vel]+(lfo_out[i]>>3))&127;  // key pitch with offset
+
+
+								last_note_played[i]= midi_cue[(cue_counter)+1]; // save note on the same channel
 
 							}
 							if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
@@ -360,7 +365,9 @@ void cdc_send(void){     // all midi runs often , need to separate
 		//	uint8_t button_exception1=square_buttons_list[((seq_step_mod ) & 31)]; // 0-40
 
 			uint8_t scene_select=scene_buttons[0];
-			uint8_t button_exception1=loop_note_list[scene_select];
+			//uint8_t button_exception1=loop_note_list[scene_select];
+			uint8_t button_exception1=green_position[scene_select];
+
 			uint8_t button_colour=0;
 			//uint8_t loop_length=loop_screen_last_note[scene_select];
 			//uint8_t divider;

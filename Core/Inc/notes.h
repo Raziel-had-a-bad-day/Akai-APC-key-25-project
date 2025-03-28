@@ -351,7 +351,7 @@ void buttons_store(void){    // incoming data from controller
 		if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>3;   // works ok  sets loop length 0-16
 		else looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop  fine offset 8/note  ,
 		}
-		if (incoming_data1==53){ looper_list[(current_scene*4)+1]=(pot_states[5]>>3)&15;pattern_offset_list[pattern_select]= looper_list[(12*4)+1];} // vel position offset
+		if (incoming_data1==53){ looper_list[(current_scene*4)+1]=(pot_states[5]>>3)&15;pattern_offset_list[pattern_select]= looper_list[(12*4)+1];} // position offset but only from keys first entry  ,stored per pattern not per note ?
 		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
 		if ((incoming_data1==55)&&(!shift)) note_accent[current_scene]=pot_states[7];  // accent also used for tempo with shift
 
