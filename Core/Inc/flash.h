@@ -244,6 +244,14 @@ void flash_read(void){     // 1kbyte for now
 
 	uint8_t d;
 
+	for (d=0;d<16;d++) {
+	pattern_select=d;
+
+	for (n=0;n<128;n++) {
+
+		midi_send_control();
+	}
+	}
 
 
 	//uint8_t data_temp2=0;

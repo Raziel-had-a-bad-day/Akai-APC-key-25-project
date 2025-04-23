@@ -5,7 +5,7 @@ void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_lengt
 
 	 while (usb_rx_buffer_length && *usb_rx_buffer != 0x00)
 	  {
-		 memcpy(test_byte,usb_rx_buffer,usb_rx_buffer_length);
+		// memcpy(test_byte,usb_rx_buffer,usb_rx_buffer_length);
 
 		 memcpy(cdc_buffer,usb_rx_buffer+1,9);
 
@@ -17,6 +17,11 @@ void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_lengt
 
 
 }
+
+
+
+
+
 void USB_send(void){
 
 
@@ -55,9 +60,9 @@ void USB_send(void){
 
 		}
 
-void midi_send(void){  // produces midi data from notes etc ,only for midi music no info return ,  runs 8x per step
+void midi_send(void){  // produces midi data from notes etc ,only for midi music no info return ,  runs 8x per step, rewrite to record time, location and size for entire sequence all patterns
 
-		uint8_t cue_counter=0;
+
 		uint16_t velocity=0;
 		//uint16_t seq_step_mod=seq_step_list[0];
 		uint8_t scene=scene_buttons[0]; // only for drums atm
@@ -82,13 +87,17 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		// uint8_t i_s;
 		// uint16_t data_temp2;
 		 //uint16_t data_temp3;
-		 uint16_t current_pos=seq_pos&127;   // +8 to 2048 , gotta reset not much point otherwise
+		 //uint16_t current_pos=seq_pos&127;   // +8 to 2048 , gotta reset not much point otherwise
+		 uint16_t current_pos=midi_send_time;
+
 		 uint16_t offset=0;   // time offset
 		 uint8_t offset_pitch=0;
 		 uint8_t offset_vel=0; // velocity offset compared to notes
-		 uint8_t offset_lfo=0;
+		// uint8_t offset_lfo=0;
 		 uint16_t offset2=0;
 		 uint16_t pattern=pattern_select;
+		 uint16_t cue_counter=midi_send_current*4; // current data position
+		 uint16_t cue_counter2=midi_send_current; //also add to cue_counter
 
 
 
@@ -99,17 +108,17 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 			//offset_lfo= lfo_out[i]; // 0-4
 			if (retrigger_countdown[i]) retrigger_countdown[i]=retrigger_countdown[i]-1;// space out notes, always run, blocks playback for a minimum amount of time
 			//offset2=((32-looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8
-			offset2=((looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8
+			//offset2=((looper_list_temp[i*4])+offset_lfo)&31;  // base offset ,fine 1/8    , disabled as done elsewhere from now
 
 			offset=(((128-offset2)+current_pos)&127)+(pattern*128);   // seq_pos+offset 0-255
 
 			//i_s=i*32;
-				cue_counter=i*3;
+				//cue_counter=i*3; // always counting now
 				//offset=current_pos;
 				//if (!offset) loop_note_list[i]=31;  // reset to start , rough but works
 
 			//if ((loop_screen_note_on[offset] & (1<<i)) && (!retrigger_countdown[i])) // remove this
-				if ((7==(offset&7)) && (!retrigger_countdown[i]))
+				if ((7==(offset&7)) && (!retrigger_countdown[i]))  // triggers on 7 ?
 			{note_enable=1;        // always triggered now
 
 			if (loop_note_temp[i]>= loop_length_set[i]) loop_note_temp[i]=0; else loop_note_temp[i]++; } // works for notes only
@@ -123,19 +132,19 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 
 
-							loop_note_temp[i]=seq_pos>>3; // force for now
+							loop_note_temp[i]=(current_pos&127)>>3; // force for now
 
 							offset_pitch=loop_note_temp[i]; // note position, 0-16 this is ok
 
 
-							midi_cue[cue_counter]=0; // start with mute just in case
+						//	midi_cue[cue_counter]=0; // start with mute just in case
 							//offset_vel=((looper_list_temp[(i*4)+1])+loop_note_temp[i])&15;
-							offset_vel=(pattern_offset_list[pattern_select]+loop_note_temp[i])&15;  // modify note position for keys
+							//offset_vel=(pattern_offset_list[pattern_select]+loop_note_temp[i])&15;  // modify note position for keys
 
 
 
 							if (midi_channel_list[i]!=9)offset_pitch=offset_vel; // only on keys
-							green_position[i]=offset_pitch; // set running green light position
+							//green_position[i]=offset_pitch; // set running green light position
 
 							//if ((button_states_loop[data_temp2]!=1))   // keys
 
@@ -143,17 +152,19 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							uint8_t drum_byte=drum_store_one[drum_byte_select];
 
 
-							if (drum_byte & (1<<((offset_pitch&3)*2)))
+							if (drum_byte & (1<<((offset_pitch&3)*2)))   // should only write on note
 
 
-							{retrigger_countdown[i]=3;    // start countdown to avoid fast note repeats
+							{
 
-								midi_cue[cue_counter]=(midi_channel_list[i]&15)+144; } // get midi channel
+								//retrigger_countdown[i]=3;    // start countdown to avoid fast note repeats
+
+								midi_cue[cue_counter]=(midi_channel_list[i]&15)+144;  // get midi channel
 
 
 
 
-							if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
+							//if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
 
 
 							velocity=127;
@@ -162,30 +173,49 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // select note for drum sound
 
 							else{
-								midi_cue_noteoff[cue_counter]=midi_cue[cue_counter]; // note off channel
-								midi_cue_noteoff[cue_counter+1]=last_note_played[i]; // note off
+							//	midi_cue_noteoff[cue_counter]=midi_cue[cue_counter]; // note off channel
+							//	midi_cue_noteoff[cue_counter+1]=last_note_played[i]; // note off
 
 
 								midi_cue[(cue_counter)+1]=(random_list[offset_vel]+(lfo_out[i]>>3))&127;  // key pitch with offset
 
 
-								last_note_played[i]= midi_cue[(cue_counter)+1]; // save note on the same channel
+							//	last_note_played[i]= midi_cue[(cue_counter)+1]; // save note on the same channel
 
 							}
 							if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
 
 
-							if (!velocity) midi_cue[cue_counter]=0;  // simply disable
+						//	if (!velocity) midi_cue[cue_counter]=0;  // simply disable
 
 							midi_cue[(cue_counter)+2]=velocity&127;
 
-						note_enable=0;
+						//	if (midi_cue[cue_counter])
+
+								midi_cue_time[cue_counter2]=current_pos;      // 0-2048 for now ,0-127*16
+								midi_cue_size[cue_counter2]=4;					// data size
+								midi_cue_loc[cue_counter2]=cue_counter;      // data location
+								cue_counter=cue_counter+4; cue_counter2++;       // step up counters 0-8192
+
+
+
+							} // end of drum byte trigger
+
+
+
+							note_enable=0;
 						}
 
 
 
 		}   // end of loop
-		//midi_cue[50]=cue_counter; // doesnt do anything
+
+
+		midi_send_current=cue_counter2; // write back position
+		midi_cue_count=cue_counter2;
+
+
+		//midi_cue[50]=cue_counter; // total data
 
 		memcpy(loop_note_list,loop_note_temp,sound_set*2);
 		}
@@ -249,7 +279,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 			uint8_t note_off_midi[50];
 			uint8_t cc_temp[22];
 			//uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
-			uint8_t seq_step_mod=(seq_pos>>3)&31;
+
 
 			//uint8_t cue_counter2=0;
 			//uint8_t nrpn_chl=185;
@@ -259,7 +289,35 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 
 			cue_counter=0;
+
+			uint16_t pattern_loc=pattern_select*128;
+			uint16_t seq_step_mod=(seq_pos&127)+pattern_loc;   // 0-2047
+
+
+			for(i=0;i<midi_cue_count;i++){				// new data search for sending , checks by time record of the notes
+
+				//pattern_set=pattern_loc+i;
+
+
+				if ((midi_cue_time[i]==seq_step_mod) && (midi_cue_time[i] ))	{		// linked to seq_pos for now
+									counterb=midi_cue_loc[i];  // gets midi_cue pos
+
+									note_midi[cue_counter]=midi_cue[counterb];
+									note_midi[(cue_counter)+1]=midi_cue[counterb+1];
+									note_midi[(cue_counter)+2]=midi_cue[counterb+2];
+									//midi_cue[counterb]=0;   // clear after note off only when used, too quick
+
+									cue_counter=cue_counter+4;
+
+
+
+			} }
+
+	/*
 			for (i=0;i<sound_set;i++){  // short , ready to send notes only
+
+
+
 				counterb=i*3;
 
 
@@ -284,6 +342,10 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 
 				}}
+
+			*/
+
+
 			//memcpy(test_byte,note_midi,9);
 			note_midi[50]=cue_counter;
 
@@ -294,7 +356,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 				for (i=0;i<sound_set;i++){  // short , ready to send notes off only
 					counterb=i*3;
 
-					if (midi_cue_noteoff[counterb]){
+			/*		if (midi_cue_noteoff[counterb]){
 					note_off_midi[cue_counter]=midi_cue_noteoff[counterb]-16;
 					note_off_midi[(cue_counter)+1]=midi_cue_noteoff[counterb+1];
 					note_off_midi[(cue_counter)+2]=0;
@@ -302,9 +364,13 @@ void cdc_send(void){     // all midi runs often , need to separate
 					//midi_cue_noteoff[counterb+1]=0;
 
 					cue_counter=cue_counter+3;
+					}
 
 
-					}}
+					*/
+
+
+					}
 				note_off_midi[50]=cue_counter;
 
 
@@ -566,7 +632,7 @@ void nrpn_send(void){			 // all nrpn data goes here ,sends as well on serial
 
 }
 
-		void loop_lfo(void) {  // 0-64-0
+void loop_lfo(void) {  // 0-64-0
 
 			uint16_t temp_hold=0;
 			uint8_t lfo_out[sound_set*3];
@@ -597,4 +663,42 @@ void nrpn_send(void){			 // all nrpn data goes here ,sends as well on serial
 
 
 		}
+
+void midi_send_control(void){   // 16notes 1/8 res , 16 pattern , for one pattern only for now testing
+
+			midi_send_time=(midi_send_time+1)&2047; // temp for testing
+			//if (!midi_send_time) midi_send_current=0; // reset counter when time on zero
+			midi_send();
+
+
+		}
+
+void midi_cue_delete(uint8_t scene,uint8_t step,uint8_t pattern) {   // delete a certain time record on a certain channel ,works
+
+
+
+	uint16_t pattern_loc=(((pattern&15)*128)+((step&15)*8))>>3 ;  // time of the step  , needs to check for all 0-7 ticks
+
+	uint8_t midi_noteon=midi_channel_list[scene]+144;
+	uint16_t midi_cue_set;
+
+	for(i=0;i<midi_cue_count;i++){				// new data search for sending , checks by time record of the notes
+
+		if (((midi_cue_time[i] >> 3) == pattern_loc)) {	// linked to seq_pos for now
+
+			test_byte[8] = test_byte[8] + 1;
+			midi_cue_set = midi_cue_loc[i];   // get start byte
+
+			if (midi_cue[midi_cue_set] == midi_noteon) { // if midi command matches
+
+				memcpy(test_byte, midi_cue + midi_cue_set, 4);
+
+				memset(midi_cue + midi_cue_set, 0, 4);   // delete 4 bytes
+
+				midi_cue_loc[i] = 0; // delete loc info
+				midi_cue_time[i] = 0; // delete time record
+
+
+
+		}}}}  // end of midi cue delete
 

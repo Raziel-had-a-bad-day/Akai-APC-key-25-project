@@ -132,9 +132,13 @@ void note_buttons(void){  // always running
 				 // if button lit but not in play screen
 
 				switch(button_states[incoming_data1]){    // change state
-							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));   break;   // clear note and accent ,works
-						//	case 3 :drum_byte=drum_byte | (1<<((((last_press-(drum_byte_select*4))*2))+1));  break;		// add accent
-							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2)); break;		// note ok
+							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));
+							midi_cue_delete(scene_buttons[0],last_press,pattern_select);  // delete note from midi_cue
+
+							break;   // clear note and accent ,works
+
+							//	case 3 :drum_byte=drum_byte | (1<<((((last_press-(drum_byte_select*4))*2))+1));  break;		// add accent
+							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2)); break;		// note on ok
 
 
 				}
@@ -499,9 +503,20 @@ void pattern_settings(void){     // pattern change function
 
 
 		loop_screen();
+		//// test ok
+	/*	 midi_send_current=0;
+		for (n=0;n<128;n++) {
+			midi_cue_time[n]=0;
+			midi_cue_size[n]=0;
+			midi_cue_loc[n]=0;
 
-
+			midi_send_control();
+		}*/
+		///// test
 		}
+
+
+
 		if (pattern_rewind) {new_pattern_select=pattern_rewind-1;
 
 		button_states[square_buttons_list[pattern_select+16]]=3;pattern_rewind=0;}   // fake press

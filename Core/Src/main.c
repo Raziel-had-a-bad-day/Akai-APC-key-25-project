@@ -122,8 +122,9 @@ void loop_lfo(void);
 void settings_storage(void);
 void pattern_settings(void);
 void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_length);
-
-
+void midi_send_control(void); // runs midi send when needed
+void midi_cue_delete(uint8_t scene,uint8_t step,uint8_t pattern);  // delete a note from midi_cue
+void midi_cue_add(uint8_t scene,uint8_t step,uint8_t pattern);  // add a note to midi_cue
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -262,8 +263,8 @@ int main(void)
 				  }}
 
 			//  if (!pause)		 {midi_send();note_off();}   // midi data calculate
-			  if (!pause)		 {midi_send();}   // midi data calculate
-
+			 // if (!pause)		 {midi_send_protocol();}   // midi data calculate
+			  green_position[0]=s_temp; green_position[1]=s_temp;
 			  cdc_send(); // all midi compiled for send
 
 
@@ -361,20 +362,26 @@ int main(void)
 			//  printf(" loop =%d ",looper_list_mem[7] );
 
 			  uint8_t crap[64];
-			  memcpy (crap,test_byte,6);
+			  memcpy (crap,test_byte,64);
+
+			  	 uint16_t pattern_set=pattern_select*128;
+			  for (i=0;i<20;i++){
+
+				//  printf(" %d",crap[i] );
+
+				  printf(" %d",midi_cue_time[i] );
 
 
-			  for (i=0;i<9;i++){
-
-				  printf(" %d",crap[i] );
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
 				 // printf(" ds=%d ",drum_store_one[i+(scene_buttons[0]*4)] );
 
 
 			  }
 
+			  printf("   %d",midi_cue_count );
+			  printf(" \n" );
 		//	  printf(" incoming=%d ",square_buttons_list[test_byte[11]]);  printf(" step=%d ",seq_step_list[0]);
-			  printf(" cdc=%d\n ",cdc_len_temp);
+			//  printf(" cdc=%d\n ",cdc_len_temp);
 			  if (first_message==2){
 				  uint8_t clear[30]={7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7};  // doesnt do anything
 				 				 		  memcpy(other_buttons_hold,clear,28);

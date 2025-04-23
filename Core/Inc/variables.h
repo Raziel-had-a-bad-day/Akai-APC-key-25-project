@@ -90,9 +90,9 @@ uint8_t pot_states[sound_set]={64,64,64,64,64,64,64,64}; // stores pots 1-8 curr
 uint8_t note_off_flag[3]; // use this to detect held buttons 0 is on off ,1 is last button detected
 uint8_t all_update=1; // update all buttons from button_states , 40 for now
 uint8_t keyboard[3];  // store keys
-const uint8_t drum_list[sound_set] ={20,21,22,23,24,25,26,27,28,29,30,30,30,30,30,30}; // notes played for drum scenes
-uint8_t midi_cue[50];  // data cue for midi max 8 notes [25] = message length
-uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length
+//const uint8_t drum_list[sound_set] ={20,21,22,23,24,25,26,27,28,29,30,30,30,30,30,30}; // notes played for drum scenes
+const uint8_t drum_list[sound_set] ={48,50,52,41,43,60,61,42,46,47,45,30,30,30,30,30}; // notes played for drum scenes
+
 uint32_t sys_cnt[3];
 uint8_t note_off_enable;
 uint8_t settings_write_flag=0;
@@ -203,3 +203,20 @@ uint8_t second_scene=0;  // select second set of sounds
 uint8_t cdc_len_temp;
 uint8_t program_change[2]; // hold current prograam change for 2 channels
 uint8_t green_position[20];
+
+
+
+uint8_t midi_cue[8192];  // data cue for one entire pattern now 4*128*16 in total (assuming evey note is on )
+uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length , not used now
+uint16_t midi_cue_time[2048];  // holds actual time for  midi note messages in midi_cue_main 0-2047 for now
+uint8_t midi_cue_size[2048]; // holds message size (usually 4 for now )
+uint16_t midi_cue_loc[2048]; // holds data location ( *4  )
+
+//uint8_t midi_cue_main[1024] ; //holds all midi note data for now , all notes all patterns
+uint16_t midi_send_time=0; // holds seq_pos for midi_send 0-2048
+uint16_t midi_send_current=0; // tracks data entered not cue_counter   ,reset on pattern change ?
+uint16_t midi_cue_count=0; //tracks the number of notes recorded
+
+
+
+
