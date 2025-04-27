@@ -136,7 +136,7 @@ uint8_t loop_note_count[sound_set];  // keeps track of number of notes in a loop
 uint8_t loop_current_speed;
 uint8_t loop_lfo_out[sound_set*3];  // used for some level of lfo using pot7 for now 0-255
 // uint8_t lfo_settings[sound_set*3];  // lfo 0-8   rate , gain,offset, target
-uint8_t alt_pots[sound_set]; // stores a set of alt pot settings , 2 sets for now
+uint8_t alt_pots[sound_set*16]; // stores a set of alt pot settings , 2 sets*16 pattern  for now
 
 
 uint8_t pitch_hold[sound_set]; //holds last not eplayed
@@ -203,8 +203,28 @@ uint8_t second_scene=0;  // select second set of sounds
 uint8_t cdc_len_temp;
 uint8_t program_change[2]; // hold current prograam change for 2 channels
 uint8_t green_position[20];
+uint8_t cdc_buf2[12];
+//uint8_t pattern_scales[]={"major","minor","maj penta","minor penta","blues","dorian","half diminshed","lydian", "asc melodic minor","lyidian aug"," half dimished"," octatonic","persian" };  // 8 per scale
+uint8_t pattern_scale_data[]={
+		0,2,4,5,7,9,11,0,
+		0,2,3,5,7,8,10,0,
+		0,2,4,7,9,0,0,0,
+		0,3,5,7,10,0,0,0,
+		0,3,5,6,7,10,0,0,
+		0,2,3,5,7,9,10,0,
+		0,2,3,5,6,8,10,0,
+		0,2,4,6,7,9,11,0,
+		0,2,3,5,7,9,11,0,
+		0,2,4,6,8,9,11,0,
+		0,2,3,5,6,8,10,0,
+		0,2,3,5,6,8,9,11,
+		0,1,4,5,6,8,11,0
 
 
+
+ 	 	 	 	 	 	 }; // 8 per scale , 0 terminate
+
+uint8_t pattern_scale_list [16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //  keeps track of scale used in pattern, one set for now
 
 uint8_t midi_cue[8192];  // data cue for one entire pattern now 4*128*16 in total (assuming evey note is on )
 uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length , not used now
@@ -216,7 +236,10 @@ uint16_t midi_cue_loc[2048]; // holds data location ( *4  )
 uint16_t midi_send_time=0; // holds seq_pos for midi_send 0-2048
 uint16_t midi_send_current=0; // tracks data entered not cue_counter   ,reset on pattern change ?
 uint16_t midi_cue_count=0; //tracks the number of notes recorded
-
-
+uint8_t pattern_copy[32];  // buf for copypasta
+uint8_t pattern_loop;  // pattern looping track count
+uint8_t pattern_repeat=1; // sets the number of times to repeat before stepping
+uint8_t pattern_count=3; // sets the pattern total repeating size
+uint8_t pattern_start=0; //sets start position of pattern playback
 
 

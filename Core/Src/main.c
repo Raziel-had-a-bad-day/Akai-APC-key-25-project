@@ -125,6 +125,9 @@ void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_lengt
 void midi_send_control(void); // runs midi send when needed
 void midi_cue_delete(uint8_t scene,uint8_t step,uint8_t pattern);  // delete a note from midi_cue
 void midi_cue_add(uint8_t scene,uint8_t step,uint8_t pattern);  // add a note to midi_cue
+void flash_page_write(uint8_t page_select,uint8_t* data);
+uint8_t pattern_scale_process(uint8_t value ); // midi in to scaled note
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -305,7 +308,9 @@ int main(void)
 
 
 
-		  if ((s_temp) != (seq_pos>>3)) {			// normal sending , very slow atm
+		  if ((s_temp) != (seq_pos>>3)) {			// normal sending , very slow atm , only 16 count now
+
+
 
 			  if ((seq_pos>>5)&1)   // send cc
 			  {
@@ -341,10 +346,12 @@ int main(void)
 			  uint8_t selected_scene=scene_buttons[0];
 			  seq_step_mod=seq_pos>>3;
 			  seq_current_step=seq_step_mod;
-			  loop_current_length=looper_list[(selected_scene*4)+1];
-			  loop_current_offset=looper_list[(selected_scene*4)];
+			 // loop_current_length=looper_list[(selected_scene*4)+1];
+			 // loop_current_offset=looper_list[(selected_scene*4)];
+			  loop_current_length=pattern_repeat+1;
+			  loop_current_offset=pattern_count+1;
 			  loop_current_speed=looper_list[(selected_scene*4)+2];
-			  lfo=loop_lfo_out[selected_scene+32];
+			  lfo=pattern_select;
 			  pattern_offset=pattern_offset_list[pattern_select];
 
 				play_position=seq_step_long;
@@ -356,20 +363,20 @@ int main(void)
 ////
 
 
-			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload
+			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload everything
 
 			 // printf(" %d",loop_lfo_out[(selected_scene)+20] );
 			//  printf(" loop =%d ",looper_list_mem[7] );
 
 			  uint8_t crap[64];
-			  memcpy (crap,test_byte,64);
+			  memcpy (crap,cdc_buffer,12);
 
 			  	 uint16_t pattern_set=pattern_select*128;
-			  for (i=0;i<20;i++){
+			  for (i=0;i<7;i++){
 
 				//  printf(" %d",crap[i] );
 
-				  printf(" %d",midi_cue_time[i] );
+				  printf(" %d",alt_pots[i+(pattern_select*16)]);
 
 
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
@@ -378,6 +385,12 @@ int main(void)
 
 			  }
 
+
+			  printf("   %d",s_temp );
+			  printf("   %d",pattern_loop);
+			  printf("   %d",pattern_select );
+
+			  printf("   %d",midi_cue_time[midi_cue_count] );
 			  printf("   %d",midi_cue_count );
 			  printf(" \n" );
 		//	  printf(" incoming=%d ",square_buttons_list[test_byte[11]]);  printf(" step=%d ",seq_step_list[0]);
@@ -468,10 +481,15 @@ int main(void)
 		  if( (USBD_MIDI_GetState(&hUsbDeviceFS) == MIDI_IDLE) )  USB_send();
 
 
- 	  if (cdc_buffer[0] | cdc_buffer[3] |   cdc_buffer[6]                   ) {      //  when cdc buffer incoming
+ 	  if (cdc_buffer[0] | cdc_buffer[3] |   cdc_buffer[6]                   ) {      //  when cdc buffer incoming, need change
  		 if (cdc_buffer[6] )cdc_start=6;
  		 	if (cdc_buffer[3] )cdc_start=3;
  		 	if (cdc_buffer[0] )cdc_start=0;
+
+
+
+
+
 
 
  		 // printf(" 1=%d ",cdc_buffer[0] ); printf(" 2=%d ",cdc_buffer[1] ); printf(" 3=%d \n ",cdc_buffer[2] );

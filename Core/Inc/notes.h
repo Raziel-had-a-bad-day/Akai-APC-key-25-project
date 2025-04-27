@@ -1,4 +1,28 @@
 
+uint8_t pattern_scale_process(uint8_t value ) {
+
+	uint8_t note=0;
+	uint8_t count=0;
+
+	uint8_t octave=0;
+	uint8_t note_countup=0;
+	//count=value;
+	value=value>>3; // 0-15
+
+
+	while (count<value){
+
+		note=pattern_scale_data[note_countup];
+
+	if ((note_countup) && (note==0)) {octave++;note_countup=0;}  else  note_countup=(note_countup+1)&7; // reset counter or count up
+
+
+	count++;
+	}
+
+	return (note+(octave*12)+36);
+
+}
 
 
 
@@ -102,7 +126,7 @@ void loop_screen(void){  // loop screen ,always on now , 16 notes and 16 pattern
 void note_buttons(void){  // always running
 
 	uint8_t incoming_message[3];
-	memcpy(incoming_message,cdc_buffer+cdc_start, 3); // works off only receiving buffer
+	memcpy(incoming_message,cdc_buf2, 3); // works off only receiving buffer , this might be changing
 	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t incoming_data1 = incoming_message[1]&127;
 
@@ -138,7 +162,10 @@ void note_buttons(void){  // always running
 							break;   // clear note and accent ,works
 
 							//	case 3 :drum_byte=drum_byte | (1<<((((last_press-(drum_byte_select*4))*2))+1));  break;		// add accent
-							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2)); break;		// note on ok
+							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2));
+							midi_cue_add(scene_buttons[0],last_press,pattern_select); //  add a note to midi_cue
+
+							break;		// note on ok
 
 
 				}
@@ -152,14 +179,14 @@ void note_buttons(void){  // always running
 				//uint8_t pattern=pattern_select;
 				uint8_t new_pattern=(last_press-16);
 				//for (i =8 ; i < 40; i++) {button_states[i]=0;}  // clear all ,  this is ok
-				memcpy(button_states+8,clear,32);
+				//memcpy(button_states+8,clear,32);
 
 
 
 					//if (new_pattern==pattern_select)  { button_states[square_buttons_list[new_pattern+16]]=3; pattern_rewind=last_pattern_select+1;}  // enables return
 					//else button_states[square_buttons_list[new_pattern+16]]=6;
 					if (shift) { button_states[square_buttons_list[new_pattern+16]]=4; pattern_rewind=pattern_select+1; shift=0;}
-					else button_states[square_buttons_list[new_pattern+16]]=6;
+					else button_states[square_buttons_list[new_pattern+16]]=6; //enable blink
 
 
 
@@ -189,6 +216,9 @@ void buttons_store(void){    // incoming data from controller
 	//uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
 	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t current_scene=scene_buttons[0];
+	uint16_t drum_store_select=current_scene*4*pattern_select;
+
+
 	if (status == 128) // note off
 		{  note_off_flag[0]=0;
 
@@ -254,7 +284,10 @@ void buttons_store(void){    // incoming data from controller
 		if (button_states[67])  {right_arrow=1;     }  //shift notes right
 		if (button_states[86])  {select=1;} else select=0;  // select enable
 
-		if (button_states[65]) {down_arrow=1;  	   }		else down_arrow=0;
+		if (button_states[65]) {down_arrow=1;  	 memcpy(pattern_copy,drum_store_one+drum_store_select,4);  }		else down_arrow=0;  // use for copy pattern
+
+		if (button_states[66]) {left_arrow=1;  memcpy(drum_store_one+drum_store_select,pattern_copy,4); down_arrow=0;button_states[65]=0;button_states[66]=0;left_arrow=0; 	   }		else left_arrow=0;  // use for paste pattern
+
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[93]) { record=1;} else {record=0;} // select enable
 
@@ -269,7 +302,9 @@ void buttons_store(void){    // incoming data from controller
 
 			//button_pressed=incoming_data1; // important  , only after note on
 		//	if (button_pressed!=255)  {send_buffer[9]=144; send_buffer[10]=button_pressed;send_buffer[11]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
-			if ((incoming_data1 > 7) && (incoming_data1 < 40)) note_buttons();
+			if ((incoming_data1 > 7) && (incoming_data1 < 40))
+				{memcpy(cdc_buf2,incoming_message, 3); // copy current message
+				note_buttons(); }  // send to buttons input
 		} // end of note on
 
 
@@ -277,7 +312,8 @@ void buttons_store(void){    // incoming data from controller
 	if ((status == 176) && (clip_stop)){
 
 
-	alt_pots[incoming_data1  - 48] =(incoming_message[2]&127);
+	alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =pattern_scale_process(incoming_message[2]&127);   // writes note pots when clip stop but only to first set , need something the copy to first though
+									// maybe 16 values or about 2 octaves in scales
 
 		status=0; // clear
 	}
@@ -287,11 +323,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 
-		pot_states[incoming_data1  - 48] = incoming_message[2]&127; // store pot all  // not always ok
-
-
-
-
+		pot_states[incoming_data1  - 48] = (incoming_message[2]&127); // store pot all  // not always ok
 
 
 		if (pan) {
@@ -309,6 +341,13 @@ void buttons_store(void){    // incoming data from controller
 //
 //		}
 
+		if ((incoming_data1==49) &&(!clip_stop))
+		pattern_repeat=((pot_states[1]>>4))&7;
+		if ((incoming_data1==50) &&(!clip_stop))
+			pattern_count=(pot_states[2]>>3)&15;
+
+
+
 		if ((incoming_data1==48) &&(!select) && (current_scene>3))  //  cc function
 			{
 
@@ -320,8 +359,8 @@ void buttons_store(void){    // incoming data from controller
 			}
 
 
-		if ((incoming_data1==49) && shift && (!keyboard[0]) )  write_velocity=(((pot_states[1]&63))+63); // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
-
+	//	if ((incoming_data1==50) &&(!keyboard[0]) )  pattern_repeat=((pot_states[1]>>5))&7; // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
+	//	if ((incoming_data1==51) && (!keyboard[0]) )  pattern_count=(pot_states[2]>>5)&7;
 
 
 
@@ -352,6 +391,11 @@ void buttons_store(void){    // incoming data from controller
 */
 		if ((incoming_data1<56)&&(incoming_data1>51)&& (!device))  {    // pots 4-8  , with device button off
 
+
+
+
+
+
 		if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>3;   // works ok  sets loop length 0-16
 		else looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop  fine offset 8/note  ,
 		}
@@ -372,7 +416,12 @@ void buttons_store(void){    // incoming data from controller
 
 			}
 
-		if ((incoming_data1==50) && (!keyboard[0]))  // if held down
+
+
+
+
+
+			if ((incoming_data1==50) && (!keyboard[0]))  // if held down
 
 		{
 
@@ -491,35 +540,66 @@ void arrows(void){   // disable
 
 
 void pattern_settings(void){     // pattern change function
-	if (s_temp==0){
+	if (s_temp==15){
 		//uint16_t clear[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+			uint8_t total=(((pattern_repeat+1)*(pattern_count+1)))-1;
+			//pattern_repeat=((pot_states[1]>>4))&7;
+			//pattern_count=(pot_states[2]>>3)&15;
+		  // pattern select section
+			if ((pattern_select!=new_pattern_select)){    // switch pattern at the endo of the loop to new
 
-		if ((pattern_select!=new_pattern_select)){    // switch pattern at the endo of the loop to new
+			//	button_states[square_buttons_list[pattern_select+16]]=0;
+			//pattern_start=new_pattern_select&(!pattern_count); // switch pattern to new
+			pattern_start=new_pattern_select;
 
-			button_states[square_buttons_list[pattern_select+16]]=0;
-		pattern_select=new_pattern_select; // switch pattern to new
-		if ((pattern_rewind)) button_states[square_buttons_list[new_pattern_select+16]]=3; else button_states[square_buttons_list[new_pattern_select+16]]=5;
-
-
-		loop_screen();
-		//// test ok
-	/*	 midi_send_current=0;
-		for (n=0;n<128;n++) {
-			midi_cue_time[n]=0;
-			midi_cue_size[n]=0;
-			midi_cue_loc[n]=0;
-
-			midi_send_control();
-		}*/
-		///// test
-		}
+			//	if ((pattern_rewind)) button_states[square_buttons_list[new_pattern_select+16]]=3; else button_states[square_buttons_list[new_pattern_select+16]]=5;
 
 
 
-		if (pattern_rewind) {new_pattern_select=pattern_rewind-1;
+			loop_screen();
+			//// test ok
+		/*	 midi_send_current=0;
+			for (n=0;n<128;n++) {
+				midi_cue_time[n]=0;
+				midi_cue_size[n]=0;
+				midi_cue_loc[n]=0;
 
-		button_states[square_buttons_list[pattern_select+16]]=3;pattern_rewind=0;}   // fake press
+				midi_send_control();
+			}*/
+			///// test
+			}
+
+
+
+			if (pattern_loop>=(pattern_repeat*15))  button_states[square_buttons_list[pattern_select+16]]=6;  // blink
+
+
+
+			if (pattern_loop>=total){    // check when total pattern count  reached
+				button_states[square_buttons_list[pattern_select+16]]=0; //always
+				pattern_select=pattern_start; // clear bits
+				button_states[square_buttons_list[pattern_select+16]]=5;
+				new_pattern_select=pattern_select;
+			}
+
+
+			else if (((pattern_loop&pattern_repeat)==pattern_repeat)) {   // check when repeated enough
+
+				button_states[square_buttons_list[pattern_select+16]]=0; //always
+				//memset(button_states+8, 0, 32);  // clear
+				pattern_select=(pattern_select+1)&15;
+
+				button_states[square_buttons_list[pattern_select+16]]=5;
+				new_pattern_select=pattern_select;  }
+
+			if (pattern_loop>=total)pattern_loop=0; else pattern_loop++;
+
+
+
+	//	if (pattern_rewind) {new_pattern_select=pattern_rewind-1;
+
+	//	button_states[square_buttons_list[pattern_select+16]]=3;pattern_rewind=0;}   // fake press
 
 
 		//memcpy(loop_note_list,clear,16);   // reset on pattern select , running always atm
@@ -528,7 +608,7 @@ void pattern_settings(void){     // pattern change function
 	} //end of s_temp
 
 
-}
+	}
 
 
 
@@ -554,3 +634,5 @@ void flash_command(uint8_t command,uint32_t address,  uint8_t* pointer,uint16_t 
 
 }
 */
+
+

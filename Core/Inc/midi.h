@@ -66,16 +66,16 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		uint16_t velocity=0;
 		//uint16_t seq_step_mod=seq_step_list[0];
 		uint8_t scene=scene_buttons[0]; // only for drums atm
-		uint8_t random_list[16]={12,12,12,12,12,12,12,12,12,12,12,12,46,65,23,45}; // random notes for now
-		memcpy (random_list,alt_pots,8);
-		memcpy (random_list+8,alt_pots,8);
+		uint8_t random_list[256]={12,18,12,15,12,13,22,22,12,12,12,12,46,65,23,45}; // random notes for now
+		memcpy (random_list,alt_pots,256); // 8+8 *16
+		//memcpy (random_list+8,alt_pots,8);
 
 
 
 		uint8_t looper_list_temp[sound_set*4];
 		uint8_t lfo_out[sound_set];
 		uint16_t loop_note_temp[sound_set];
-		memcpy (looper_list_temp,looper_list,sound_set*4); // need this only for fine time offset
+		memcpy (looper_list_temp,looper_list,sound_set*4); // need this only for fine time offset, might use for other stuff
 		memcpy(lfo_out,loop_lfo_out+32,sound_set);  // time adjust , maybe change to controller data
 		memcpy(loop_note_temp,loop_note_list,sound_set*2); // 16 bit
 
@@ -88,7 +88,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 		// uint16_t data_temp2;
 		 //uint16_t data_temp3;
 		 //uint16_t current_pos=seq_pos&127;   // +8 to 2048 , gotta reset not much point otherwise
-		 uint16_t current_pos=midi_send_time;
+		 uint16_t current_pos=midi_send_time; // only for counting up time during initial fill
 
 		 uint16_t offset=0;   // time offset
 		 uint8_t offset_pitch=0;
@@ -138,9 +138,9 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 
 						//	midi_cue[cue_counter]=0; // start with mute just in case
-							//offset_vel=((looper_list_temp[(i*4)+1])+loop_note_temp[i])&15;
+						//	offset_vel=((looper_list_temp[(i*4)+1])+loop_note_temp[i])&15; // this has be on or only a single note repeats, disable for now
 							//offset_vel=(pattern_offset_list[pattern_select]+loop_note_temp[i])&15;  // modify note position for keys
-
+							offset_vel=loop_note_temp[i];
 
 
 							if (midi_channel_list[i]!=9)offset_pitch=offset_vel; // only on keys
@@ -177,7 +177,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							//	midi_cue_noteoff[cue_counter+1]=last_note_played[i]; // note off
 
 
-								midi_cue[(cue_counter)+1]=(random_list[offset_vel]+(lfo_out[i]>>3))&127;  // key pitch with offset
+								midi_cue[(cue_counter)+1]=(random_list[(offset_vel&7)+(pattern*16)])&127;  // key pitch with offset using first 8 notes
 
 
 							//	last_note_played[i]= midi_cue[(cue_counter)+1]; // save note on the same channel
@@ -217,7 +217,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 		//midi_cue[50]=cue_counter; // total data
 
-		memcpy(loop_note_list,loop_note_temp,sound_set*2);
+		memcpy(loop_note_list,loop_note_temp,sound_set*2); // counts up steps
 		}
 
 
@@ -273,7 +273,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 			uint8_t send_temp[256];
 			uint8_t len1;  // note off
 			uint8_t cue_counter;
-			uint8_t counterb;
+			uint16_t counterb;
 			uint8_t note_midi [70] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  // seems to get some garbage ?
 			uint8_t nrpn_temp[100];
 			uint8_t note_off_midi[50];
@@ -292,10 +292,11 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 			uint16_t pattern_loc=pattern_select*128;
 			uint16_t seq_step_mod=(seq_pos&127)+pattern_loc;   // 0-2047
+			uint8_t pitch_seq=alt_pots[((seq_pos>>3)&7)+(pattern_select*16)]; // loops 0-7 ,steps
+			i=0;
 
-
-			for(i=0;i<midi_cue_count;i++){				// new data search for sending , checks by time record of the notes
-
+			//for(i=0;i<midi_cue_count;i++){				// new data search for sending , checks by time record of the notes
+				while (i<=midi_cue_count){
 				//pattern_set=pattern_loc+i;
 
 
@@ -303,7 +304,9 @@ void cdc_send(void){     // all midi runs often , need to separate
 									counterb=midi_cue_loc[i];  // gets midi_cue pos
 
 									note_midi[cue_counter]=midi_cue[counterb];
-									note_midi[(cue_counter)+1]=midi_cue[counterb+1];
+									if (clip_stop && (note_midi[cue_counter]!=153)) note_midi[(cue_counter)+1]=pitch_seq; else  note_midi[(cue_counter)+1]=midi_cue[counterb+1];  // enables live pitch change
+
+
 									note_midi[(cue_counter)+2]=midi_cue[counterb+2];
 									//midi_cue[counterb]=0;   // clear after note off only when used, too quick
 
@@ -311,10 +314,18 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 
 
-			} }
+			} i++ ; }
 
-	/*
+
+			if(note_midi[0])  memcpy(test_byte, note_midi, 20);
+
+
+
+			/*
 			for (i=0;i<sound_set;i++){  // short , ready to send notes only
+
+
+
 
 
 
@@ -353,10 +364,10 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 				//memcpy(cue_temp,midi_cue_noteoff,25);
 				cue_counter=0;
-				for (i=0;i<sound_set;i++){  // short , ready to send notes off only
+			/*	for (i=0;i<sound_set;i++){  // short , ready to send notes off only
 					counterb=i*3;
 
-			/*		if (midi_cue_noteoff[counterb]){
+					if (midi_cue_noteoff[counterb]){
 					note_off_midi[cue_counter]=midi_cue_noteoff[counterb]-16;
 					note_off_midi[(cue_counter)+1]=midi_cue_noteoff[counterb+1];
 					note_off_midi[(cue_counter)+2]=0;
@@ -367,10 +378,8 @@ void cdc_send(void){     // all midi runs often , need to separate
 					}
 
 
-					*/
-
-
 					}
+				*/
 				note_off_midi[50]=cue_counter;
 
 
@@ -381,19 +390,13 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 			memcpy(send_temp,note_off_midi,len1); // adding  Note off first
 
-
-
 			memcpy(send_temp+len1,note_midi,len);     // adding Note on
 
 			 if (pause)  len=len1; else len=len+len1;     // add note off and note on
 
 			 if (pause==2)   len=0;   // disable all after last send
 
-
-
 			 serial_len=len;   // serial send length note off + note on
-
-
 
 			 memcpy(serial_out, midi_extra_cue, midi_extra_cue[28]); // extra stuff sent , anything
 			 // start of serial send
@@ -430,10 +433,10 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 		//	uint8_t button_exception1=square_buttons_list[((seq_step_mod ) & 31)]; // 0-40
 
-			uint8_t scene_select=scene_buttons[0];
+			//uint8_t scene_select=scene_buttons[0];
 			//uint8_t button_exception1=loop_note_list[scene_select];
-			uint8_t button_exception1=green_position[scene_select];
-
+			//uint8_t button_exception1=green_position[scene_select]; //disbled for now
+			uint8_t button_exception1=green_position[0];
 			uint8_t button_colour=0;
 			//uint8_t loop_length=loop_screen_last_note[scene_select];
 			//uint8_t divider;
@@ -509,7 +512,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 
 		}
 		all_update = 0;
-		}
+		} // end of all update
 
 /*
 
@@ -691,7 +694,7 @@ void midi_cue_delete(uint8_t scene,uint8_t step,uint8_t pattern) {   // delete a
 
 			if (midi_cue[midi_cue_set] == midi_noteon) { // if midi command matches
 
-				memcpy(test_byte, midi_cue + midi_cue_set, 4);
+			//	memcpy(test_byte, midi_cue + midi_cue_set, 4);
 
 				memset(midi_cue + midi_cue_set, 0, 4);   // delete 4 bytes
 
@@ -701,4 +704,34 @@ void midi_cue_delete(uint8_t scene,uint8_t step,uint8_t pattern) {   // delete a
 
 
 		}}}}  // end of midi cue delete
+void midi_cue_add(uint8_t scene,uint8_t step,uint8_t pattern) {  // does add to midi_cue work , time also correct , still missing notes
+
+	uint16_t pattern_loc=(((pattern&15)*128)+((step&15)*8))+7 ;  // time  of the step
+	uint8_t midi_noteon=midi_channel_list[scene]+144;
+	uint8_t note=64;
+
+
+	uint8_t velocity=96;
+	uint16_t next_free=(midi_cue_count+1);  // next free pos
+	uint16_t last_free_location=next_free*4;
+
+	if (midi_noteon==153) note=drum_list[scene]; else note=alt_pots[step&7];
+
+
+	midi_cue[last_free_location]=midi_noteon;
+	midi_cue[last_free_location+1]=note;
+	midi_cue[last_free_location+2]=velocity;
+	midi_cue_loc[next_free] = last_free_location; // add loc
+	midi_cue_time[next_free] = pattern_loc;		// add time
+
+
+
+	//memcpy(test_byte, midi_cue +last_free_location, 4);
+
+	midi_cue_count=next_free;  // add one
+
+
+
+
+	}
 
