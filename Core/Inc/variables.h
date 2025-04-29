@@ -79,7 +79,7 @@ uint8_t lfo; // temp storage
 // play 91 . stop all clip =81 ,record 93 ,shift button 98 ,82 clip stop
 // round horizontal 64-71
 // velocity  1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
-const uint8_t square_buttons_list [40]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7}; // just reads buttons in top.down order
+const uint8_t square_buttons_list [100]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99}; // just reads buttons in top.down order
 const uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
 uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 3 bits 7-5 , pitch 5 bits LSB 0-4
@@ -124,9 +124,9 @@ uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1
 uint8_t spi_hold[260]={0,10,0,0};
 uint8_t all_settings[256];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
-uint8_t other_buttons_hold[28]; // keeps track of buttons
+uint8_t other_buttons_hold[100]; // keeps track of buttons
 uint8_t send_buffer_sent;
-uint8_t button_states_save[100]; // reference for button changes for controller
+uint8_t button_states_save[100]; // reference for button changes for controller , not in order
 uint8_t button_states_loop[256];  // stored,loop screen buttons ,  pitch+accent (MSB),always on , 1 for empty
 uint8_t  loop_screen_note_on[2048];    //changed , 1 bit per note on , 128*16 =2048 for 8 notes
 uint16_t loop_screen_note_off[256]; 		// calculated, note off record also 2048 count
@@ -241,5 +241,6 @@ uint8_t pattern_loop;  // pattern looping track count
 uint8_t pattern_repeat=1; // sets the number of times to repeat before stepping
 uint8_t pattern_count=3; // sets the pattern total repeating size
 uint8_t pattern_start=0; //sets start position of pattern playback
+uint8_t rand_velocities[32]; //holds a list of modified velocities
 
 

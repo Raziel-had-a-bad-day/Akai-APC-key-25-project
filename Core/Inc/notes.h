@@ -123,7 +123,7 @@ void loop_screen(void){  // loop screen ,always on now , 16 notes and 16 pattern
 
 
 
-void note_buttons(void){  // always running
+void note_buttons(void){  // always running only on notes though
 
 	uint8_t incoming_message[3];
 	memcpy(incoming_message,cdc_buf2, 3); // works off only receiving buffer , this might be changing
@@ -136,7 +136,7 @@ void note_buttons(void){  // always running
 
 	uint8_t last_press = square_buttons_list[incoming_data1];  //0-32
 
-	uint16_t drum_byte_select= (last_press>>2)+((scene_buttons[0])*4)+(pattern_select*drum_store);  // only for drums
+	uint16_t drum_byte_select= (last_press>>2)+((scene_buttons[0])*4)+(pattern_select*drum_store);  //
 	uint8_t drum_byte=drum_store_one[drum_byte_select];  // get data
 
 
@@ -156,8 +156,8 @@ void note_buttons(void){  // always running
 				 // if button lit but not in play screen
 
 				switch(button_states[incoming_data1]){    // change state
-							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));
-							midi_cue_delete(scene_buttons[0],last_press,pattern_select);  // delete note from midi_cue
+							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));  // ok
+							midi_cue_delete(scene_buttons[0],last_press,pattern_select);  // delete note from midi_cue ,buggy
 
 							break;   // clear note and accent ,works
 
@@ -342,9 +342,9 @@ void buttons_store(void){    // incoming data from controller
 //		}
 
 		if ((incoming_data1==49) &&(!clip_stop))
-		pattern_repeat=((pot_states[1]>>4))&7;
+		pattern_count=((pot_states[1]>>4))&7;
 		if ((incoming_data1==50) &&(!clip_stop))
-			pattern_count=(pot_states[2]>>3)&15;
+			pattern_repeat=(pot_states[2]>>3)&15;
 
 
 
@@ -442,19 +442,13 @@ void buttons_store(void){    // incoming data from controller
 
 	if (scene_select)  { // change scene select lite , one at a time though , fully update so need for extra sends
 		scene_select=scene_select-1;
-		uint8_t clear_green[8]= {1,1,1,1,1,1,1,1};
+		//uint8_t clear_green[8]= {1,1,1,1,1,1,1,1};
 
-		memcpy(button_states,clear_green,8) ;  // turn green
+		memset(button_states,1,8); ;  // turn green
 		button_states[scene_select&7]=5;
 
-
-
 			scene_buttons[0]=scene_select;
-
 			 current_midi=midi_channel_list[scene_buttons[0]];
-
-
-
 
 			 //loop_selector=1; // redraw
 	
@@ -540,7 +534,7 @@ void arrows(void){   // disable
 
 
 void pattern_settings(void){     // pattern change function
-	if (s_temp==15){
+	if (seq_step==15){
 		//uint16_t clear[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 			uint8_t total=(((pattern_repeat+1)*(pattern_count+1)))-1;
@@ -577,6 +571,7 @@ void pattern_settings(void){     // pattern change function
 
 
 			if (pattern_loop>=total){    // check when total pattern count  reached
+				memset(button_states+8,0,16);  // clear
 				button_states[square_buttons_list[pattern_select+16]]=0; //always
 				pattern_select=pattern_start; // clear bits
 				button_states[square_buttons_list[pattern_select+16]]=5;

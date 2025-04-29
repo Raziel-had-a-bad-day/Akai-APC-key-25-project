@@ -267,7 +267,7 @@ int main(void)
 
 			//  if (!pause)		 {midi_send();note_off();}   // midi data calculate
 			 // if (!pause)		 {midi_send_protocol();}   // midi data calculate
-			  green_position[0]=s_temp; green_position[1]=s_temp;
+			  green_position[0]=seq_step; green_position[1]=seq_step;
 			  cdc_send(); // all midi compiled for send
 
 
@@ -395,12 +395,7 @@ int main(void)
 			  printf(" \n" );
 		//	  printf(" incoming=%d ",square_buttons_list[test_byte[11]]);  printf(" step=%d ",seq_step_list[0]);
 			//  printf(" cdc=%d\n ",cdc_len_temp);
-			  if (first_message==2){
-				  uint8_t clear[30]={7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7};  // doesnt do anything
-				 				 		  memcpy(other_buttons_hold,clear,28);
-				  first_message=1;
 
-			  }
  				// print section
 
  				lcd_menu_vars();
@@ -478,14 +473,14 @@ int main(void)
 */
 
 
-		  if( (USBD_MIDI_GetState(&hUsbDeviceFS) == MIDI_IDLE) )  USB_send();
+		  if( (USBD_MIDI_GetState(&hUsbDeviceFS) == MIDI_IDLE) )  USB_send();  // fast
 
 
  	  if (cdc_buffer[0] | cdc_buffer[3] |   cdc_buffer[6]                   ) {      //  when cdc buffer incoming, need change
  		 if (cdc_buffer[6] )cdc_start=6;
  		 	if (cdc_buffer[3] )cdc_start=3;
  		 	if (cdc_buffer[0] )cdc_start=0;
-
+ 		 	if (first_message) {first_message=0;  memset(other_buttons_hold,9,70);} // only runs after getting a midi message from usb
 
 
 

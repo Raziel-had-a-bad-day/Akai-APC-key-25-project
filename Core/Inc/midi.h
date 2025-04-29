@@ -22,43 +22,45 @@ void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_lengt
 
 
 
-void USB_send(void){
+void USB_send(void){    // send to midi controller, clean atm
 
-
-
-	uint8_t buttons_list[28]={0,64,65,66,67,68,69,70,71,81,82,83,84,85,86,91,93,98,0,1,2,3,4,5,6,7};  //extra buttons  slow
 	  uint8_t seq_step_mod=(seq_pos>>3)&31;
-	  uint8_t send_temp[]={9,144,7,3};  // test
+	  uint8_t send_temp[100];  // need this for temp lights
+	  memcpy(send_temp,button_states,100);
 
 	if (send_buffer_sent == 1) { // moving light send and button change , current
 
 		seq_step_mem = seq_step_mod;
 		send_buffer_sent = 2;
 	}
-	//// extra buttons
-	counter_a = 0;
-	for (i = 0; i < 27; i++) { // test for extra button changes and set counter_a, quick
-		if ((other_buttons_hold[i] != button_states[buttons_list[i]])
+	////  temporary lights , not stored
+	send_temp[square_buttons_list[green_position[0]]]=1; // add moving green light
+
+	counter_a = 0; // clear
+	i=0;
+	while((!counter_a)&& (i<100))
+	{ // test for all button changes
+		if ((other_buttons_hold[i] != send_temp[i]) // this is ok
 				&& (!counter_a)) {
 			counter_a = i + 1;
-			other_buttons_hold[i] = button_states[buttons_list[i]];
+			other_buttons_hold[i] = send_temp[i];
 		}  // can be used to reset all these buttons
-	}
+	i++;}
 
 	if (counter_a) {
 
 		send_buffer[6] = 144;
-		send_buffer[7] = buttons_list[counter_a - 1] & 127;
-		send_buffer[8] = button_states[buttons_list[counter_a - 1]]
-				& 127;  // not all will light up :/
+		send_buffer[7] = (counter_a - 1) & 127;
+		send_buffer[8] = send_temp[counter_a - 1] & 127;
 
-	} else
-		//send_buffer[6] = 0;
+	}
 
-	  			 if ((cdc_len>2)   )
-	  			 {  memcpy (send_temp+1,cdc_send_cue+(cdc_len-3),3); USBD_MIDI_SendReport(&hUsbDeviceFS,send_temp,4); cdc_len=cdc_len-3;}  else cdc_len=0;  // usb send
-
+	send_buffer[5]=9;
+		// if ((cdc_len>2)   )
+	  			// {  memcpy (send_temp+1,cdc_send_cue+(cdc_len-3),3); USBD_MIDI_SendReport(&hUsbDeviceFS,send_temp,4); cdc_len=cdc_len-3;}  else cdc_len=0;  // usb send
+	if (send_buffer[6]) {USBD_MIDI_SendReport(&hUsbDeviceFS,send_buffer+5,4);send_buffer[6]=0;} // only data for controller
 		}
+
 
 void midi_send(void){  // produces midi data from notes etc ,only for midi music no info return ,  runs 8x per step, rewrite to record time, location and size for entire sequence all patterns
 
@@ -167,8 +169,8 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							//if(mute_list[i]) midi_cue[cue_counter]=0; //send nothing // IMPORTANT OR WILL SEND GARBAGE //
 
 
-							velocity=127;
-
+							velocity=rand_velocities[((offset_pitch&15)+i)&31]&127;
+							//velocity=127;
 
 							if (midi_channel_list[i]==9)midi_cue[(cue_counter)+1]=drum_list[i];  // select note for drum sound
 
@@ -183,7 +185,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 							//	last_note_played[i]= midi_cue[(cue_counter)+1]; // save note on the same channel
 
 							}
-							if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
+						//	if ((scene_solo) && (scene!=i)) velocity=0;   // mute everything but solo
 
 
 						//	if (!velocity) midi_cue[cue_counter]=0;  // simply disable
@@ -436,8 +438,8 @@ void cdc_send(void){     // all midi runs often , need to separate
 			//uint8_t scene_select=scene_buttons[0];
 			//uint8_t button_exception1=loop_note_list[scene_select];
 			//uint8_t button_exception1=green_position[scene_select]; //disbled for now
-			uint8_t button_exception1=green_position[0];
-			uint8_t button_colour=0;
+			//uint8_t button_exception1=green_position[0];
+			//uint8_t button_colour=0;
 			//uint8_t loop_length=loop_screen_last_note[scene_select];
 			//uint8_t divider;
 
@@ -456,13 +458,15 @@ void cdc_send(void){     // all midi runs often , need to separate
 				 }*/
 
 
-			if (record) button_colour=4; else button_colour=1;
+			//if (record) button_colour=4; else button_colour=1;
 
-		all_update=1;
+		all_update=0;
 
-		if((all_update==1)){   //  test and update all square scene lights on main screen
+/*
+	while ((all_update==1)){   //  test and update all square scene lights on main screen , this needs to change
 
-			  for (i=0;i<32;i++)  {
+			  i=0;
+			  while (all_update==1)  {
 				  uint8_t alt_list=square_buttons_list[i];
 				  uint8_t display_button=button_states[alt_list]; // just holds normal 0-32 number value
 
@@ -474,19 +478,23 @@ void cdc_send(void){     // all midi runs often , need to separate
 				  send_temp[len+2]=display_button;  // only this part needs to change , all other normal
 				 	len=len+3;
 				  button_states_save[i] = display_button;
+				  all_update=0;
+
 			  }
 
-			  if((i==button_exception1) && (button_states_save[i]!=button_colour)) {   // green moving button , seems ok
+			  if((i==button_exception1) && (button_states_save[i]!=button_colour) && all_update ) {   // green moving button , seems ok
 			  send_temp[len]=144;
 			  send_temp[len+1]=alt_list;
 			  send_temp[len+2]=button_colour;
 			  len=len+3;
 			  button_states_save[i] =button_colour;
+			  all_update=0;
 			  }
 
-			  }
-
-			  for (i=0;i<8;i++)  {  //selection buttons
+			  i++;
+			  } // end of i loop
+			  i=0;
+			  while (all_update==1)  { //sound selection buttons
 
 			  				  uint8_t display_button=button_states[i]; // just holds normal 0-32 number value
 
@@ -498,8 +506,9 @@ void cdc_send(void){     // all midi runs often , need to separate
 			  				  send_temp[len+2]=display_button;  // only this part needs to change , all other normal
 			  				 	len=len+3;
 			  				  button_states_save[i+32] = display_button;
+			  				  all_update=0;
 			  			  }
-			  }
+			  i++;}
 
 
 
@@ -513,45 +522,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 		}
 		all_update = 0;
 		} // end of all update
-
-/*
-
-		if((all_update==1)&&(loop_selector)){   // update all square scene lights on loop screen
-
-					  for (i=0;i<40;i++)  {
-
-
-					  if (((button_states_save[i]) != button_states_loop[i]) && (i!=button_exception1))  // send if changed
-					  {
-						  send_temp[len]=144;
-						  send_temp[len+1]=i;
-						  send_temp[len+2]=button_states[i];
-						 	len=len+3;
-						  button_states_save[i] = button_states_loop[i];
-					  }
-					  if((i==button_exception1) && (button_states_save[i]!=button_colour)) {   // green moving button
-					  send_temp[len]=144;
-					  send_temp[len+1]=i;
-					  send_temp[len+2]=button_colour;
-					  len=len+3;
-					  button_states_save[i] =button_colour;
-					  }
-
-					  }
-
-				if (send_buffer[6]) {
-					memcpy(send_temp + len, send_buffer + 6, 3); // extra buttons, ok
-					len = len + 3;
-					send_buffer[6] = 0;
-
-				}
-				all_update = 0;
-				}
 */
-
-
-
-
 
 
 
@@ -711,7 +682,7 @@ void midi_cue_add(uint8_t scene,uint8_t step,uint8_t pattern) {  // does add to 
 	uint8_t note=64;
 
 
-	uint8_t velocity=96;
+	uint8_t velocity=127;
 	uint16_t next_free=(midi_cue_count+1);  // next free pos
 	uint16_t last_free_location=next_free*4;
 

@@ -127,7 +127,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		  button_states[70]=0;
 		  button_states[69]=0;
 		  pan=0;
-		 scene_buttons[0]=0;
+		 //scene_buttons[0]=0;
 		 all_update=1;
 		  other_buttons=1;
 		  button_states[square_buttons_list[patch_save]]=0;
@@ -164,17 +164,11 @@ void flash_read(void){     // 1kbyte for now
 	if (tempo==255) tempo=120;
 	if (!tempo) tempo=120;
 
-	for (i=0;i<40;i++){
-		//pot_tracking[i>>1] =scene_transpose[3+(i>>3)];
-		button_states[i]=3;
-
-
-	//if ((i<8) && (mute_list[i])) button_states[i]=3;  // muting
-		}
-
 
 	uint8_t d;
-
+	 for (d=1;d<32;d++) {
+					 rand_velocities[d]=(rand()&31)+95;
+				 } // write random velocites list
 	for (d=0;d<16;d++) {   // load up midi_cue
 	pattern_select=d;
 
@@ -183,28 +177,6 @@ void flash_read(void){     // 1kbyte for now
 		midi_send_control();
 	}
 	}
-
-
-	//uint8_t data_temp2=0;
-	//uint16_t loop_pos=0;
-	for (n=0;n<8;n++){			//initial loop fill
-		//uint16_t  loop_speed=((looper_list[(n*4)+2])+1);
-		//uint8_t note_length=looper_list[(n*4)+3];
-		loop_screen_last_note[n]=16;
-		scene_buttons[0]=n;
-
-		for (d=0;d<16;d++) {// loop notes fill
-
-				//	data_temp2=i+(n*32);    // button + scene_select writes all on selected
-					//loop_pos=(i*8);
-					pattern_select=d;
-
-						 loop_screen_last_note[n]=d;
-					}
-
-					}
-
-	pattern_select=0;
 
 	float tempo_hold=1;  // calculate tempo look up
 
@@ -230,8 +202,10 @@ void flash_read(void){     // 1kbyte for now
 				  button_states[70]=0;
 				  button_states[69]=0;
 				  pan=0;
-				 scene_buttons[0]=0;
+				// scene_buttons[0]=0;
 				 all_update=1;
+				 memset(button_states_save,10,32);
+
 
 				 button_states[patch_save+8]=0;
 
