@@ -1,4 +1,5 @@
 
+
 void flash_page_write(uint8_t page_select,uint8_t* data){    // write single page (256 bytes )
 
 	 	 	 	 	 	 	 	 uint8_t test_data3[270]={0,10,0,0}; // [3]=bytes , [2]=page [1] = 64k block
@@ -32,7 +33,7 @@ void flash_page_write(uint8_t page_select,uint8_t* data){    // write single pag
 
 void settings_storage(void){   // runs to store setting and backh
 
-			uint8_t *settings[8]={ 	scene_transpose,pot_states,pot_tracking,mute_list,pattern_offset_list,midi_channel_list,looper_list,loop_length_set};
+			uint8_t *settings[8]={ 	scene_transpose,pot_states,pot_tracking,mute_list,pattern_offset_list,midi_channel_list,looper_list,pattern_scale_list};
 			uint8_t settings_multi[9]={1,1,4,1,1,1,4,1,1};   // sets length,  sound_set*x
 			uint8_t settings_temp[64];
 			uint8_t settings_total=0;  //adds up position
@@ -169,14 +170,8 @@ void flash_read(void){     // 1kbyte for now
 	 for (d=1;d<32;d++) {
 					 rand_velocities[d]=(rand()&31)+95;
 				 } // write random velocites list
-	for (d=0;d<16;d++) {   // load up midi_cue
-	pattern_select=d;
+	midi_cue_fill();
 
-	for (n=0;n<128;n++) {
-
-		midi_send_control();
-	}
-	}
 
 	float tempo_hold=1;  // calculate tempo look up
 
@@ -231,6 +226,9 @@ void panic_delete(void){
 
 
 // note bank search and replace
+
+
+
 
 
 

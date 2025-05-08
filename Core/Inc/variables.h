@@ -171,7 +171,7 @@ uint8_t loop_screen_last_note[sound_set]; //holds last enabled loop screen note
 uint8_t note_latch[sound_set]; // stays on when triggered
 uint16_t note_latch_pos[sound_set]; // holds pos of note latch
 uint8_t loop_length;
-uint8_t loop_length_set[sound_set]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15}; // loop length
+uint8_t loop_length_set[sound_set]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15}; // loop length , not really needed atm
 uint8_t serial_out[50];
 uint8_t serial_len;
 uint8_t midi_channel_list[21]={9,9,9,9,9,9,9,9,9,9,9,9,3,3,3,3,3,3 };   //holds midi channel settings 0=1 (midi channels 1-16)
@@ -218,6 +218,9 @@ uint8_t pattern_scale_data[]={
 		0,2,4,6,8,9,11,0,
 		0,2,3,5,6,8,10,0,
 		0,2,3,5,6,8,9,11,
+		0,1,4,5,6,8,11,0, // repeat here
+		0,2,3,5,6,8,10,0,
+		0,2,3,5,6,8,9,11,
 		0,1,4,5,6,8,11,0
 
 
@@ -225,7 +228,7 @@ uint8_t pattern_scale_data[]={
  	 	 	 	 	 	 }; // 8 per scale , 0 terminate
 
 uint8_t pattern_scale_list [16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //  keeps track of scale used in pattern, one set for now
-
+uint8_t pattern_copy_full=0;
 uint8_t midi_cue[8192];  // data cue for one entire pattern now 4*128*16 in total (assuming evey note is on )
 uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length , not used now
 uint16_t midi_cue_time[2048];  // holds actual time for  midi note messages in midi_cue_main 0-2047 for now

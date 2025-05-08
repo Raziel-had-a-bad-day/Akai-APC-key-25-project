@@ -1,31 +1,21 @@
 
-uint8_t pattern_scale_process(uint8_t value ) {
-
-	uint8_t note=0;
-	uint8_t count=0;
-
-	uint8_t octave=0;
-	uint8_t note_countup=0;
-	//count=value;
-	value=value>>3; // 0-15
+void midi_cue_fill(void){
 
 
-	while (count<value){
+	uint8_t d;
+	uint8_t n;
 
-		note=pattern_scale_data[note_countup];
+	 for (d=0;d<16;d++) {   // load up midi_cue
+		pattern_select=d;
 
-	if ((note_countup) && (note==0)) {octave++;note_countup=0;}  else  note_countup=(note_countup+1)&7; // reset counter or count up
+		for (n=0;n<128;n++) {
 
+			midi_send_control();
+		}
+		}
 
-	count++;
-	}
-
-	return (note+(octave*12)+36);
 
 }
-
-
-
 
 
 
@@ -127,7 +117,7 @@ void note_buttons(void){  // always running only on notes though
 
 	uint8_t incoming_message[3];
 	memcpy(incoming_message,cdc_buf2, 3); // works off only receiving buffer , this might be changing
-	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	//uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t incoming_data1 = incoming_message[1]&127;
 
 
@@ -216,7 +206,9 @@ void buttons_store(void){    // incoming data from controller
 	//uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
 	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t current_scene=scene_buttons[0];
-	uint16_t drum_store_select=current_scene*4*pattern_select;
+	//uint16_t drum_store_select=current_scene*4*pattern_select;  // not correct
+	uint16_t drum_store_select=(current_scene*4)+(pattern_select*drum_store);
+
 
 
 	if (status == 128) // note off
@@ -284,9 +276,10 @@ void buttons_store(void){    // incoming data from controller
 		if (button_states[67])  {right_arrow=1;     }  //shift notes right
 		if (button_states[86])  {select=1;} else select=0;  // select enable
 
-		if (button_states[65]) {down_arrow=1;  	 memcpy(pattern_copy,drum_store_one+drum_store_select,4);  }		else down_arrow=0;  // use for copy pattern
+		if (button_states[65] && (!pattern_copy_full)) {down_arrow=1;  	 memcpy(pattern_copy,drum_store_one+drum_store_select,4);pattern_copy_full=1; }		else down_arrow=0;  // use for copy pattern
 
-		if (button_states[66]) {left_arrow=1;  memcpy(drum_store_one+drum_store_select,pattern_copy,4); down_arrow=0;button_states[65]=0;button_states[66]=0;left_arrow=0; 	   }		else left_arrow=0;  // use for paste pattern
+		if (button_states[66]) {left_arrow=1;  memcpy(drum_store_one+drum_store_select,pattern_copy,4);midi_cue_fill();pattern_copy_full=0; down_arrow=0;button_states[65]=0;button_states[66]=0;left_arrow=0; 	   }
+		else left_arrow=0;  // use for paste pattern
 
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[93]) { record=1;} else {record=0;} // select enable
@@ -309,17 +302,20 @@ void buttons_store(void){    // incoming data from controller
 
 
 		    // not very useful
-	if ((status == 176) && (clip_stop)){
+	if ((status == 176) && (clip_stop)){   // with clip stop on
 
 
-	alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =pattern_scale_process(incoming_message[2]&127);   // writes note pots when clip stop but only to first set , need something the copy to first though
-									// maybe 16 values or about 2 octaves in scales
+	//alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =pattern_scale_process(incoming_message[2]&127);   // writes note pots when clip stop but only to first set , need something the copy to first though
+	alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =((incoming_message[2])&127); 		// just store pot data 0-31 +32
+
+
+	// maybe 16 values or about 2 octaves in scales
 
 		status=0; // clear
 	}
 
 
-	if (status == 176) {//  controller data , store pot
+	if (status == 176) {//  controller data , store pot , clip stop off
 
 
 
@@ -341,11 +337,12 @@ void buttons_store(void){    // incoming data from controller
 //
 //		}
 
-		if ((incoming_data1==49) &&(!clip_stop))
+		if ((incoming_data1==49) )
 		pattern_count=((pot_states[1]>>4))&7;
-		if ((incoming_data1==50) &&(!clip_stop))
+		if ((incoming_data1==50) )
 			pattern_repeat=(pot_states[2]>>3)&15;
-
+		if ((incoming_data1==51) )
+					pattern_scale_list[pattern_select]=(pot_states[3]>>3)&15;
 
 
 		if ((incoming_data1==48) &&(!select) && (current_scene>3))  //  cc function

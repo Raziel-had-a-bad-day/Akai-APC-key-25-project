@@ -6,9 +6,12 @@ Akai APC key 25 sequencer project with STM32F411+flash , uses usb cdc to talk to
 
 
 Pot 3 = Transpose, disabled 
-
+Pot 2= pattern set length
+Pot 3 = Repeat pattern
+Pot 4 = set musical scale type 
 Pot 5-8 = crossfade  velocity between 1-2,3-4 etc  , disabled
-
+down arrow = copy current part of the current pattern
+left arrow= paste
 device + shift =     pot8=temp , pot7= midi channel,
 send = write to flash , 
 send + shift = reload 

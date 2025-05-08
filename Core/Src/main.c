@@ -343,14 +343,14 @@ int main(void)
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
 			// if (play_list_write) play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;    // keep writing if enabled,disabled
 
-			  uint8_t selected_scene=scene_buttons[0];
+			 // uint8_t selected_scene=scene_buttons[0];
 			  seq_step_mod=seq_pos>>3;
 			  seq_current_step=seq_step_mod;
 			 // loop_current_length=looper_list[(selected_scene*4)+1];
 			 // loop_current_offset=looper_list[(selected_scene*4)];
 			  loop_current_length=pattern_repeat+1;
 			  loop_current_offset=pattern_count+1;
-			  loop_current_speed=looper_list[(selected_scene*4)+2];
+			  loop_current_speed=pattern_scale_list [pattern_select];
 			  lfo=pattern_select;
 			  pattern_offset=pattern_offset_list[pattern_select];
 
@@ -371,7 +371,7 @@ int main(void)
 			  uint8_t crap[64];
 			  memcpy (crap,cdc_buffer,12);
 
-			  	 uint16_t pattern_set=pattern_select*128;
+			  //	 uint16_t pattern_set=pattern_select*128;
 			  for (i=0;i<7;i++){
 
 				//  printf(" %d",crap[i] );

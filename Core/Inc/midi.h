@@ -1,4 +1,31 @@
 
+uint8_t pattern_scale_process(uint8_t value ) {    // scale notes from list
+
+	uint8_t note=0;
+	uint8_t count=0;
+
+	uint8_t octave=0;
+	uint8_t note_countup=0;
+	//count=value;
+	value=value>>3; // 0-15
+
+
+	while (count<value){
+
+		note=pattern_scale_data[note_countup+(pattern_scale_list[pattern_select]*8)];  // pattern scale with selected scale
+		//note=pattern_scale_data[note_countup];  // pattern scale with selected scale  , might skip this and do only during playback
+
+	if ((note_countup) && (note==0)) {octave++;note_countup=0;}  else  note_countup=(note_countup+1)&7; // reset counter or count up
+
+
+	count++;
+	}
+
+	return (note+(octave*12)+36); // starts from 36
+
+}
+
+
 void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_length)   // first byte is extra info then normal midi bytes
 {
 
@@ -67,7 +94,7 @@ void midi_send(void){  // produces midi data from notes etc ,only for midi music
 
 		uint16_t velocity=0;
 		//uint16_t seq_step_mod=seq_step_list[0];
-		uint8_t scene=scene_buttons[0]; // only for drums atm
+		//uint8_t scene=scene_buttons[0]; // only for drums atm
 		uint8_t random_list[256]={12,18,12,15,12,13,22,22,12,12,12,12,46,65,23,45}; // random notes for now
 		memcpy (random_list,alt_pots,256); // 8+8 *16
 		//memcpy (random_list+8,alt_pots,8);
@@ -279,13 +306,13 @@ void cdc_send(void){     // all midi runs often , need to separate
 			uint8_t note_midi [70] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  // seems to get some garbage ?
 			uint8_t nrpn_temp[100];
 			uint8_t note_off_midi[50];
-			uint8_t cc_temp[22];
+			//uint8_t cc_temp[22];
 			//uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
 
 
 			//uint8_t cue_counter2=0;
 			//uint8_t nrpn_chl=185;
-			cc_temp[20]=0;
+			//cc_temp[20]=0;
 			//memcpy(cue_temp,midi_cue,25);
 
 
@@ -295,9 +322,13 @@ void cdc_send(void){     // all midi runs often , need to separate
 			uint16_t pattern_loc=pattern_select*128;
 			uint16_t seq_step_mod=(seq_pos&127)+pattern_loc;   // 0-2047
 			uint8_t pitch_seq=alt_pots[((seq_pos>>3)&7)+(pattern_select*16)]; // loops 0-7 ,steps
-			i=0;
+			pitch_seq=pattern_scale_process(pitch_seq);  // change pitch from pots , maybe run always and ignore original pitch
 
-			//for(i=0;i<midi_cue_count;i++){				// new data search for sending , checks by time record of the notes
+
+			i=0;
+			// not super important but good for testing , below
+
+			//for(i=0;i<midi_cue_count;i++){				// new data search for sending , checks by time record of the notes and adds when found , pitch data is not needed
 				while (i<=midi_cue_count){
 				//pattern_set=pattern_loc+i;
 
@@ -306,8 +337,8 @@ void cdc_send(void){     // all midi runs often , need to separate
 									counterb=midi_cue_loc[i];  // gets midi_cue pos
 
 									note_midi[cue_counter]=midi_cue[counterb];
-									if (clip_stop && (note_midi[cue_counter]!=153)) note_midi[(cue_counter)+1]=pitch_seq; else  note_midi[(cue_counter)+1]=midi_cue[counterb+1];  // enables live pitch change
-
+									//if (clip_stop && (note_midi[cue_counter]!=153)) note_midi[(cue_counter)+1]=pitch_seq; else  note_midi[(cue_counter)+1]=midi_cue[counterb+1];  // enables live pitch change, ignoring pitch data for now
+									if (note_midi[cue_counter]!=153)	note_midi[(cue_counter)+1]=pitch_seq; else  note_midi[(cue_counter)+1]=midi_cue[counterb+1]; // only timing data , pitch only orig if drums otherwise all new
 
 									note_midi[(cue_counter)+2]=midi_cue[counterb+2];
 									//midi_cue[counterb]=0;   // clear after note off only when used, too quick
@@ -417,7 +448,7 @@ void cdc_send(void){     // all midi runs often , need to separate
 //
 //
 //					serial_len=serial_len+cc_temp[20];
-					cc_temp[20]=0;
+					//cc_temp[20]=0;
 			// end of serial send
 
 			//  only for midi controller
@@ -686,7 +717,7 @@ void midi_cue_add(uint8_t scene,uint8_t step,uint8_t pattern) {  // does add to 
 	uint16_t next_free=(midi_cue_count+1);  // next free pos
 	uint16_t last_free_location=next_free*4;
 
-	if (midi_noteon==153) note=drum_list[scene]; else note=alt_pots[step&7];
+	if (midi_noteon==153) note=drum_list[scene]; else note=alt_pots[step&7];  // only basic alt pots data
 
 
 	midi_cue[last_free_location]=midi_noteon;
