@@ -348,7 +348,7 @@ int main(void)
 			  seq_current_step=seq_step_mod;
 			 // loop_current_length=looper_list[(selected_scene*4)+1];
 			 // loop_current_offset=looper_list[(selected_scene*4)];
-			  loop_current_length=pattern_repeat+1;
+			  loop_current_length=pattern_repeat[pattern_select]+1;
 			  loop_current_offset=pattern_count+1;
 			  loop_current_speed=pattern_scale_list [pattern_select];
 			  lfo=pattern_select;

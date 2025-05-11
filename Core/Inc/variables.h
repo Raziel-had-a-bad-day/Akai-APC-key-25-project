@@ -31,6 +31,7 @@ uint8_t device;
 uint8_t clip_stop;
 uint8_t send;
 uint8_t record;
+uint8_t sustain;
 
 uint8_t serial1_temp;
 uint8_t temp;
@@ -240,8 +241,9 @@ uint16_t midi_send_time=0; // holds seq_pos for midi_send 0-2048
 uint16_t midi_send_current=0; // tracks data entered not cue_counter   ,reset on pattern change ?
 uint16_t midi_cue_count=0; //tracks the number of notes recorded
 uint8_t pattern_copy[32];  // buf for copypasta
-uint8_t pattern_loop;  // pattern looping track count
-uint8_t pattern_repeat=1; // sets the number of times to repeat before stepping
+uint8_t pattern_loop;  // pattern select counter from pattern count
+uint8_t pattern_loop_repeat; // counts only currently playing pattern
+uint8_t pattern_repeat[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}; // sets the number of times to repeat before stepping
 uint8_t pattern_count=3; // sets the pattern total repeating size
 uint8_t pattern_start=0; //sets start position of pattern playback
 uint8_t rand_velocities[32]; //holds a list of modified velocities

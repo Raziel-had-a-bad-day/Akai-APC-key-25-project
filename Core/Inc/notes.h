@@ -302,6 +302,10 @@ void buttons_store(void){    // incoming data from controller
 
 
 		    // not very useful
+
+	if ((status == 177) && (incoming_data1==64) && (incoming_message[2]==127) && (sustain)) {sustain=0;button_states[square_buttons_list[pattern_select+16]]=5;status=0;}
+	if ((status == 177) && (incoming_data1==64) && (incoming_message[2]==127) && (!sustain)) {sustain=1;button_states[square_buttons_list[pattern_select+16]]=4;status=0;}	 // toggle sustain also reset pattern repeat
+
 	if ((status == 176) && (clip_stop)){   // with clip stop on
 
 
@@ -340,7 +344,7 @@ void buttons_store(void){    // incoming data from controller
 		if ((incoming_data1==49) )
 		pattern_count=((pot_states[1]>>4))&7;
 		if ((incoming_data1==50) )
-			pattern_repeat=(pot_states[2]>>3)&15;
+			pattern_repeat[pattern_select]=(pot_states[2]>>3)&15;
 		if ((incoming_data1==51) )
 					pattern_scale_list[pattern_select]=(pot_states[3]>>3)&15;
 
@@ -532,21 +536,11 @@ void arrows(void){   // disable
 
 void pattern_settings(void){     // pattern change function
 	if (seq_step==15){
-		//uint16_t clear[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-			uint8_t total=(((pattern_repeat+1)*(pattern_count+1)))-1;
-			//pattern_repeat=((pot_states[1]>>4))&7;
-			//pattern_count=(pot_states[2]>>3)&15;
-		  // pattern select section
 			if ((pattern_select!=new_pattern_select)){    // switch pattern at the endo of the loop to new
 
-			//	button_states[square_buttons_list[pattern_select+16]]=0;
-			//pattern_start=new_pattern_select&(!pattern_count); // switch pattern to new
-			pattern_start=new_pattern_select;
 
-			//	if ((pattern_rewind)) button_states[square_buttons_list[new_pattern_select+16]]=3; else button_states[square_buttons_list[new_pattern_select+16]]=5;
-
-
+				pattern_start=new_pattern_select;    //creates a pattern start position for the loop
 
 			loop_screen();
 			//// test ok
@@ -561,40 +555,38 @@ void pattern_settings(void){     // pattern change function
 			///// test
 			}
 
+			if ((pattern_loop_repeat==pattern_repeat[pattern_select])) button_states[square_buttons_list[pattern_select+16]]=6;  // blink last bar
 
 
-			if (pattern_loop>=(pattern_repeat*15))  button_states[square_buttons_list[pattern_select+16]]=6;  // blink
 
 
+			if ((pattern_loop_repeat>pattern_repeat[pattern_select])) {   // check when repeated enough , good
 
-			if (pattern_loop>=total){    // check when total pattern count  reached
-				memset(button_states+8,0,16);  // clear
-				button_states[square_buttons_list[pattern_select+16]]=0; //always
-				pattern_select=pattern_start; // clear bits
-				button_states[square_buttons_list[pattern_select+16]]=5;
-				new_pattern_select=pattern_select;
-			}
-
-
-			else if (((pattern_loop&pattern_repeat)==pattern_repeat)) {   // check when repeated enough
-
-				button_states[square_buttons_list[pattern_select+16]]=0; //always
+				button_states[square_buttons_list[pattern_select+16]]=0; //always clear
 				//memset(button_states+8, 0, 32);  // clear
-				pattern_select=(pattern_select+1)&15;
+				//memset(button_states+8,0,16);  // clear
+				if ((pattern_loop+1)>pattern_count) {
+
+				pattern_select=pattern_start;   // check if at the end total play , jump to start
+				new_pattern_select=pattern_select;
+
+				pattern_loop=0;}
+
+
+				else {pattern_loop_repeat=0;
+				pattern_select=(pattern_select+1)&15;	// +1 on pattern select
+				new_pattern_select=pattern_select;
+				button_states[square_buttons_list[pattern_select+16]]=5;
+				pattern_loop++;}
 
 				button_states[square_buttons_list[pattern_select+16]]=5;
-				new_pattern_select=pattern_select;  }
+				pattern_loop_repeat=0;
 
-			if (pattern_loop>=total)pattern_loop=0; else pattern_loop++;
-
-
-
-	//	if (pattern_rewind) {new_pattern_select=pattern_rewind-1;
-
-	//	button_states[square_buttons_list[pattern_select+16]]=3;pattern_rewind=0;}   // fake press
+			} //end of pattern change
 
 
-		//memcpy(loop_note_list,clear,16);   // reset on pattern select , running always atm
+				if (!sustain) {pattern_loop_repeat++;}  // count up on patterns or stop if sustain ,
+
 
 
 	} //end of s_temp
