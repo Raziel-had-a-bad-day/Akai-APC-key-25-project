@@ -268,7 +268,7 @@ int main(void)
 			//  if (!pause)		 {midi_send();note_off();}   // midi data calculate
 			 // if (!pause)		 {midi_send_protocol();}   // midi data calculate
 			  green_position[0]=seq_step; green_position[1]=seq_step;
-			  cdc_send(); // all midi compiled for send
+			  cdc_send(); // all midi compiled for send  8/per note
 
 
 			  			 if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info, sent seq_pos
@@ -372,11 +372,11 @@ int main(void)
 			  memcpy (crap,cdc_buffer,12);
 
 			  //	 uint16_t pattern_set=pattern_select*128;
-			  for (i=0;i<7;i++){
+			  for (i=0;i<16;i++){
 
 				//  printf(" %d",crap[i] );
 
-				  printf(" %d",alt_pots[i+(pattern_select*16)]);
+				  printf(" %d",last_note_end_count[i]);
 
 
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );

@@ -167,10 +167,10 @@ void flash_read(void){     // 1kbyte for now
 
 
 	uint8_t d;
-	 for (d=1;d<32;d++) {
+	 for (d=0;d<32;d++) {
 					 rand_velocities[d]=(rand()&31)+95;
 				 } // write random velocites list
-	midi_cue_fill();
+	//midi_cue_fill();  // not needed anymore
 
 
 	float tempo_hold=1;  // calculate tempo look up

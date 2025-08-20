@@ -147,13 +147,13 @@ void note_buttons(void){  // always running only on notes though
 
 				switch(button_states[incoming_data1]){    // change state
 							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));  // ok
-							midi_cue_delete(scene_buttons[0],last_press,pattern_select);  // delete note from midi_cue ,buggy
+							//midi_cue_delete(scene_buttons[0],last_press,pattern_select);  // delete note from midi_cue ,buggy
 
 							break;   // clear note and accent ,works
 
 							//	case 3 :drum_byte=drum_byte | (1<<((((last_press-(drum_byte_select*4))*2))+1));  break;		// add accent
 							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2));
-							midi_cue_add(scene_buttons[0],last_press,pattern_select); //  add a note to midi_cue
+							//midi_cue_add(scene_buttons[0],last_press,pattern_select); //  add a note to midi_cue
 
 							break;		// note on ok
 
@@ -164,8 +164,15 @@ void note_buttons(void){  // always running only on notes though
 				drum_store_one[drum_byte_select]=drum_byte; //write back info
 
 			}
+				if((last_press>15)&& (right_arrow)){    // pattern selection , right attow off
+								//uint8_t pattern=pattern_select;
+					memset(button_states+8, 0, 16);
 
-				if(last_press>15){    // pattern selection
+					program_change[0]=last_press-16; button_states[square_buttons_list[last_press]]=3; }   // program change when right arrow enabled using pattern buttons
+
+
+
+				if((last_press>15)&& (!right_arrow)){    // pattern selection , right attow off
 				//uint8_t pattern=pattern_select;
 				uint8_t new_pattern=(last_press-16);
 				//for (i =8 ; i < 40; i++) {button_states[i]=0;}  // clear all ,  this is ok
@@ -280,7 +287,7 @@ void buttons_store(void){    // incoming data from controller
 
 		if (button_states[66]) {left_arrow=1;  memcpy(drum_store_one+drum_store_select,pattern_copy,4);midi_cue_fill();pattern_copy_full=0; down_arrow=0;button_states[65]=0;button_states[66]=0;left_arrow=0; 	   }
 		else left_arrow=0;  // use for paste pattern
-
+		if (button_states[67] )  right_arrow=1; else right_arrow=0;   // enables program instead of pattern select
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[93]) { record=1;} else {record=0;} // select enable
 
@@ -402,7 +409,7 @@ void buttons_store(void){    // incoming data from controller
 		}
 		if (incoming_data1==53){ looper_list[(current_scene*4)+1]=(pot_states[5]>>3)&15;pattern_offset_list[pattern_select]= looper_list[(12*4)+1];} // position offset but only from keys first entry  ,stored per pattern not per note ?
 		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
-		if ((incoming_data1==55)&&(!shift)) note_accent[current_scene]=pot_states[7];  // accent also used for tempo with shift
+		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];}  // accent also used for tempo with shift
 
 
 		}
@@ -534,14 +541,16 @@ void arrows(void){   // disable
 		}
 
 
-void pattern_settings(void){     // pattern change function
+void pattern_settings(void){     // pattern change function , runs on last step only
 	if (seq_step==15){
 
-			if ((pattern_select!=new_pattern_select)){    // switch pattern at the endo of the loop to new
+
+
+				if ((pattern_select!=new_pattern_select)){    // switch pattern at the endo of the loop to new
 
 
 				pattern_start=new_pattern_select;    //creates a pattern start position for the loop
-
+				memset(button_states+7,0,16);
 			loop_screen();
 			//// test ok
 		/*	 midi_send_current=0;

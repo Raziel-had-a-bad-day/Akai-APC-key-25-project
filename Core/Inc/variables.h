@@ -230,8 +230,8 @@ uint8_t pattern_scale_data[]={
 
 uint8_t pattern_scale_list [16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //  keeps track of scale used in pattern, one set for now
 uint8_t pattern_copy_full=0;
-uint8_t midi_cue[8192];  // data cue for one entire pattern now 4*128*16 in total (assuming evey note is on )
-uint8_t midi_cue_noteoff[50];  // data cue for midi max 8 notes [25] = message length , not used now
+uint8_t midi_cue[8192];  // data cue for one entire pattern now 2*16*16*16 in total (assuming evey note is on )
+uint8_t midi_cue_noteoff[64];  // 16*3 bytes
 uint16_t midi_cue_time[2048];  // holds actual time for  midi note messages in midi_cue_main 0-2047 for now
 uint8_t midi_cue_size[2048]; // holds message size (usually 4 for now )
 uint16_t midi_cue_loc[2048]; // holds data location ( *4  )
@@ -244,8 +244,10 @@ uint8_t pattern_copy[32];  // buf for copypasta
 uint8_t pattern_loop;  // pattern select counter from pattern count
 uint8_t pattern_loop_repeat; // counts only currently playing pattern
 uint8_t pattern_repeat[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}; // sets the number of times to repeat before stepping
-uint8_t pattern_count=3; // sets the pattern total repeating size
+uint8_t pattern_count=0; // sets the pattern total repeating size
 uint8_t pattern_start=0; //sets start position of pattern playback
 uint8_t rand_velocities[32]; //holds a list of modified velocities
+uint8_t last_note_on_channel[16];  // stores last played note on non drum channels ,second page
+uint8_t last_note_end_count[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}; // counts down for note off , second page
 
 
