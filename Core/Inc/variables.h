@@ -4,7 +4,8 @@
 #define ppq_set 192   // TIM10 values
 #define drum_store 64  // scene_select  *4
 #define sound_set 16   // define selectable sounds for scene_buttons[0]  , important
-
+#define MIDI_NOTE_OFF 128
+#define MIDI_NOTE_ON 144
 
 uint16_t bpm_table[256];  // lut values for temp TIM10 ARR
 uint8_t tempo; // tempo value
@@ -46,7 +47,7 @@ uint8_t note_bank[18];   //contains note on and off info
 uint8_t last_note=0; // 1-3  last note played on note bank
 uint8_t last_key=0;  // last actual key played
 uint8_t clear[3]={0,0,0};
-uint8_t velocity=0;   // enable for velocity data byte
+
 uint8_t note_temp[3]={0,0,0};   // holds current note being filled
 uint8_t note_replace_enable=0;
 uint8_t note_length_list[10];   // keeps note count for note off
@@ -61,10 +62,10 @@ uint16_t s_temp;
 uint16_t seq_pos_mem=1;
 uint16_t mtc_tick=0;  // incoming realtime clock counter
 uint8_t seq_enable=1;  // start stop sequencer
-uint8_t seq_step; // 0-32 steps
+uint8_t seq_step; // 0-15 steps
 uint8_t realtime;
-uint8_t message_cue[10];
-uint8_t message_counter;// points to select byte in midi
+
+
 volatile uint16_t timer_value=512; // sets timer ccr  def is 1100 for now
 uint16_t seq_tmp;
 uint8_t cdc_buffer[12];  // receive buffer on sub , check usbd_cdc_if.c and h for more
@@ -83,10 +84,10 @@ uint8_t lfo; // temp storage
 const uint8_t square_buttons_list [100]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99}; // just reads buttons in top.down order
 const uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
-uint8_t scene_memory[260];  // scene memory 8*32 stored in order , velocity msb 3 bits 7-5 , pitch 5 bits LSB 0-4
+
 uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , 8-40 (0-32)  is out of order to make it easier on operations ,bad idea -reversed
-uint8_t scene_pitch[260]; // stores a pitch value per field 8*32 , stored in order
-uint8_t scene_velocity[260]; // stores a pitch value per field 8*32
+
+
 uint8_t pot_states[sound_set]={64,64,64,64,64,64,64,64}; // stores pots 1-8 current state
 uint8_t note_off_flag[3]; // use this to detect held buttons 0 is on off ,1 is last button detected
 uint8_t all_update=1; // update all buttons from button_states , 40 for now
@@ -106,15 +107,6 @@ uint8_t spi_send[10];
 uint8_t status_reg[2];
 uint8_t first_message=0; // flag to clear once a button is pressed
 
-
-uint8_t last_pattern_select;
-uint8_t pattern_rewind;  // +1
-uint8_t new_pattern_select;
-uint8_t pattern_select=0; //
-uint8_t pattern_offset_list[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};   // list of offset for a single part (keys only ) on each pattern , handy
-uint8_t pattern_offset; // for lcd
-
-
 uint8_t last_note_played[16]; // stores note for note off
 
 uint8_t flash_flag=0;
@@ -128,51 +120,46 @@ uint8_t other_buttons; // update control button lights
 uint8_t other_buttons_hold[100]; // keeps track of buttons
 uint8_t send_buffer_sent;
 uint8_t button_states_save[100]; // reference for button changes for controller , not in order
-uint8_t button_states_loop[256];  // stored,loop screen buttons ,  pitch+accent (MSB),always on , 1 for empty
-uint8_t  loop_screen_note_on[2048];    //changed , 1 bit per note on , 128*16 =2048 for 8 notes
-uint16_t loop_screen_note_off[256]; 		// calculated, note off record also 2048 count
+
+
+
 uint16_t loop_note_list[sound_set]; //tracks currently playing note position
-uint8_t button_states_main[64]; // button states on main screen , copied
+
 uint8_t loop_note_count[sound_set];  // keeps track of number of notes in a loop
 uint8_t loop_current_speed;
 uint8_t loop_lfo_out[sound_set*3];  // used for some level of lfo using pot7 for now 0-255
 // uint8_t lfo_settings[sound_set*3];  // lfo 0-8   rate , gain,offset, target
-uint8_t alt_pots[sound_set*16]; // stores a set of alt pot settings , 2 sets*16 pattern  for now
+uint8_t alt_pots[sound_set*16]; // stores a set of alt pot settings , 2 sets*8 pattern  for now ,use rest for other data
 
 
-uint8_t pitch_hold[sound_set]; //holds last not eplayed
+
 uint8_t seq_step_mem;  // mem for looper
-uint8_t retrigger_countdown[sound_set];
+
 
 uint8_t pot_tracking[33] ; // record pot movements , maybe after 1 bar ,only transpose for now
 uint8_t mute_list[sound_set]; //track scene mutes
 uint8_t noteoff_list[25]; //track note offs sorted 0-7 , empty when not in use
 //notes
 uint8_t scene_transpose[sound_set];
-uint8_t scene_volume[sound_set];  // use it to control velocity only on midi out
+
 uint8_t last_button;
-uint8_t bar_looping; // loop 8 notes on cueent scene if enabled
-uint8_t bar_count; // relates to looping
+
 uint8_t scene_mute; // muting
 uint8_t last_incoming;
 uint8_t scene_solo; //enable solo mode
 uint8_t stop_toggle=0; // use it for pause
-uint8_t loop_selector=1;  //enables loop controls pot 4-8 when up arrow is on
-
-
 
 uint8_t seq_step_list[20]; //store seq_step position per part  .for now just notes 4-8
 uint16_t seq_step_fine[sound_set];  // holds high count for seq_step_list   *8 res
 uint8_t seq_current_step; // current position on selected from seq_step_list
 uint8_t seq_step_reset[sound_set];  // tracks when seq_step_list reset to start
-uint8_t seq_step_long; // 32*32
+uint8_t seq_step_long; // 16*32
 uint8_t seq_step_enable[sound_set]; // step change tracking
-uint8_t loop_screen_scene;
-uint8_t loop_screen_last_note[sound_set]; //holds last enabled loop screen note
-uint8_t note_latch[sound_set]; // stays on when triggered
-uint16_t note_latch_pos[sound_set]; // holds pos of note latch
+
+
+
 uint8_t loop_length;
-uint8_t loop_length_set[sound_set]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15}; // loop length , not really needed atm
+
 uint8_t serial_out[50];
 uint8_t serial_len;
 uint8_t midi_channel_list[21]={9,9,9,9,9,9,9,9,9,9,9,9,3,3,3,3,3,3 };   //holds midi channel settings 0=1 (midi channels 1-16)
@@ -231,7 +218,7 @@ uint8_t pattern_scale_data[]={
 uint8_t pattern_scale_list [16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; //  keeps track of scale used in pattern, one set for now
 uint8_t pattern_copy_full=0;
 uint8_t midi_cue[8192];  // data cue for one entire pattern now 2*16*16*16 in total (assuming evey note is on )
-uint8_t midi_cue_noteoff[64];  // 16*3 bytes
+
 uint16_t midi_cue_time[2048];  // holds actual time for  midi note messages in midi_cue_main 0-2047 for now
 uint8_t midi_cue_size[2048]; // holds message size (usually 4 for now )
 uint16_t midi_cue_loc[2048]; // holds data location ( *4  )
@@ -240,6 +227,13 @@ uint16_t midi_cue_loc[2048]; // holds data location ( *4  )
 uint16_t midi_send_time=0; // holds seq_pos for midi_send 0-2048
 uint16_t midi_send_current=0; // tracks data entered not cue_counter   ,reset on pattern change ?
 uint16_t midi_cue_count=0; //tracks the number of notes recorded
+// pattern related
+uint8_t last_pattern_select;
+uint8_t pattern_rewind;  // +1
+uint8_t new_pattern_select;
+uint8_t pattern_select=0; // was 16 now 8
+uint8_t pattern_offset_list[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};   // list of offset for a single part (keys only ) on each pattern , handy
+uint8_t pattern_offset; // for lcd
 uint8_t pattern_copy[32];  // buf for copypasta
 uint8_t pattern_loop;  // pattern select counter from pattern count
 uint8_t pattern_loop_repeat; // counts only currently playing pattern
@@ -249,5 +243,6 @@ uint8_t pattern_start=0; //sets start position of pattern playback
 uint8_t rand_velocities[32]; //holds a list of modified velocities
 uint8_t last_note_on_channel[16];  // stores last played note on non drum channels ,second page
 uint8_t last_note_end_count[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}; // counts down for note off , second page
+uint8_t program_change_automation[32];   // record a single pc per bar 4 bit for position from seq_pos and 3 bit for actual pc selected ,can be overwritten ,only 1 per bar
 
 

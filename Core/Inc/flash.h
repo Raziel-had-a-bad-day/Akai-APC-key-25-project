@@ -160,6 +160,8 @@ void flash_read(void){     // 1kbyte for now
 	memcpy(drum_store_one,test_data3+516,256);   // next block (+4)
 	memcpy(drum_store_one+512,test_data3+772,512); //
 	memcpy(alt_pots,test_data3+1284,256);
+	memcpy(program_change_automation,alt_pots+128,32); // program change data
+
 
 	tempo=all_settings[250];
 	if (tempo==255) tempo=120;
@@ -207,23 +209,6 @@ void flash_read(void){     // 1kbyte for now
 				 first_message=2;
 
 }
-void panic_delete(void){
-
-	HAL_Delay(100);
-
-
-	uint8_t temp_hold=0;
-
-	for (n=0;n<32;n++){ // delete all if most notes are on
-	{if (scene_memory[n+32]) temp_hold++;}
-
-	}
-
-	if (temp_hold > 29) {for (n=0;n<255;n++){scene_memory[n]=0;}}
-
-}
-
-
 
 // note bank search and replace
 

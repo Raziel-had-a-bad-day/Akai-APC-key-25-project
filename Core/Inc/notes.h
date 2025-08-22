@@ -55,7 +55,7 @@ void patch_screen(void)		{     // shows last loaded patch and save patch as well
 	}
 
 
-void loop_screen(void){  // loop screen ,always on now , 16 notes and 16 patterns , full redraw  but notes only
+void loop_screen(void){  // loop screen ,always on now , 16 notes and 8 patterns , full redraw  but notes only
 
 	//uint16_t current_scene=scene_buttons[0]*256;  // pattern select
 	uint8_t selected_scene=scene_buttons[0];  // this wiil change to pattern select 0-15
@@ -83,24 +83,14 @@ void loop_screen(void){  // loop screen ,always on now , 16 notes and 16 pattern
 		drum_byte_select= (i>>2)+(selected_scene*4)+(pattern_select*drum_store);  // select byte position
 		drum_byte=drum_store_one[drum_byte_select];  // get data
 
-
-
 		if (drum_byte & (1<<((i&3)*2))) data_temp2=1; else data_temp2=0;     // note test ok
 		if (drum_byte & (1<<((i&3)+1))) accent_temp=1; else accent_temp=0;  // accent test
-
-
-
-
 
 			if (data_temp2)    // read back on first loop select   , change button state colour
 				{if (accent_temp) button_states[square_buttons_list[i]]=3 ;  else button_states[square_buttons_list[i]]=5 ;}
 				 else button_states[square_buttons_list[i]]=0;
 
-
-
 				note_counter++;
-
-
 
 					} // end of loop
 	} // end of drums
@@ -164,28 +154,26 @@ void note_buttons(void){  // always running only on notes though
 				drum_store_one[drum_byte_select]=drum_byte; //write back info
 
 			}
-				if((last_press>15)&& (right_arrow)){    // pattern selection , right attow off
+				if((last_press>15)&& (last_press<24)){    // program change , right attow removed
 								//uint8_t pattern=pattern_select;
-					memset(button_states+8, 0, 16);
+					memset(button_states+16, 0, 8);
 
-					program_change[0]=last_press-16; button_states[square_buttons_list[last_press]]=3; }   // program change when right arrow enabled using pattern buttons
+					program_change[0]=last_press-16; button_states[square_buttons_list[last_press]]=3;
+
+					program_change_automation[seq_step_long]=seq_step+(((program_change[0]&7)+1)<<4);  // save program change ,only one per bar +1 or stay on previous setting
+					memcpy(alt_pots+128,program_change_automation,32); // save pc data
+
+
+				}   // program change when right arrow enabled using pattern buttons
 
 
 
-				if((last_press>15)&& (!right_arrow)){    // pattern selection , right attow off
+				if((last_press>23)){    // pattern selection ,
 				//uint8_t pattern=pattern_select;
-				uint8_t new_pattern=(last_press-16);
-				//for (i =8 ; i < 40; i++) {button_states[i]=0;}  // clear all ,  this is ok
-				//memcpy(button_states+8,clear,32);
+				uint8_t new_pattern=(last_press-24);
 
-
-
-					//if (new_pattern==pattern_select)  { button_states[square_buttons_list[new_pattern+16]]=3; pattern_rewind=last_pattern_select+1;}  // enables return
-					//else button_states[square_buttons_list[new_pattern+16]]=6;
-					if (shift) { button_states[square_buttons_list[new_pattern+16]]=4; pattern_rewind=pattern_select+1; shift=0;}
-					else button_states[square_buttons_list[new_pattern+16]]=6; //enable blink
-
-
+					if (shift) { button_states[square_buttons_list[new_pattern+24]]=4; pattern_rewind=pattern_select+1; shift=0;}
+					else button_states[square_buttons_list[new_pattern+24]]=6; //enable blink
 
 					new_pattern_select=new_pattern;  //add only to new pattern select
 
@@ -317,7 +305,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 	//alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =pattern_scale_process(incoming_message[2]&127);   // writes note pots when clip stop but only to first set , need something the copy to first though
-	alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =((incoming_message[2])&127); 		// just store pot data 0-31 +32
+	alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =((incoming_message[2])&127); 		// just store pot data 0-31 +32 , only use half
 
 
 	// maybe 16 values or about 2 octaves in scales
@@ -404,10 +392,21 @@ void buttons_store(void){    // incoming data from controller
 
 
 
-		if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>3;   // works ok  sets loop length 0-16
+		/*if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>3;   // works ok  sets loop length 0-16
 		else looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop  fine offset 8/note  ,
-		}
-		if (incoming_data1==53){ looper_list[(current_scene*4)+1]=(pot_states[5]>>3)&15;pattern_offset_list[pattern_select]= looper_list[(12*4)+1];} // position offset but only from keys first entry  ,stored per pattern not per note ?
+		}*/
+
+
+		if ((incoming_data1==52)&& pause) {seq_step=(pot_states[4]>>1)&15; seq_pos=seq_step<<3;seq_step_long=(((pot_states[5]>>4)<<2)+(pot_states[4]>>5))&31; }   // moves seq_pos and seq_step ,during pause
+
+
+
+		//if (incoming_data1==53){ looper_list[(current_scene*4)+1]=(pot_states[5]>>3)&15;pattern_offset_list[pattern_select]= looper_list[(12*4)+1];} // position offset but only from keys first entry  ,stored per pattern not per note ?
+
+		if ((incoming_data1==53) && pause) seq_step_long=(((pot_states[5]>>4)<<2)+(pot_states[4]>>5))&31;   // moves bar during pause
+
+
+
 		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
 		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];}  // accent also used for tempo with shift
 
@@ -417,12 +416,12 @@ void buttons_store(void){    // incoming data from controller
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
 
 
-			if ((incoming_data1==48) && (shift)){     // change program pot 1
+		/*	if ((incoming_data1==48) && (shift)){     // change program pot 1
 				if (scene_buttons[0]<12) program_change[0]=pot_states[0]>>3;   else program_change[1]=pot_states[0]>>3;
 
 
 
-			}
+			}*/
 
 
 
@@ -492,65 +491,38 @@ void note_replace(uint8_t note_replace) {    // replace first note
 
 
 
-void arrows(void){   // disable
 
-	if (right_arrow)
-	{
-		uint8_t scene=scene_buttons[0];
-		uint8_t temp_hold;
-		uint8_t temp[33];
-		uint8_t point=scene*32;
-		temp_hold= scene_memory[(point)+31];
-		memcpy(temp+1,scene_memory+point,31);
-		temp[0]=temp_hold;
-		memcpy(scene_memory+point,temp,32);
-
-				temp_hold= scene_velocity[(point)+31];
-				memcpy(temp+1,scene_velocity+point,31);
-				temp[0]=temp_hold;
-				memcpy(scene_velocity+point,temp,32);
-
-				temp_hold= scene_pitch[(point)+31];
-								memcpy(temp+1,scene_pitch+point,31);
-								temp[0]=temp_hold;
-								memcpy(scene_pitch+point,temp,32);
-
-								temp_hold= button_states[39];
-																memcpy(temp+1,button_states+8,31);
-																temp[0]=temp_hold;
-																memcpy(button_states+8,temp,32);
+void pattern_settings(void){     // pattern change function , runs on last step only , lights can run all the time
 
 
-			button_states[67]=0;
-		right_arrow=0;
-		//all_update=1;
+	uint8_t pc_set=program_change_automation[seq_step_long]>>4;
+
+	if ((program_change_automation[seq_step_long] & 15) == seq_step) { // program change automation ,single change per bar ,32 bars
+
+		if (pc_set)
+			program_change[0] = (pc_set - 1) & 7; //change pc but only on fresh data
+
+		memset(button_states + 16, 0, 8);
+
+		button_states[program_change[0] + 16] = 3;
+	} // end of program change
+	memset(button_states+8,0,8);
+	if ((seq_step&3)==3)button_states[pattern_select+8]=0;  else button_states[pattern_select+8]=5;  // blink on quarter
+	button_states[(seq_step_long>>2)+8]=1;
 
 
+	if ((seq_step==0) && (!pause)){memset(button_states+8,0,8); }// blinks on zero
+	if (pause && (!pc_set)) memset(button_states+8,2,8);  // green blink in pause if no data in current bar
 
-
-
-
-
-	}
-
-
-
-
-
-
-		}
-
-
-void pattern_settings(void){     // pattern change function , runs on last step only
 	if (seq_step==15){
 
+			//pattern steps blink
 
 
 				if ((pattern_select!=new_pattern_select)){    // switch pattern at the endo of the loop to new
 
-
 				pattern_start=new_pattern_select;    //creates a pattern start position for the loop
-				memset(button_states+7,0,16);
+				memset(button_states+8,0,8);
 			loop_screen();
 			//// test ok
 		/*	 midi_send_current=0;
@@ -564,16 +536,12 @@ void pattern_settings(void){     // pattern change function , runs on last step 
 			///// test
 			}
 
-			if ((pattern_loop_repeat==pattern_repeat[pattern_select])) button_states[square_buttons_list[pattern_select+16]]=6;  // blink last bar
-
-
-
+			if ((pattern_loop_repeat==pattern_repeat[pattern_select])) button_states[pattern_select+8]=6;  // blink last bar
 
 			if ((pattern_loop_repeat>pattern_repeat[pattern_select])) {   // check when repeated enough , good
 
-				button_states[square_buttons_list[pattern_select+16]]=0; //always clear
-				//memset(button_states+8, 0, 32);  // clear
-				//memset(button_states+8,0,16);  // clear
+				button_states[pattern_select+8]=0; //always clear
+
 				if ((pattern_loop+1)>pattern_count) {
 
 				pattern_select=pattern_start;   // check if at the end total play , jump to start
@@ -585,10 +553,10 @@ void pattern_settings(void){     // pattern change function , runs on last step 
 				else {pattern_loop_repeat=0;
 				pattern_select=(pattern_select+1)&15;	// +1 on pattern select
 				new_pattern_select=pattern_select;
-				button_states[square_buttons_list[pattern_select+16]]=5;
+				button_states[pattern_select+8]=5;
 				pattern_loop++;}
 
-				button_states[square_buttons_list[pattern_select+16]]=5;
+				button_states[pattern_select+8]=5;
 				pattern_loop_repeat=0;
 
 			} //end of pattern change

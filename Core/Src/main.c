@@ -101,7 +101,6 @@ void note_replace(uint8_t note_replace);
 //void USB_CDC_RxHandler(uint8_t*, uint32_t);
 void patch_screen(void);
 void buttons_store(void);
-void midi_send(void);  // creates midi_cue data
 void flash_write(void);
 void flash_read(void);
 void panic_delete(void);
@@ -357,7 +356,7 @@ int main(void)
 				play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
-			  if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
+			 // if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
 			  if ((s_temp&7)==7) loop_lfo();
 
 ////
