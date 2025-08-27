@@ -244,5 +244,9 @@ uint8_t rand_velocities[32]; //holds a list of modified velocities
 uint8_t last_note_on_channel[16];  // stores last played note on non drum channels ,second page
 uint8_t last_note_end_count[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}; // counts down for note off , second page
 uint8_t program_change_automation[32];   // record a single pc per bar 4 bit for position from seq_pos and 3 bit for actual pc selected ,can be overwritten ,only 1 per bar
-
-
+uint8_t lcd_control=0;  // controls type of lcd menu , used for downcount as well
+uint8_t lcd_downcount=0;
+uint8_t lcd_messages_select=0;//select from lcd_meesages
+uint8_t current_accent;// current selected sound accent value
+uint8_t lcd_buffer[32]; // holds outgoing characters
+uint8_t lcd_buffer_mem[32]; // holds outgoing characters

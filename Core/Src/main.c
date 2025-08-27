@@ -347,11 +347,11 @@ int main(void)
 			  seq_current_step=seq_step_mod;
 			 // loop_current_length=looper_list[(selected_scene*4)+1];
 			 // loop_current_offset=looper_list[(selected_scene*4)];
-			  loop_current_length=pattern_repeat[pattern_select]+1;
-			  loop_current_offset=pattern_count+1;
-			  loop_current_speed=pattern_scale_list [pattern_select];
-			  lfo=pattern_select;
-			  pattern_offset=pattern_offset_list[pattern_select];
+			//  loop_current_length=pattern_repeat[pattern_select]+1;
+
+			 // loop_current_speed=pattern_scale_list [pattern_select];
+
+			//  pattern_offset=pattern_offset_list[pattern_select];
 
 				play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
@@ -397,8 +397,12 @@ int main(void)
 
  				// print section
 
- 				lcd_menu_vars();
 
+
+ 				if (lcd_downcount) { lcd_message();lcd_downcount--; }
+
+ 				 lcd_menu_vars();
+ 				 lcd_mem();
  				//		printf(" %d ", midi_cue[3]);
  				//		printf(" %d\n ", midi_cue[6]);
 

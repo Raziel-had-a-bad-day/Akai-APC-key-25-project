@@ -264,7 +264,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 		 if ((!button_states[64]) && (scene_buttons[0]>7)) {scene_buttons[0]=scene_buttons[0]-8;second_scene=0;loop_screen();}
-		 if (button_states[64] && (scene_buttons[0]<8)) 	{scene_buttons[0]=scene_buttons[0]+8;second_scene=8;loop_screen();}
+		 if (button_states[64] && (scene_buttons[0]<8)) 	{scene_buttons[0]=scene_buttons[0]+8;second_scene=8;lcd_downcount=10;lcd_messages_select=2;loop_screen();}
 
 
 		 if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
@@ -275,7 +275,7 @@ void buttons_store(void){    // incoming data from controller
 
 		if (button_states[66]) {left_arrow=1;  memcpy(drum_store_one+drum_store_select,pattern_copy,4);midi_cue_fill();pattern_copy_full=0; down_arrow=0;button_states[65]=0;button_states[66]=0;left_arrow=0; 	   }
 		else left_arrow=0;  // use for paste pattern
-		if (button_states[67] )  right_arrow=1; else right_arrow=0;   // enables program instead of pattern select
+		if (button_states[67] )  {right_arrow=1;} else right_arrow=0;   // enables program instead of pattern select
 		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
 		if (button_states[93]) { record=1;} else {record=0;} // select enable
 
@@ -285,7 +285,7 @@ void buttons_store(void){    // incoming data from controller
 		if (button_states[71])  {device=1;  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;memcpy(loop_note_list,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
 
-		if ((button_states[82])  )    {clip_stop=1;   } else clip_stop=0;
+		if ((button_states[82])  )    {clip_stop=1; lcd_downcount=10;lcd_messages_select=3;  } else clip_stop=0;
 	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
 
 			//button_pressed=incoming_data1; // important  , only after note on
@@ -341,7 +341,7 @@ void buttons_store(void){    // incoming data from controller
 		if ((incoming_data1==50) )
 			pattern_repeat[pattern_select]=(pot_states[2]>>3)&15;
 		if ((incoming_data1==51) )
-					pattern_scale_list[pattern_select]=(pot_states[3]>>3)&15;
+					{pattern_scale_list[pattern_select]=(pot_states[3]>>3)&15;lcd_control=0;lcd_downcount=3;lcd_messages_select=0;}
 
 
 		if ((incoming_data1==48) &&(!select) && (current_scene>3))  //  cc function
@@ -408,7 +408,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
-		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];}  // accent also used for tempo with shift
+		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7]; lcd_control=1;lcd_downcount=3;lcd_messages_select=1;current_accent=pot_states[7];}  // accent also used for tempo with shift
 
 
 		}
