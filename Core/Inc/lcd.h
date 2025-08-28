@@ -165,7 +165,7 @@ void lcd_menu_vars(void){     // grab vars for menu
 
 void lcd_message(void){    // prints controls being used while being used
 
-	char *lcd_messages[] = {"note_scale  ","note_accent  ","second_bank  ","pitch_sets   "
+	char *lcd_messages[] = {"note_scale  ","note_accent  ","second_bank  ","pitch_sets   ","midi_channel "
 
 	};
 

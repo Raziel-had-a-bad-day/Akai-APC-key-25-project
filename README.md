@@ -12,13 +12,13 @@ Pot 3 = Repeat pattern times
 
 ,,,,,
 
-right arrow =  program change select on pattern buttons 
-
-Pot 4 = set musical scale type 
-
-down arrow = copy current part of the current pattern
-left arrow= paste
-device + shift =     pot8=temp , pot7= midi channel,
+Middle horizontal row is program change for drums 1-8 , saved when set to record every 8 notes  
+Pot 1 + Shift =program change only for non drum channels
+Pot 4 = set musical scale type ,
+Hold Shift to enter accented notes.
+Down arrow = copy current part of the current pattern
+Left arrow= paste
+Device + Shift =     pot8=temp , pot7= midi channel,
 send = write to flash , 
 send + shift = reload 
 solo = solo current selected part only , 
@@ -30,7 +30,7 @@ keyboard = sets pitch for programming notes , also play
 Stop all clips = stops and jumps to start 
 clip_stop = enables all pots to set pitch for 8x2 notes  except drums
 
-shift+pot 1 =program change 
+
 
   
 pan = shows current loaded patch  , pot 8 to set load/save position 

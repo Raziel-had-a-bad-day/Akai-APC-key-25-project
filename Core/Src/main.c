@@ -122,8 +122,7 @@ void settings_storage(void);
 void pattern_settings(void);
 void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_length);
 void midi_send_control(void); // runs midi send when needed
-void midi_cue_delete(uint8_t scene,uint8_t step,uint8_t pattern);  // delete a note from midi_cue
-void midi_cue_add(uint8_t scene,uint8_t step,uint8_t pattern);  // add a note to midi_cue
+
 void flash_page_write(uint8_t page_select,uint8_t* data);
 uint8_t pattern_scale_process(uint8_t value ); // midi in to scaled note
 
@@ -190,10 +189,6 @@ int main(void)
 
 	printf("hello");
 
-	//memcpy(scene_memory,test_data,32);
-	//button_states[70]=1;
-
-//	flash_write();
 	//  get flash data
 	flash_read();
 	//other_buttons=1; // nothing
@@ -202,9 +197,9 @@ int main(void)
   	//TIM2->CCR1=(arr_cnt/2) ;   // 90-4v   50-1.5v 20- 0.6v   -1
 
 	//TIM2->CCMR1 = 0;
-			lcd_start();
+	lcd_start();
 
-			loop_screen();
+	loop_screen();
 	// panic_delete();                 WATCH FOR WEIRD APC SENDS , IE UP ARROW PLUS BOTTOM ROW 3 SENDS CONSTANT CONTROLLER 50 INFO  ?
   /* USER CODE END 2 */
 
@@ -215,157 +210,96 @@ int main(void)
 
 
 	 // HAL_GPIO_WritePin(PPQ_GPIO_Port, PPQ_Pin, (ppq_send|1));
-	  //if (seq_enable) {
-		  uint16_t step_temp=0;
-		  //uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
-		  uint8_t seq_step_mod=(seq_pos>>3)&31;
+
+	  uint16_t step_temp=0;
+	  uint8_t seq_step_mod=(seq_pos>>3)&31;
+	  uint8_t selected_scene=scene_buttons[0];
 
 
-		  //uint8_t step_end;
-		//  uint8_t step_length;
-		  uint8_t selected_scene=scene_buttons[0];
-		//  uint8_t step_start;
-		//  uint8_t play_total; // different for each note
+	  if (seq_pos_mem!=seq_pos){     // runs  8 times /step  , control sequencer counting
 
-/*
+		  green_position[0]=seq_step; green_position[1]=seq_step;
+		  cdc_send(); // all midi compiled for send  8/per note
 
+		  if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info, sent seq_pos
 
-		  if ((looper_list_mem[7]<looper_list[7*4]) && (!skip_counter))  {    // catch up with loop slide + for now
-			  skip_counter=((looper_list[7*4]-looper_list_mem[7])*6);
-			  looper_list_mem[7]=looper_list[7*4];
-		  skip_setting=3;
+		  // USB_send();
+
+		  if (keyboard[0])  {    // keyboard play live
+
+			  uint8_t note_flag=144;
+			  if (keyboard[0]>>7)  note_flag=128;
+
+			  last_key=keyboard[0]&127;   //store key
+			  keyboard[1]=last_key;
+
+			  if (midi_channel_list[selected_scene]==9)   // drums send
+			  {  midi_extra_cue[0]=(note_flag+9);         // use drumlist for now
+
+			  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;   // send midi
+
+			  //{	nrpn_cue[selected_scene*3]=selected_scene+1; nrpn_cue[(selected_scene*3)+1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;  } // pitch data
+			  keyboard[0]=0;}
+			  else  {midi_extra_cue[0]=note_flag+midi_channel_list[selected_scene];  midi_extra_cue[1]=((last_key+32))&127 ;
+			  midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;keyboard[0]=0;}  // send normal then keyboard off
+
 		  }
 
-
-
-		  if ((looper_list_mem[7]>looper_list[7*4])&& (!skip_counter)) {   // 384 max or 32 steps max , one big skip instead of gradual
-			  skip_counter=((looper_list_mem[7]-looper_list[7*4])*6);
-			  looper_list_mem[7]=looper_list[7*4];
-			  skip_setting=0;
-
-		  }
-
-		  if ((skip_counter) &&  (!skip_enable)){ skip_counter--; }  // count down
-
-		  if ((!skip_counter) &&  (!skip_enable)) skip_setting=1;  // default speed
-
-*/
-
-		  if (seq_pos_mem!=seq_pos){     // runs  8 times /step  , control sequencer counting
-
-			  if(!pause) {
-
-				  for (i=0;i<8;i++){				// controls steps needs better res
-
-					  seq_step_fine[i] = (seq_step_fine[i]+1)&255;   // long and slow , only 1/8 a note so 256 notes in total normal speed
-
-					  step_temp=(( seq_step_fine[i]>>4)&31);  // reads fine position , one note length is 64 count
-					  step_temp=seq_pos>>3;  // ditch for now
-					  seq_step_list[i] =step_temp;     // meaningless
-				  }}
-
-			//  if (!pause)		 {midi_send();note_off();}   // midi data calculate
-			 // if (!pause)		 {midi_send_protocol();}   // midi data calculate
-			  green_position[0]=seq_step; green_position[1]=seq_step;
-			  cdc_send(); // all midi compiled for send  8/per note
-
-
-			  			 if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info, sent seq_pos
-
-
-			  			// USB_send();
-
-			  			if (keyboard[0])  {    // keyboard play live
-
-							 uint8_t note_flag=144;
-							  if (keyboard[0]>>7)  note_flag=128;
-
-							  last_key=keyboard[0]&127;   //store key
-							  keyboard[1]=last_key;
-
-							  if (midi_channel_list[selected_scene]==9)   // drums send
-							  {  midi_extra_cue[0]=(note_flag+9);         // use drumlist for now
-
-							  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;   // send midi
-
-							  //{	nrpn_cue[selected_scene*3]=selected_scene+1; nrpn_cue[(selected_scene*3)+1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;  } // pitch data
-							  keyboard[0]=0;}
-							  else  {midi_extra_cue[0]=note_flag+midi_channel_list[selected_scene];  midi_extra_cue[1]=((last_key+32))&127 ;
-							  midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;keyboard[0]=0;}  // send normal then keyboard off
-
-						  }
-
-
-
-						 // else //midi_extra_cue[28]=0;
-						  //	  keyboard[0]=0;
-				//	  }
 
 
 			 seq_pos_mem=seq_pos;
-		 } // end of fast step 8/step
+		 } // end of seq_pos ,fast step 8/step
 
 
 
-		  if ((s_temp) != (seq_pos>>3)) {			// normal sending , very slow atm , only 16 count now
+	  if ((s_temp) != (seq_pos>>3)) {			// normal sending , very slow atm , only 16 count now, most stuff done that's not too accuarate
 
 
 
-			  if ((seq_pos>>5)&1)   // send cc
-			  {
-				 uint8_t extras=midi_extra_cue[28];
-				 midi_extra_cue[extras]=176+midi_channel_list[12];  // cc ch3
-				 midi_extra_cue[extras+1]=74;  // filter cutoff ,correct
-				 midi_extra_cue[extras+2]=(((loop_lfo_out[44]*2)+32)+pot_states[0])&127;  // lfo out , use pot 0 for offset
-				// midi_extra_cue[extras+2]=64;
-				 midi_extra_cue[28]=extras+3;
-
-		if (scene_buttons[0]<12)	{ midi_extra_cue[extras+3]=192+midi_channel_list[0];
-		 	 	 	 	 midi_extra_cue[extras+4]=program_change[0];
-						 midi_extra_cue[extras+5]=program_change[0];
-						 midi_extra_cue[28]=extras+6;}
+		  if (((seq_pos>>5)&1) && (!pause))   // send cc , off during pause
+		  {
+			  uint8_t extras=midi_extra_cue[28];
+			  midi_extra_cue[extras]=176+midi_channel_list[12];  // cc ch3
+			  midi_extra_cue[extras+1]=74;  // filter cutoff ,correct
+			  midi_extra_cue[extras+2]=(((loop_lfo_out[44]*2)+32)+pot_states[0])&127;  // lfo out , use pot 0 for offset
+			  // midi_extra_cue[extras+2]=64;
+			  midi_extra_cue[28]=extras+3;
 
 
+			  { midi_extra_cue[extras+3]=192+midi_channel_list[0];     // program change data,always runs,  mainly used only for changing program on es1
+			  midi_extra_cue[extras+4]=program_change[0];
+			  midi_extra_cue[extras+5]=program_change[0];
+			  midi_extra_cue[28]=extras+6;}
 
-
-		else  {midi_extra_cue[extras+3]=192+midi_channel_list[12];   // test progrma change
-		 			 midi_extra_cue[extras+4]=program_change[1];
-				 midi_extra_cue[extras+5]=program_change[1];
-				 midi_extra_cue[28]=extras+6;}
-
+			  if (program_change[2]){midi_extra_cue[extras+3]=192+midi_channel_list[12];   // program change for non drums
+			  midi_extra_cue[extras+4]=program_change[1];
+			  midi_extra_cue[extras+5]=program_change[1];
+			  midi_extra_cue[28]=extras+6;
+			  program_change[2]=0; //clear
 
 			  }
 
+
+		  }
+
 			  pattern_settings();
 
-		//  if((button_send_trigger>>3)!=trigger_mem){      //
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
-			// if (play_list_write) play_list[(scene_buttons[0]*32)+seq_step_long]=pot_states[2]>>1;    // keep writing if enabled,disabled
 
-			 // uint8_t selected_scene=scene_buttons[0];
 			  seq_step_mod=seq_pos>>3;
 			  seq_current_step=seq_step_mod;
-			 // loop_current_length=looper_list[(selected_scene*4)+1];
-			 // loop_current_offset=looper_list[(selected_scene*4)];
-			//  loop_current_length=pattern_repeat[pattern_select]+1;
 
-			 // loop_current_speed=pattern_scale_list [pattern_select];
-
-			//  pattern_offset=pattern_offset_list[pattern_select];
-
-				play_position=seq_step_long;
+			  play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
-				if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
-			 // if(write_velocity && button_states[seq_step_mod+8] )  scene_velocity[seq_step_mod+(scene_buttons[0]*32)]= write_velocity;    // Writes velocity while enabled
+			  if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
+
 			  if ((s_temp&7)==7) loop_lfo();
 
-////
+			  ////
 
 
-			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload everything
+			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload everything from flash
 
-			 // printf(" %d",loop_lfo_out[(selected_scene)+20] );
-			//  printf(" loop =%d ",looper_list_mem[7] );
 
 			  uint8_t crap[64];
 			  memcpy (crap,cdc_buffer,12);
@@ -419,7 +353,7 @@ int main(void)
  				//  trigger_mem=button_send_trigger>>3;
  			}   // blink steps , end of send trigger
 
- 		//}  // end of seq_enable
+
 
 
 
@@ -479,11 +413,11 @@ int main(void)
 		  if( (USBD_MIDI_GetState(&hUsbDeviceFS) == MIDI_IDLE) )  USB_send();  // fast
 
 
- 	  if (cdc_buffer[0] | cdc_buffer[3] |   cdc_buffer[6]                   ) {      //  when cdc buffer incoming, need change
- 		 if (cdc_buffer[6] )cdc_start=6;
- 		 	if (cdc_buffer[3] )cdc_start=3;
- 		 	if (cdc_buffer[0] )cdc_start=0;
- 		 	if (first_message) {first_message=0;  memset(other_buttons_hold,9,70);} // only runs after getting a midi message from usb
+		  if (cdc_buffer[0] | cdc_buffer[3] |   cdc_buffer[6]                   ) {      //  when cdc buffer incoming, need change
+			  if (cdc_buffer[6] )cdc_start=6;
+			  if (cdc_buffer[3] )cdc_start=3;
+			  if (cdc_buffer[0] )cdc_start=0;
+			  if (first_message) {first_message=0;  memset(other_buttons_hold,9,70);} // only runs after getting a midi message from usb
 
 
 

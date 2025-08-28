@@ -74,32 +74,27 @@ void loop_screen(void){  // loop screen ,always on now , 16 notes and 8 patterns
 	drums=1;    //always
 
 
-	if (drums){
+		if (drums){
 
+			for (i=0;i<16;i++) {// drums fill
 
+				drum_byte_select= (i>>2)+(selected_scene*4)+(pattern_select*drum_store);  // select byte position
+				drum_byte=drum_store_one[drum_byte_select];  // get data
 
-		for (i=0;i<16;i++) {// drums fill
+				if (drum_byte & (1<<((i&3)*2))) data_temp2=1; else data_temp2=0;     // note test ok
+				if (drum_byte & (1<<(((i&3)*2)+1))) accent_temp=1; else accent_temp=0;  // accent test
 
-		drum_byte_select= (i>>2)+(selected_scene*4)+(pattern_select*drum_store);  // select byte position
-		drum_byte=drum_store_one[drum_byte_select];  // get data
-
-		if (drum_byte & (1<<((i&3)*2))) data_temp2=1; else data_temp2=0;     // note test ok
-		if (drum_byte & (1<<((i&3)+1))) accent_temp=1; else accent_temp=0;  // accent test
-
-			if (data_temp2)    // read back on first loop select   , change button state colour
+				if (data_temp2)    // read back on first loop select   , change button state colour
 				{if (accent_temp) button_states[square_buttons_list[i]]=3 ;  else button_states[square_buttons_list[i]]=5 ;}
-				 else button_states[square_buttons_list[i]]=0;
+				else button_states[square_buttons_list[i]]=0;
 
 				note_counter++;
 
-					} // end of loop
-	} // end of drums
+			} // end of loop
+		} // end of drums
 
-
-
-
-					//loop_note_count[selected_scene]=note_counter;
-					}
+		//loop_note_count[selected_scene]=note_counter;
+	}
 
 
 
@@ -127,29 +122,21 @@ void note_buttons(void){  // always running only on notes though
 
 
 
-	if ((!pan) && (last_press<16) )      // loop screen , normal , only for drum satm
+	if ((!pan) && (last_press<16) )      //  normal screen
 
 			{ //  , only if enabled though ,
 
-	//	if (pause) pitch=keyboard[1]+32;  // during pause pitch comes from keyboard
-		//pitch=keyboard[1]+32;  // 32+25
-				 // if button lit but not in play screen
+
 
 				switch(button_states[incoming_data1]){    // change state
-							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));  // ok
-							//midi_cue_delete(scene_buttons[0],last_press,pattern_select);  // delete note from midi_cue ,buggy
-
+							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));  // ok on/off ,clear note and accent too
 							break;   // clear note and accent ,works
-
 							//	case 3 :drum_byte=drum_byte | (1<<((((last_press-(drum_byte_select*4))*2))+1));  break;		// add accent
 							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2));
-							//midi_cue_add(scene_buttons[0],last_press,pattern_select); //  add a note to midi_cue
-
+							if (shift) { drum_byte=drum_byte + (1<<(((last_press&3)*2)+1));}  // adds an accented note
 							break;		// note on ok
 
-
 				}
-
 
 				drum_store_one[drum_byte_select]=drum_byte; //write back info
 
@@ -160,12 +147,17 @@ void note_buttons(void){  // always running only on notes though
 
 					program_change[0]=last_press-16; button_states[square_buttons_list[last_press]]=3;
 
-					program_change_automation[seq_step_long]=seq_step+(((program_change[0]&7)+1)<<4);  // save program change ,only one per bar +1 or stay on previous setting
-					memcpy(alt_pots+128,program_change_automation,32); // save pc data
+					if(record){   // only save on record
+					uint8_t pc_set= program_change_automation[seq_step_long];
+					//program_change_automation[seq_step_long]=seq_step+(((program_change[0]&7)+1)<<4);  // save program change ,only one per bar +1 or stay on previous setting
+
+					{if (seq_step<8) { pc_set=(pc_set&240)+((program_change[0]&7)+1) ;} else {pc_set=(pc_set&15)+(((program_change[0]&7)+1)<<4) ;}} // modified program save save, twice on note 0 and 8
+					program_change_automation[seq_step_long]=pc_set;
+
+					memcpy(alt_pots+128,program_change_automation,32);} // save pc data
 
 
 				}   // program change when right arrow enabled using pattern buttons
-
 
 
 				if((last_press>23)){    // pattern selection ,
@@ -190,44 +182,46 @@ void buttons_store(void){    // incoming data from controller
 	uint8_t scene_select=0;
 
 	uint8_t incoming_message[3];
-
-
+	//uint16_t drum_byte_select;   // selects a trigger 16 + (i*4) 16*64 ... 0-256
+	//uint8_t drum_byte;
+	 uint16_t pattern=pattern_select;
+	 //uint8_t offset_pitch=seq_pos>>3;
 
 	memcpy(incoming_message,cdc_buffer+cdc_start, 3); // works off only receiving buffer
-	//uint8_t button_selection=button_states[incoming_message[1]];
+
 	uint8_t buffer_clear = 0;
 	uint8_t incoming_data1 = incoming_message[1]&127;
 	uint8_t status=incoming_message[0];
-	//uint8_t current_scene=((scene_buttons[0])*32);   // current scene in pitch/volume/scene memory list
+
 	uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t current_scene=scene_buttons[0];
-	//uint16_t drum_store_select=current_scene*4*pattern_select;  // not correct
+
 	uint16_t drum_store_select=(current_scene*4)+(pattern_select*drum_store);
 
+	//drum_byte_select = (offset_pitch >> 2) + (i * 4) + (pattern * drum_store); //based on time,  selects a trigger 16 + (i*4) 16*64 ... 0-256 (64bytes per pattern, 4 bytes per per )
+	//drum_byte = drum_store_one[drum_byte_select]; // this could be smaller
 
 
-	if (status == 128) // note off
-		{  note_off_flag[0]=0;
+
+	if (status == MIDI_NOTE_OFF) // note off
+	{  note_off_flag[0]=0;
 
 
-		if (incoming_data1==98)    // shift related functions
-			{shift=0;
-			play_list_write=0;
-			write_velocity=0;}
-			}   // note off buttons
+	if (incoming_data1==98)    // shift related functions
+	{shift=0;
+	play_list_write=0;
+	write_velocity=0;}
+	}   // note off buttons
 
-		  // skip for now
+	// skip for now
 
-	if ((incoming_data1 <8)&& (status==144)) {   // scene buttons
-									scene_select=incoming_data1 +1+second_scene;}  //enable scene_select section
+	if ((incoming_data1 <8)&& (status==MIDI_NOTE_ON)) {   // scene buttons
+		scene_select=incoming_data1 +1+second_scene;}  //enable scene_select section
 
 	if (status == 145)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47);}  // store last key pressed mainly , 48-72 default setting(24)  0-24 13 in th emiddle
 	if (status == 129)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47)+128;}  // note off keyboard
 
-
-
-
-	if (status == 144){  // Note on  ,buttons
+	if (status == MIDI_NOTE_ON){  // Note on  ,buttons
 
 		note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
 		if (incoming_data1==98) shift=1;
@@ -289,7 +283,7 @@ void buttons_store(void){    // incoming data from controller
 	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
 
 			//button_pressed=incoming_data1; // important  , only after note on
-		//	if (button_pressed!=255)  {send_buffer[9]=144; send_buffer[10]=button_pressed;send_buffer[11]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
+		//	if (button_pressed!=255)  {send_buffer[9]=MIDI_NOTE_ON; send_buffer[10]=button_pressed;send_buffer[11]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
 			if ((incoming_data1 > 7) && (incoming_data1 < 40))
 				{memcpy(cdc_buf2,incoming_message, 3); // copy current message
 				note_buttons(); }  // send to buttons input
@@ -305,7 +299,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 	//alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =pattern_scale_process(incoming_message[2]&127);   // writes note pots when clip stop but only to first set , need something the copy to first though
-	alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =((incoming_message[2])&127); 		// just store pot data 0-31 +32 , only use half
+	alt_pots[(incoming_data1  - 48)+(pattern*16)] =((incoming_message[2])&127); 		// just store pot data 0-31 +32 , only use half
 
 
 	// maybe 16 values or about 2 octaves in scales
@@ -339,9 +333,9 @@ void buttons_store(void){    // incoming data from controller
 		if ((incoming_data1==49) )
 		pattern_count=((pot_states[1]>>4))&7;
 		if ((incoming_data1==50) )
-			pattern_repeat[pattern_select]=(pot_states[2]>>3)&15;
+			pattern_repeat[pattern]=(pot_states[2]>>3)&15;
 		if ((incoming_data1==51) )
-					{pattern_scale_list[pattern_select]=(pot_states[3]>>3)&15;lcd_control=0;lcd_downcount=3;lcd_messages_select=0;}
+					{pattern_scale_list[pattern]=(pot_states[3]>>3)&15;lcd_control=0;lcd_downcount=3;lcd_messages_select=0;}
 
 
 		if ((incoming_data1==48) &&(!select) && (current_scene>3))  //  cc function
@@ -397,18 +391,20 @@ void buttons_store(void){    // incoming data from controller
 		}*/
 
 
-		if ((incoming_data1==52)&& pause) {seq_step=(pot_states[4]>>1)&15; seq_pos=seq_step<<3;seq_step_long=(((pot_states[5]>>4)<<2)+(pot_states[4]>>5))&31; }   // moves seq_pos and seq_step ,during pause
+		if ((incoming_data1==52)&& pause) {seq_step=0;
 
+		seq_step_long=(seq_step_long&28)+((pot_states[4]>>5)&3); }   // moves seq_pos and seq_step ,during pause
 
-
-		//if (incoming_data1==53){ looper_list[(current_scene*4)+1]=(pot_states[5]>>3)&15;pattern_offset_list[pattern_select]= looper_list[(12*4)+1];} // position offset but only from keys first entry  ,stored per pattern not per note ?
-
-		if ((incoming_data1==53) && pause) seq_step_long=(((pot_states[5]>>4)<<2)+(pot_states[4]>>5))&31;   // moves bar during pause
+		if ((incoming_data1==53) && pause) seq_step_long=(seq_step_long &3)+ ((pot_states[5]>>4)*4);   // moves bar during pause
 
 
 
 		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
-		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7]; lcd_control=1;lcd_downcount=3;lcd_messages_select=1;current_accent=pot_states[7];}  // accent also used for tempo with shift
+		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];     // accent input
+
+		//if  (record) {drum_byte=(drum_byte & (1<<(((i&3)*2)+1)));   } // get accent info
+
+		lcd_control=1;lcd_downcount=3;lcd_messages_select=1;current_accent=pot_states[7];}  // accent also used for tempo with shift
 
 
 		}
@@ -416,15 +412,8 @@ void buttons_store(void){    // incoming data from controller
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
 
 
-		/*	if ((incoming_data1==48) && (shift)){     // change program pot 1
-				if (scene_buttons[0]<12) program_change[0]=pot_states[0]>>3;   else program_change[1]=pot_states[0]>>3;
-
-
-
-			}*/
-
-
-
+			if ((incoming_data1==48) && (shift)){     // program change for channels other than drums  pot 1
+				if (midi_channel_list[current_scene]!=9)  {program_change[1]=pot_states[0]>>3; program_change[2]=1;}}
 
 
 
@@ -495,10 +484,12 @@ void note_replace(uint8_t note_replace) {    // replace first note
 void pattern_settings(void){     // pattern change function , runs on last step only , lights can run all the time
 
 
-	uint8_t pc_set=program_change_automation[seq_step_long]>>4;
+	uint8_t pc_set=0;
+	if (seq_step<8)  pc_set=program_change_automation[seq_step_long]&15; else pc_set=(program_change_automation[seq_step_long])>>4;  // select program twice during 16 notes
 
-	if ((program_change_automation[seq_step_long] & 15) == seq_step) { // program change automation ,single change per bar ,32 bars
 
+	//if ((program_change_automation[seq_step_long] & 15) == seq_step) { // program change automation ,single change per bar ,32 bars
+		if ((!seq_step) || (seq_step==8)) { // program change automation ,modified to change twice on note 0 and 8
 		if (pc_set)
 			program_change[0] = (pc_set - 1) & 7; //change pc but only on fresh data
 
@@ -506,6 +497,8 @@ void pattern_settings(void){     // pattern change function , runs on last step 
 
 		button_states[program_change[0] + 16] = 3;
 	} // end of program change
+
+
 	memset(button_states+8,0,8);
 	if ((seq_step&3)==3)button_states[pattern_select+8]=0;  else button_states[pattern_select+8]=5;  // blink on quarter
 	button_states[(seq_step_long>>2)+8]=1;

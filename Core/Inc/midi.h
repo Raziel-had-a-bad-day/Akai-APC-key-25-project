@@ -57,7 +57,7 @@ void USB_send(void){    // send to midi controller, clean atm
 		send_buffer_sent = 2;
 	}
 	////  temporary lights , not stored
-	send_temp[square_buttons_list[green_position[0]]]=1; // add moving green light
+	if (record) send_temp[square_buttons_list[green_position[0]]]=3; else send_temp[square_buttons_list[green_position[0]]]=1; // add moving green light
 
 	counter_a = 0; // clear
 	i=0;
@@ -72,7 +72,7 @@ void USB_send(void){    // send to midi controller, clean atm
 
 	if (counter_a) {
 
-		send_buffer[6] = 144;
+		send_buffer[6] = MIDI_NOTE_ON;
 		send_buffer[7] = (counter_a - 1) & 127;
 		send_buffer[8] = send_temp[counter_a - 1] & 127;
 
@@ -108,7 +108,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 			i=0;
 			// not super important but good for testing , below
-
+			uint8_t current_velocity=64;
 			uint8_t offset_pitch=seq_pos>>3; // 0-15
 				//counterb=(pattern_select*512) +(offset_pitch*32) ; // pattern=512bytes or 16*32
 				uint16_t drum_byte_select;   // selects a trigger 16 + (i*4) 16*64 ... 0-256
@@ -159,6 +159,8 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 				last_note_on_channel[i] = 0; // clear note
 			}
 
+
+			if (drum_byte & (1 << ((((offset_pitch) & 3) * 2)+1)) ) current_velocity=note_accent[i]; else current_velocity=96;   // get accent info
 			if (midi_channel_select == 9) {
 
 				if (drum_byte & (1 << (((offset_pitch) & 3) * 2))) { // ok , drums
@@ -166,7 +168,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 						button_states_temp[i & 7] = 0;
 					note_midi[cue_counter] = 153; // add note on
 					note_midi[(cue_counter) + 1] = drum_list[i];
-					note_midi[(cue_counter) + 2] = rand_velocities[i];
+					note_midi[(cue_counter) + 2] = current_velocity;
 					cue_counter = cue_counter + 3;
 					last_note_on_channel[i] = drum_list[i];
 					note_timing[i] = 4;
@@ -180,7 +182,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 						button_states_temp[i & 7] = 0;
 					note_midi[cue_counter] = midi_channel_select + MIDI_NOTE_ON; // add note on
 					note_midi[(cue_counter) + 1] = pitch_seq; // only first pitch set for now
-					note_midi[(cue_counter) + 2] = rand_velocities[i];
+					note_midi[(cue_counter) + 2] = current_velocity;
 					cue_counter = cue_counter + 3;
 
 					if (note_timing[i]>1 ){    // in case old note hasnt finished
