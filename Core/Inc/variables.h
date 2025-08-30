@@ -80,7 +80,7 @@ uint8_t lfo; // temp storage
 //  round vertical  144/128,81-85,127
 // play 91 . stop all clip =81 ,record 93 ,shift button 98 ,82 clip stop
 // round horizontal 64-71
-// velocity  1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
+// velocity  															1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
 const uint8_t square_buttons_list [100]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99}; // just reads buttons in top.down order
 const uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
 uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
@@ -250,3 +250,4 @@ uint8_t lcd_messages_select=0;//select from lcd_meesages
 uint8_t current_accent;// current selected sound accent value
 uint8_t lcd_buffer[32]; // holds outgoing characters
 uint8_t lcd_buffer_mem[32]; // holds outgoing characters
+uint8_t last_solo_selected=0;  // saves last selected solo button

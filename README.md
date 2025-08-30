@@ -21,8 +21,8 @@ Left arrow= paste
 Device + Shift =     pot8=temp , pot7= midi channel,
 send = write to flash , 
 send + shift = reload 
-solo = solo current selected part only , 
-mute = select any part to mute, 
+solo = solo uses top 4 pots to select between 4 sounds each 
+mute = select any part to mute, turns red 
 up arrow = select sounds 8-15, 
 pot5=note start offset fine  8/note  ,pot6=offset velocities in time to move accent, pot 7=lfo gain on time offset  ,  pot8=velocity/accent   
 shift + pot 5 = set part currently playing  length 0-15 / disabled

@@ -119,23 +119,23 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 					//uint8_t pitch_seq=alt_pots[((seq_pos>>3)&7)+(pattern_select*16)]; // loops 0-7 ,steps
 						uint8_t	pitch_seq=pattern_scale_process(random_list[(offset_pitch&7)]);  // change pitch from pots , maybe run always and ignore original pitch
 
-						uint8_t button_states_temp[8]={1,1,1,1,1,1,1,1};
+						uint8_t button_states_temp[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
 						uint8_t high_row_enable=0; // select second sounds scene ,default on
 
 						uint8_t high_row=0;
 
 
-						memcpy(button_states_temp,button_states,8); // transfer bottom row data for blinky lights
+						//memcpy(button_states_temp,button_states,8); // transfer bottom row data for blinky lights
 
 						if (scene_buttons[0]>7) high_row_enable=1;
 
 
-				if ((seq_pos&7)==1) {    // fixed time for now
+				if ((seq_pos&7)==1) {    // fixed time for now , note generator
 					uint8_t note_timing[16];
 					uint8_t midi_channel_select=9;
 					memcpy(note_timing,last_note_end_count,16);
-					memset(button_states_temp,1,8);
-					button_states_temp[scene_buttons[0]&7]=3;
+
+					button_states_temp[scene_buttons[0]]=5;  // selected sound yellow
 
 		for (i = 0; i < sound_set; i++) { // transfer from midi_cue to note_midi to be sent
 
@@ -161,11 +161,14 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 
 			if (drum_byte & (1 << ((((offset_pitch) & 3) * 2)+1)) ) current_velocity=note_accent[i]; else current_velocity=96;   // get accent info
-			if (midi_channel_select == 9) {
+
+			if (mute_list[i] || pause) {current_velocity=0;} // mutes sound also sound button button goes dark
+
+			if ((midi_channel_select == 9)&&(current_velocity)) {
 
 				if (drum_byte & (1 << (((offset_pitch) & 3) * 2))) { // ok , drums
 					if (high_row)
-						button_states_temp[i & 7] = 0;
+						button_states_temp[i] = 0;
 					note_midi[cue_counter] = 153; // add note on
 					note_midi[(cue_counter) + 1] = drum_list[i];
 					note_midi[(cue_counter) + 2] = current_velocity;
@@ -175,11 +178,11 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 				}
 			}
-			if (midi_channel_select != 9) {
+			if ((midi_channel_select != 9)&&(current_velocity)) {
 
 				if (drum_byte & (1 << (((offset_pitch) & 3) * 2))) { // ok , notes
 					if (high_row)
-						button_states_temp[i & 7] = 0;
+						button_states_temp[i] = 0; // button dark
 					note_midi[cue_counter] = midi_channel_select + MIDI_NOTE_ON; // add note on
 					note_midi[(cue_counter) + 1] = pitch_seq; // only first pitch set for now
 					note_midi[(cue_counter) + 2] = current_velocity;
@@ -198,6 +201,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 				}
 			}
 
+			if (mute_list[i]) {button_states_temp[i] =3;} // show mute
 
 
 			 if ((cue_counter + 3) >= 47) cue_counter=47;  // test for buffer size
@@ -206,9 +210,18 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 					//if (cue_counter)	{memcpy(midi_cue_noteoff,note_midi,cue_counter); midi_cue_noteoff[49]=cue_counter;}   // save for note off
 
-					memcpy(last_note_end_count,note_timing,16);
+
+		//if (!pause)
+
+		{if (high_row_enable )  memcpy(button_states,button_states_temp+8,8); else memcpy(button_states,button_states_temp,8);}   //copy back blinky lights
+
+
+		memcpy(last_note_end_count,note_timing,16);
 				} // end of note on generator
-				memcpy(button_states,button_states_temp,8); //copy back blinky lights
+
+
+
+
 
 				if(note_midi[0])  memcpy(test_byte, note_midi, 20);
 

@@ -129,7 +129,9 @@ void note_buttons(void){  // always running only on notes though
 
 
 				switch(button_states[incoming_data1]){    // change state
-							case 0 : drum_byte=drum_byte &~ (11<<((last_press&3)*2));  // ok on/off ,clear note and accent too
+							case 0 : drum_byte=drum_byte &~ (1<<((last_press&3)*2));  //turn off note
+							drum_byte=drum_byte &~ (1<<(((last_press&3)*2)+1));  // turn off accent
+							// ok on/off ,clear note and accent too
 							break;   // clear note and accent ,works
 							//	case 3 :drum_byte=drum_byte | (1<<((((last_press-(drum_byte_select*4))*2))+1));  break;		// add accent
 							case 5 :drum_byte=drum_byte + (1<<((last_press&3)*2));
@@ -256,13 +258,14 @@ void buttons_store(void){    // incoming data from controller
 			}
 
 
+		// function select logic  here
 
-		 if ((!button_states[64]) && (scene_buttons[0]>7)) {scene_buttons[0]=scene_buttons[0]-8;second_scene=0;loop_screen();}
+		if ((!button_states[64]) && (scene_buttons[0]>7)) {scene_buttons[0]=scene_buttons[0]-8;second_scene=0;loop_screen();}
 		 if (button_states[64] && (scene_buttons[0]<8)) 	{scene_buttons[0]=scene_buttons[0]+8;second_scene=8;lcd_downcount=10;lcd_messages_select=2;loop_screen();}
+		 if (button_states[83]) {scene_solo=1;clip_stop=0;button_states[82]=0; } else scene_solo=0;  //solo but with pots now ,turns off clip stop or mute
+		 if ((button_states[83])&& shift) memset(mute_list,0,16); // clear all mute info when shift held
 
-
-		 if (button_states[83]) {scene_solo=1;} else scene_solo=0;  //enable muting on scene select
-		if (button_states[67])  {right_arrow=1;     }  //shift notes right
+		 if (button_states[67])  {right_arrow=1;     }  //shift notes right
 		if (button_states[86])  {select=1;} else select=0;  // select enable
 
 		if (button_states[65] && (!pattern_copy_full)) {down_arrow=1;  	 memcpy(pattern_copy,drum_store_one+drum_store_select,4);pattern_copy_full=1; }		else down_arrow=0;  // use for copy pattern
@@ -279,11 +282,8 @@ void buttons_store(void){    // incoming data from controller
 		if (button_states[71])  {device=1;  }else {device=0; }
 		if (button_states[81])  {button_states[91]=5;memcpy(loop_note_list,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
 
-		if ((button_states[82])  )    {clip_stop=1; lcd_downcount=10;lcd_messages_select=3;  } else clip_stop=0;
-	//	if ((!button_states[81]) && (stop_toggle==2)) {stop_toggle=4; stop_start();}
+		if ((button_states[82])  )    {clip_stop=1; lcd_downcount=10;lcd_messages_select=3;scene_solo=0;button_states[83]=0;  } else clip_stop=0;
 
-			//button_pressed=incoming_data1; // important  , only after note on
-		//	if (button_pressed!=255)  {send_buffer[9]=MIDI_NOTE_ON; send_buffer[10]=button_pressed;send_buffer[11]=button_states[button_pressed];button_pressed=255;}   // send after one press , maybe retriger for more
 			if ((incoming_data1 > 7) && (incoming_data1 < 40))
 				{memcpy(cdc_buf2,incoming_message, 3); // copy current message
 				note_buttons(); }  // send to buttons input
@@ -304,6 +304,14 @@ void buttons_store(void){    // incoming data from controller
 
 	// maybe 16 values or about 2 octaves in scales
 
+		status=0; // clear
+	}
+
+	if ((status == 176) && (scene_solo)&& (incoming_data1<52)){   // solo processing
+		uint8_t solo_selector=(incoming_data1-48)*4;
+		incoming_message[2]=(incoming_message[2]>>5)&3;
+
+			memset(mute_list+solo_selector,1,4);mute_list[incoming_message[2]+solo_selector]=0;
 		status=0; // clear
 	}
 
@@ -360,35 +368,10 @@ void buttons_store(void){    // incoming data from controller
 
 			if (incoming_data1==55) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
-
-
 		}
 
 
-
-/*
-		if ((incoming_data1<56)&&(incoming_data1>51)&&(!shift)&& (!loop_selector))  {    // pots 4-8
-
-
-		if ((incoming_message[2] <64))      // crossfade mode
-		{	scene_volume[(incoming_data1-52)*2]= 127;      // 0,2,4,6,
-		scene_volume[((incoming_data1-52)*2)+1]= 127-((63-incoming_message[2])<<1);} //1,3,5,7
-		else
-		{	scene_volume[(incoming_data1-52)*2]=127-(( incoming_message[2]-64)<<1);      // 0,2,4,6,
-				scene_volume[((incoming_data1-52)*2)+1]=127;} //1,3,5,7
-
-		} //end of pots 4-8
-*/
 		if ((incoming_data1<56)&&(incoming_data1>51)&& (!device))  {    // pots 4-8  , with device button off
-
-
-
-
-
-
-		/*if (incoming_data1==52)	{if(shift)    loop_length_set[current_scene]=pot_states[4]>>3;   // works ok  sets loop length 0-16
-		else looper_list[(current_scene*4) ]=(pot_states[4]>>2)&31;  // 1-32 start loop  fine offset 8/note  ,
-		}*/
 
 
 		if ((incoming_data1==52)&& pause) {seq_step=0;
@@ -440,8 +423,13 @@ void buttons_store(void){    // incoming data from controller
 		scene_select=scene_select-1;
 		//uint8_t clear_green[8]= {1,1,1,1,1,1,1,1};
 
-		memset(button_states,1,8); ;  // turn green
+	//	memset(button_states,1,8); ;  // turn green
 		button_states[scene_select&7]=5;
+		if (scene_mute) { // muting control
+
+			{if (mute_list[scene_select]) {mute_list[scene_select]=0; button_states[scene_select&7]=5;} else {mute_list[scene_select]=1; button_states[scene_select&7]=3;}}
+
+		}
 
 			scene_buttons[0]=scene_select;
 			 current_midi=midi_channel_list[scene_buttons[0]];
