@@ -305,12 +305,12 @@ int main(void)
 			  memcpy (crap,cdc_buffer,12);
 
 			  //	 uint16_t pattern_set=pattern_select*128;
-			  for (i=0;i<16;i++){
+			  for (i=0;i<8;i++){  // i=scene
 
 				//  printf(" %d",crap[i] );
 
-				  printf(" %d",last_note_end_count[i]);
-
+				  printf(" %d",pitch_selected_for_drums[i]);
+				  printf(" %d",pitch_list_for_drums[pitch_selected_for_drums[i]+(i*8)]);
 
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
 				 // printf(" ds=%d ",drum_store_one[i+(scene_buttons[0]*4)] );

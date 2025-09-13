@@ -178,7 +178,7 @@ uint8_t play_screen=0;  // enable for secondary screen for muting setup
 uint8_t play_position;  // track muting list 8*4     each 8 steps  +1
 uint8_t play_list_write=0; // keeps writing while shift is held down
 uint8_t write_velocity;  // keeps writing velocity while enable , holds velocity value as well
-uint8_t looper_list[sound_set*4]={0,31,0,8,0,31,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start offset 2=vel offset 3=lfo level  4=speed
+uint8_t looper_list[sound_set*4]={0,31,0,8,0,31,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0,32,0,8,0};  // holds looper settings , 0=start offset 2=vel offset 3=lfo level  4=speed  ,obsolete for now
 uint8_t looper_list_mem[20];  // keeps track of previous values for ppq skip
 uint8_t loop_current_offset;
 uint8_t loop_current_length;
@@ -251,3 +251,6 @@ uint8_t current_accent;// current selected sound accent value
 uint8_t lcd_buffer[32]; // holds outgoing characters
 uint8_t lcd_buffer_mem[32]; // holds outgoing characters
 uint8_t last_solo_selected=0;  // saves last selected solo button
+uint8_t pitch_list_for_drums[64];  // holds 8 pitches per (first page ) 8 notes for drums for automation , used with nrpn data ,separate from pitch data for now
+uint8_t pitch_selected_for_drums[8];  // current selected pitch on first page of drums 1-7 , not actual pitch but just selection
+uint8_t pitch_change_flag; //enabled when pitch data needs to be sent

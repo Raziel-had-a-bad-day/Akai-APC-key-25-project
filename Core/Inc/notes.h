@@ -104,14 +104,14 @@ void note_buttons(void){  // always running only on notes though
 	memcpy(incoming_message,cdc_buf2, 3); // works off only receiving buffer , this might be changing
 	//uint16_t clear[20]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	uint8_t incoming_data1 = incoming_message[1]&127;
-
+	uint8_t selected_scene=scene_buttons[0];
 
 
 	last_button = square_buttons_list[incoming_data1];   // memory location  of note pressed 0-256(0-3 (16notes)   + sounds*4+(pattern_select*16)
 
 	uint8_t last_press = square_buttons_list[incoming_data1];  //0-32
 
-	uint16_t drum_byte_select= (last_press>>2)+((scene_buttons[0])*4)+(pattern_select*drum_store);  //
+	uint16_t drum_byte_select= (last_press>>2)+((selected_scene)*4)+(pattern_select*drum_store);  //
 	uint8_t drum_byte=drum_store_one[drum_byte_select];  // get data
 
 
@@ -143,7 +143,7 @@ void note_buttons(void){  // always running only on notes though
 				drum_store_one[drum_byte_select]=drum_byte; //write back info
 
 			}
-				if((last_press>15)&& (last_press<24)){    // program change , right attow removed
+				if((last_press>15)&& (last_press<24) && (!select)){    // program change , right attow removed
 								//uint8_t pattern=pattern_select;
 					memset(button_states+16, 0, 8);
 
@@ -160,6 +160,32 @@ void note_buttons(void){  // always running only on notes though
 
 
 				}   // program change when right arrow enabled using pattern buttons
+
+				if((last_press>15)&& (last_press<24) && (select) && (selected_scene<8)){    // pitch  change on first page  only
+											//uint8_t pattern=pattern_select;
+								memset(button_states+16, 0, 8);
+
+								pitch_selected_for_drums[selected_scene]=last_press-16; button_states[square_buttons_list[last_press]]=5; // controls lights
+								pitch_change_flag=1; //enable pitch nrpn send
+								//pitch_list_for_drums[pitch_selected_for_drums[current_scene]*8];
+
+							//	if(record){   // only save on record
+							//	uint8_t pc_set= program_change_automation[seq_step_long];
+								//program_change_automation[seq_step_long]=seq_step+(((program_change[0]&7)+1)<<4);  // save program change ,only one per bar +1 or stay on previous setting
+
+							//	{if (seq_step<8) { pc_set=(pc_set&240)+((program_change[0]&7)+1) ;} else {pc_set=(pc_set&15)+(((program_change[0]&7)+1)<<4) ;}} // modified program save save, twice on note 0 and 8
+							//	program_change_automation[seq_step_long]=pc_set;
+
+							//	memcpy(alt_pots+128,program_change_automation,32);} // save pc data
+
+
+							}   // pitch change end
+
+
+
+
+
+
 
 
 				if((last_press>23)){    // pattern selection ,
@@ -223,7 +249,7 @@ void buttons_store(void){    // incoming data from controller
 	if (status == 145)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47);}  // store last key pressed mainly , 48-72 default setting(24)  0-24 13 in th emiddle
 	if (status == 129)  {if((incoming_data1>47)& (incoming_data1<73)) keyboard[0]=(incoming_data1 -47)+128;}  // note off keyboard
 
-	if (status == MIDI_NOTE_ON){  // Note on  ,buttons
+	if (status == MIDI_NOTE_ON){  // Midi Note on  for buttons
 
 		note_off_flag[0]=1;note_off_flag[1]=incoming_data1 ;
 		if (incoming_data1==98) shift=1;
@@ -283,11 +309,16 @@ void buttons_store(void){    // incoming data from controller
 		if (button_states[81])  {button_states[91]=5;memcpy(loop_note_list,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
 
 		if ((button_states[82])  )    {clip_stop=1; lcd_downcount=10;lcd_messages_select=3;scene_solo=0;button_states[83]=0;  } else clip_stop=0;
+		if (shift && pause && clip_stop) { 			// clear all program change info on drums , needs to be saved though
+			memset(program_change_automation,0,32);
+			memcpy(alt_pots+128,program_change_automation,32);clip_stop=0;button_states[82]=0;
+		}
 
-			if ((incoming_data1 > 7) && (incoming_data1 < 40))
+
+		if ((incoming_data1 > 7) && (incoming_data1 < 40))
 				{memcpy(cdc_buf2,incoming_message, 3); // copy current message
 				note_buttons(); }  // send to buttons input
-		} // end of note on
+		} // end of Note on for all buttons
 
 
 		    // not very useful
@@ -340,8 +371,10 @@ void buttons_store(void){    // incoming data from controller
 
 		if ((incoming_data1==49) )
 		pattern_count=((pot_states[1]>>4))&7;
-		if ((incoming_data1==50) )
-			pattern_repeat[pattern]=(pot_states[2]>>3)&15;
+		if ((incoming_data1==50) && (select) && (current_scene < 8))
+			{pitch_list_for_drums[(pitch_selected_for_drums[current_scene])+(current_scene*8)] =incoming_message[2];pitch_change_flag=1; } // sets pitch for drums ,only first page
+
+
 		if ((incoming_data1==51) )
 					{pattern_scale_list[pattern]=(pot_states[3]>>3)&15;lcd_control=0;lcd_downcount=3;lcd_messages_select=0;}
 
@@ -382,7 +415,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 
-		if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
+		//if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
 		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];     // accent input
 
 		//if  (record) {drum_byte=(drum_byte & (1<<(((i&3)*2)+1)));   } // get accent info
@@ -469,21 +502,27 @@ void note_replace(uint8_t note_replace) {    // replace first note
 
 
 
-void pattern_settings(void){     // pattern change function , runs on last step only , lights can run all the time
-
+void pattern_settings(void){     // pattern change function , also program change automation
 
 	uint8_t pc_set=0;
-	if (seq_step<8)  pc_set=program_change_automation[seq_step_long]&15; else pc_set=(program_change_automation[seq_step_long])>>4;  // select program twice during 16 notes
+	if (seq_step<8)  pc_set=program_change_automation[seq_step_long]&15; else pc_set=(program_change_automation[seq_step_long])>>4;  // modifies program change  twice during 16 notes
 
 
-	//if ((program_change_automation[seq_step_long] & 15) == seq_step) { // program change automation ,single change per bar ,32 bars
+
 		if ((!seq_step) || (seq_step==8)) { // program change automation ,modified to change twice on note 0 and 8
-		if (pc_set)
-			program_change[0] = (pc_set - 1) & 7; //change pc but only on fresh data
+		if (pc_set)     program_change[0] = (pc_set - 1) & 7; //change pc but only on fresh data
 
-		memset(button_states + 16, 0, 8);
+	if (!select)	{memset(button_states + 16, 0, 8);   // sets lights for program change but only if select is off
 
-		button_states[program_change[0] + 16] = 3;
+		button_states[program_change[0] + 16] = 3;  //sets selected program change light
+	} else {memset(button_states + 16, 0, 8);button_states[pitch_selected_for_drums[scene_buttons[0]&7] + 16] = 5;
+
+	}
+
+
+
+
+
 	} // end of program change
 
 

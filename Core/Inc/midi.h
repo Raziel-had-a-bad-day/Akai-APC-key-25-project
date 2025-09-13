@@ -94,12 +94,12 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 			uint8_t cue_counter;
 			//uint16_t counterb;   // midi_cue position
 			uint8_t note_midi [70] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  // 3*16 ,   seems to get some garbage ?
-			uint8_t nrpn_temp[100];
+			uint8_t nrpn_temp[16]={185,99,5,185,98,0,185,6,0};  // last byte is pitch
 			uint8_t note_off_midi[50];
 			//uint8_t cc_temp[22];
 			//uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
 
-
+			uint8_t current_scene=scene_buttons[0];
 			//uint8_t cue_counter2=0;
 			//uint8_t nrpn_chl=185;
 			//cc_temp[20]=0;
@@ -127,7 +127,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 						//memcpy(button_states_temp,button_states,8); // transfer bottom row data for blinky lights
 
-						if (scene_buttons[0]>7) high_row_enable=1;
+						if (current_scene>7) high_row_enable=1;
 
 
 				if ((seq_pos&7)==1) {    // fixed time for now , note generator
@@ -135,7 +135,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 					uint8_t midi_channel_select=9;
 					memcpy(note_timing,last_note_end_count,16);
 
-					button_states_temp[scene_buttons[0]]=5;  // selected sound yellow
+					button_states_temp[current_scene]=5;  // selected sound yellow
 
 		for (i = 0; i < sound_set; i++) { // transfer from midi_cue to note_midi to be sent
 
@@ -219,16 +219,24 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 		memcpy(last_note_end_count,note_timing,16);
 				} // end of note on generator
 
+				if (pitch_change_flag){   // sends pitch nrpn
+
+					nrpn_temp[5]=((current_scene&7)*8)&127;  // select part
+					nrpn_temp[15]=9;
+					nrpn_temp[8]=(pitch_list_for_drums[(pitch_selected_for_drums[current_scene&7])+(current_scene*8)])&127;  // sets pitch
+					pitch_change_flag=0;
+
+
+				}
 
 
 
-
-				if(note_midi[0])  memcpy(test_byte, note_midi, 20);
+				//if(note_midi[0])  memcpy(test_byte, note_midi, 20);
 
 			//memcpy(test_byte,note_midi,9);
 			note_midi[50]=cue_counter;
 
-			nrpn_temp[80]=0;   //disable nrpn for now
+			//nrpn_temp[15]=0;   //disable nrpn for now
 
 				//memcpy(cue_temp,midi_cue_noteoff,25);
 				cue_counter=0;
@@ -256,9 +264,9 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 			 memcpy(serial_out + midi_extra_cue[28], send_temp, serial_len);
 			 serial_len = serial_len + midi_extra_cue[28];
 			 midi_extra_cue[28] = 0;  // reset
-			 memcpy(serial_out + serial_len, nrpn_temp, nrpn_temp[80]); // temp only !  add nrpn
-			 serial_len = serial_len + nrpn_temp[80];
-			 nrpn_temp[80] = 0;
+			 memcpy(serial_out + serial_len, nrpn_temp, nrpn_temp[15]); // temp only !  add nrpn
+			 serial_len = serial_len + nrpn_temp[15];
+			 nrpn_temp[15] = 0;
 			 if (pause)
 				 pause = 2;
 

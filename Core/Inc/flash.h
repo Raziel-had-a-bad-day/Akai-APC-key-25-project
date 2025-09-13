@@ -33,7 +33,7 @@ void flash_page_write(uint8_t page_select,uint8_t* data){    // write single pag
 
 void settings_storage(void){   // runs to store setting and backh
 
-			uint8_t *settings[9]={ 	scene_transpose,pot_states,pot_tracking,mute_list,note_accent,midi_channel_list,looper_list,pattern_scale_list,pattern_repeat};
+			uint8_t *settings[9]={ 	scene_transpose,pot_states,pot_tracking,mute_list,note_accent,midi_channel_list, pitch_list_for_drums,pattern_scale_list,pattern_repeat};
 			uint8_t settings_multi[9]={1,1,4,1,1,1,4,1,1};   // sets length,  sound_set*x
 			uint8_t settings_temp[64];
 			uint8_t settings_total=0;  //adds up position
@@ -194,6 +194,9 @@ void flash_read(void){     // 1kbyte for now
 		  	TIM2->ARR=timer_value;
 
 		  //	TIM2->CCR1=(timer_value/2) ;
+
+		/*  	 for (d=1;d<8;d++)
+		  	{pitch_selected_for_drums[d]=pitch_list_for_drums[pitch_selected_for_drums[d]*8]&127;}  // pitch nrpn data*/
 
 		  	send=0;
 				  button_states[70]=0;
