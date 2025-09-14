@@ -85,7 +85,7 @@ void loop_screen(void){  // loop screen ,always on now , 16 notes and 8 patterns
 				if (drum_byte & (1<<(((i&3)*2)+1))) accent_temp=1; else accent_temp=0;  // accent test
 
 				if (data_temp2)    // read back on first loop select   , change button state colour
-				{if (accent_temp) button_states[square_buttons_list[i]]=3 ;  else button_states[square_buttons_list[i]]=5 ;}
+				{if (accent_temp) button_states[square_buttons_list[i]]=red_button ;  else button_states[square_buttons_list[i]]=yellow_button ;}
 				else button_states[square_buttons_list[i]]=0;
 
 				note_counter++;
@@ -143,11 +143,11 @@ void note_buttons(void){  // always running only on notes though
 				drum_store_one[drum_byte_select]=drum_byte; //write back info
 
 			}
-				if((last_press>15)&& (last_press<24) && (!select)){    // program change , right attow removed
+				if((last_press>15)&& (last_press<24) && (select)){    // program change , right attow removed
 								//uint8_t pattern=pattern_select;
 					memset(button_states+16, 0, 8);
 
-					program_change[0]=last_press-16; button_states[square_buttons_list[last_press]]=3;
+					program_change[0]=last_press-16; button_states[square_buttons_list[last_press]]=red_button;
 
 					if(record){   // only save on record
 					uint8_t pc_set= program_change_automation[seq_step_long];
@@ -161,39 +161,24 @@ void note_buttons(void){  // always running only on notes though
 
 				}   // program change when right arrow enabled using pattern buttons
 
-				if((last_press>15)&& (last_press<24) && (select) && (selected_scene<8)){    // pitch  change on first page  only
+				if((last_press>15)&& (last_press<24) && (!select) && (selected_scene<8)){    // pitch  change on first page  only
 											//uint8_t pattern=pattern_select;
 								memset(button_states+16, 0, 8);
 
-								pitch_selected_for_drums[selected_scene]=last_press-16; button_states[square_buttons_list[last_press]]=5; // controls lights
+								pitch_selected_for_drums[selected_scene]=last_press-16; button_states[square_buttons_list[last_press]]=yellow_button; // controls lights
 								pitch_change_flag=1; //enable pitch nrpn send
-								//pitch_list_for_drums[pitch_selected_for_drums[current_scene]*8];
 
-							//	if(record){   // only save on record
-							//	uint8_t pc_set= program_change_automation[seq_step_long];
-								//program_change_automation[seq_step_long]=seq_step+(((program_change[0]&7)+1)<<4);  // save program change ,only one per bar +1 or stay on previous setting
-
-							//	{if (seq_step<8) { pc_set=(pc_set&240)+((program_change[0]&7)+1) ;} else {pc_set=(pc_set&15)+(((program_change[0]&7)+1)<<4) ;}} // modified program save save, twice on note 0 and 8
-							//	program_change_automation[seq_step_long]=pc_set;
-
-							//	memcpy(alt_pots+128,program_change_automation,32);} // save pc data
 
 
 							}   // pitch change end
-
-
-
-
-
-
 
 
 				if((last_press>23)){    // pattern selection ,
 				//uint8_t pattern=pattern_select;
 				uint8_t new_pattern=(last_press-24);
 
-					if (shift) { button_states[square_buttons_list[new_pattern+24]]=4; pattern_rewind=pattern_select+1; shift=0;}
-					else button_states[square_buttons_list[new_pattern+24]]=6; //enable blink
+					if (shift) { button_states[square_buttons_list[new_pattern+24]]=red_blink_button; pattern_rewind=pattern_select+1; shift=0;}
+					else button_states[square_buttons_list[new_pattern+24]]=yellow_blink_button; //enable blink
 
 					new_pattern_select=new_pattern;  //add only to new pattern select
 
@@ -286,29 +271,29 @@ void buttons_store(void){    // incoming data from controller
 
 		// function select logic  here
 
-		if ((!button_states[64]) && (scene_buttons[0]>7)) {scene_buttons[0]=scene_buttons[0]-8;second_scene=0;loop_screen();}
-		 if (button_states[64] && (scene_buttons[0]<8)) 	{scene_buttons[0]=scene_buttons[0]+8;second_scene=8;lcd_downcount=10;lcd_messages_select=2;loop_screen();}
-		 if (button_states[83]) {scene_solo=1;clip_stop=0;button_states[82]=0; } else scene_solo=0;  //solo but with pots now ,turns off clip stop or mute
-		 if ((button_states[83])&& shift) memset(mute_list,0,16); // clear all mute info when shift held
+		if ((!button_states[up_arrow_button]) && (scene_buttons[0]>7)) {scene_buttons[0]=scene_buttons[0]-8;second_scene=0;loop_screen();}
+		 if (button_states[up_arrow_button] && (scene_buttons[0]<8)) 	{scene_buttons[0]=scene_buttons[0]+8;second_scene=8;lcd_downcount=10;lcd_messages_select=2;loop_screen();}
+		 if (button_states[solo_button]) {scene_solo=1;clip_stop=0;button_states[82]=0; } else scene_solo=0;  //solo but with pots now ,turns off clip stop or mute
+		 if ((button_states[solo_button])&& shift) memset(mute_list,0,16); // clear all mute info when shift held
 
-		 if (button_states[67])  {right_arrow=1;     }  //shift notes right
-		if (button_states[86])  {select=1;} else select=0;  // select enable
+		 if (button_states[right_arrow_button])  {right_arrow=1;     }  //shift notes right
+		if (button_states[select_button])  {select=1;} else select=0;  // select enable
 
-		if (button_states[65] && (!pattern_copy_full)) {down_arrow=1;  	 memcpy(pattern_copy,drum_store_one+drum_store_select,4);pattern_copy_full=1; }		else down_arrow=0;  // use for copy pattern
+		if (button_states[down_arrow_button] && (!pattern_copy_full)) {down_arrow=1;  	 memcpy(pattern_copy,drum_store_one+drum_store_select,4);pattern_copy_full=1; }		else down_arrow=0;  // use for copy pattern
 
-		if (button_states[66]) {left_arrow=1;  memcpy(drum_store_one+drum_store_select,pattern_copy,4);midi_cue_fill();pattern_copy_full=0; down_arrow=0;button_states[65]=0;button_states[66]=0;left_arrow=0; 	   }
+		if (button_states[left_arrow_button]) {left_arrow=1;  memcpy(drum_store_one+drum_store_select,pattern_copy,4);midi_cue_fill();pattern_copy_full=0; down_arrow=0;button_states[65]=0;button_states[66]=0;left_arrow=0; 	   }
 		else left_arrow=0;  // use for paste pattern
-		if (button_states[67] )  {right_arrow=1;} else right_arrow=0;   // enables program instead of pattern select
-		if (button_states[85]) { scene_mute=1;} else scene_mute=0;
-		if (button_states[93]) { record=1;} else {record=0;} // select enable
+		if (button_states[right_arrow_button] )  {right_arrow=1;} else right_arrow=0;   // enables program instead of pattern select
+		if (button_states[mute_button]) { scene_mute=1;} else scene_mute=0;
+		if (button_states[record_button]) { record=1;} else {record=0;} // select enable
 
-		if (button_states[68])  volume=1; else volume=0;
-		if (button_states[69])  { pan=1; patch_screen()  ;   }   else pan=0;
-		if (button_states[70])  send=1; else send=0;
-		if (button_states[71])  {device=1;  }else {device=0; }
-		if (button_states[81])  {button_states[91]=5;memcpy(loop_note_list,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
+		if (button_states[volume_button])  volume=1; else volume=0;
+		if (button_states[pan_button])  { pan=1; patch_screen()  ;   }   else pan=0;
+		if (button_states[send_button])  send=1; else send=0;
+		if (button_states[device_button])  {device=1;  }else {device=0; }
+		if (button_states[play_pause_button])  {button_states[91]=5;memcpy(loop_note_list,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
 
-		if ((button_states[82])  )    {clip_stop=1; lcd_downcount=10;lcd_messages_select=3;scene_solo=0;button_states[83]=0;  } else clip_stop=0;
+		if ((button_states[clip_stop_button])  )    {clip_stop=1; lcd_downcount=10;lcd_messages_select=3;scene_solo=0;button_states[83]=0;  } else clip_stop=0;
 		if (shift && pause && clip_stop) { 			// clear all program change info on drums , needs to be saved though
 			memset(program_change_automation,0,32);
 			memcpy(alt_pots+128,program_change_automation,32);clip_stop=0;button_states[82]=0;
@@ -323,8 +308,8 @@ void buttons_store(void){    // incoming data from controller
 
 		    // not very useful
 
-	if ((status == 177) && (incoming_data1==64) && (incoming_message[2]==127) && (sustain)) {sustain=0;button_states[square_buttons_list[pattern_select+16]]=5;status=0;}
-	if ((status == 177) && (incoming_data1==64) && (incoming_message[2]==127) && (!sustain)) {sustain=1;button_states[square_buttons_list[pattern_select+16]]=4;status=0;}	 // toggle sustain also reset pattern repeat
+	if ((status == 177) && (incoming_data1==64) && (incoming_message[2]==127) && (sustain)) {sustain=0;button_states[square_buttons_list[pattern_select+16]]=yellow_button;status=0;}
+	if ((status == 177) && (incoming_data1==64) && (incoming_message[2]==127) && (!sustain)) {sustain=1;button_states[square_buttons_list[pattern_select+16]]=red_blink_button;status=0;}	 // toggle sustain also reset pattern repeat
 
 	if ((status == 176) && (clip_stop)){   // with clip stop on
 
@@ -338,7 +323,7 @@ void buttons_store(void){    // incoming data from controller
 		status=0; // clear
 	}
 
-	if ((status == 176) && (scene_solo)&& (incoming_data1<52)){   // solo processing
+	if ((status == 176) && (scene_solo)&& (incoming_data1<pot_5)){   // solo processing
 		uint8_t solo_selector=(incoming_data1-48)*4;
 		incoming_message[2]=(incoming_message[2]>>5)&3;
 
@@ -369,17 +354,19 @@ void buttons_store(void){    // incoming data from controller
 //
 //		}
 
-		if ((incoming_data1==49) )
+		if ((incoming_data1==pot_2) )
 		pattern_count=((pot_states[1]>>4))&7;
-		if ((incoming_data1==50) && (select) && (current_scene < 8))
-			{pitch_list_for_drums[(pitch_selected_for_drums[current_scene])+(current_scene*8)] =incoming_message[2];pitch_change_flag=1; } // sets pitch for drums ,only first page
+		if ((incoming_data1==pot_3) && (!select) && (current_scene < 8))
+			{pitch_list_for_drums[(pitch_selected_for_drums[current_scene])+(current_scene*8)] =incoming_message[2];pitch_change_flag=1;
+			lcd_downcount=3;lcd_messages_select=7;
+			} // sets pitch for drums ,only first page
 
 
-		if ((incoming_data1==51) )
-					{pattern_scale_list[pattern]=(pot_states[3]>>3)&15;lcd_control=0;lcd_downcount=3;lcd_messages_select=0;}
+		if ((incoming_data1==pot_4) )
+					{pattern_scale_list[pattern]=(pot_states[3]>>3)&15;lcd_downcount=3;lcd_messages_select=0;}
 
 
-		if ((incoming_data1==48) &&(!select) && (current_scene>3))  //  cc function
+		if ((incoming_data1==pot_1) &&(select) && (current_scene>3))  //  cc function
 			{
 
 			//	midi_cc[scene_buttons[0]+4]=incoming_message[2];   // use filter on es1  or else
@@ -391,32 +378,30 @@ void buttons_store(void){    // incoming data from controller
 
 
 	//	if ((incoming_data1==50) &&(!keyboard[0]) )  pattern_repeat=((pot_states[1]>>5))&7; // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
-	//	if ((incoming_data1==51) && (!keyboard[0]) )  pattern_count=(pot_states[2]>>5)&7;
+	//	if ((incoming_data1==pot_4) && (!keyboard[0]) )  pattern_count=(pot_states[2]>>5)&7;
 
 
 
 		if ((shift) && (device)){   // pots alt functions set , tempo , midi
 
-			if (incoming_data1==54)   {midi_channel_list[current_scene]=(incoming_message[2]>>3);current_midi=midi_channel_list[current_scene];}   // set midi
+			if (incoming_data1==pot_7)   {midi_channel_list[current_scene]=(incoming_message[2]>>3);current_midi=midi_channel_list[current_scene];}   // set midi
 
-			if (incoming_data1==55) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
+			if (incoming_data1==pot_8) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
 		}
 
 
-		if ((incoming_data1<56)&&(incoming_data1>51)&& (!device))  {    // pots 4-8  , with device button off
+		if ((incoming_data1<56)&&(incoming_data1>pot_4)&& (!device))  {    // pots 4-8  , with device button off
 
 
-		if ((incoming_data1==52)&& pause) {seq_step=0;
+		if ((incoming_data1==pot_5)&& (!clip_stop)) {lfo_settings_list[(current_scene*2)]=incoming_message[2];lcd_downcount=3;lcd_messages_select=8;}   // lfo rate
 
-		seq_step_long=(seq_step_long&28)+((pot_states[4]>>5)&3); }   // moves seq_pos and seq_step ,during pause
-
-		if ((incoming_data1==53) && pause) seq_step_long=(seq_step_long &3)+ ((pot_states[5]>>4)*4);   // moves bar during pause
+		if ((incoming_data1==pot_6) && (!clip_stop))   {lfo_settings_list[(current_scene*2)+1]=incoming_message[2] ;lcd_downcount=3;lcd_messages_select=6;}   // lfo level
 
 
 
-		//if (incoming_data1==54) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
-		if ((incoming_data1==55)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];     // accent input
+		//if (incoming_data1==pot_7) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
+		if ((incoming_data1==pot_8)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];     // accent input
 
 		//if  (record) {drum_byte=(drum_byte & (1<<(((i&3)*2)+1)));   } // get accent info
 
@@ -428,12 +413,12 @@ void buttons_store(void){    // incoming data from controller
 		//	if ((note_off_flag[0])&& (note_off_flag[1]<32))  scene_velocity[square_buttons_list[note_off_flag[1]]+(scene_buttons[0]*32)]=  pot_states[1];    // set velocity for now for held button , only for notes
 
 
-			if ((incoming_data1==48) && (shift)){     // program change for channels other than drums  pot 1
+			if ((incoming_data1==pot_1) && (shift)){     // program change for channels other than drums  pot 1
 				if (midi_channel_list[current_scene]!=9)  {program_change[1]=pot_states[0]>>3; program_change[2]=1;}}
 
 
 
-			if ((incoming_data1==50) && (!keyboard[0]))  // if held down
+			if ((incoming_data1==pot_3) && (!keyboard[0]))  // if held down
 
 		{
 
@@ -446,7 +431,7 @@ void buttons_store(void){    // incoming data from controller
 
 		}
 
-		//if ((incoming_data1==49) && (button_states[68]))   scene_velocity[seq_step_pointer]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
+		//if ((incoming_data1==pot_2) && (button_states[68]))   scene_velocity[seq_step_pointer]=  (((pot_states[1]>>5)<<5)+31)&112;  // update velocity in realtime if volume button pressed
 
 	} // end of CC (176, pots ) message
 
@@ -512,10 +497,10 @@ void pattern_settings(void){     // pattern change function , also program chang
 		if ((!seq_step) || (seq_step==8)) { // program change automation ,modified to change twice on note 0 and 8
 		if (pc_set)     program_change[0] = (pc_set - 1) & 7; //change pc but only on fresh data
 
-	if (!select)	{memset(button_states + 16, 0, 8);   // sets lights for program change but only if select is off
+	if (select)	{memset(button_states + 16, 0, 8);   // sets lights for program change but only if select is on
 
-		button_states[program_change[0] + 16] = 3;  //sets selected program change light
-	} else {memset(button_states + 16, 0, 8);button_states[pitch_selected_for_drums[scene_buttons[0]&7] + 16] = 5;
+		button_states[program_change[0] + 16] = red_button;  //sets selected program change light
+	} else {memset(button_states + 16, 0, 8);button_states[pitch_selected_for_drums[scene_buttons[0]&7] + 16] = yellow_button;
 
 	}
 
@@ -527,7 +512,7 @@ void pattern_settings(void){     // pattern change function , also program chang
 
 
 	memset(button_states+8,0,8);
-	if ((seq_step&3)==3)button_states[pattern_select+8]=0;  else button_states[pattern_select+8]=5;  // blink on quarter
+	if ((seq_step&3)==3)button_states[pattern_select+8]=0;  else button_states[pattern_select+8]=yellow_button;  // blink on quarter
 	button_states[(seq_step_long>>2)+8]=1;
 
 
@@ -556,7 +541,7 @@ void pattern_settings(void){     // pattern change function , also program chang
 			///// test
 			}
 
-			if ((pattern_loop_repeat==pattern_repeat[pattern_select])) button_states[pattern_select+8]=6;  // blink last bar
+			if ((pattern_loop_repeat==pattern_repeat[pattern_select])) button_states[pattern_select+8]=yellow_blink_button;  // blink last bar
 
 			if ((pattern_loop_repeat>pattern_repeat[pattern_select])) {   // check when repeated enough , good
 
@@ -573,10 +558,10 @@ void pattern_settings(void){     // pattern change function , also program chang
 				else {pattern_loop_repeat=0;
 				pattern_select=(pattern_select+1)&15;	// +1 on pattern select
 				new_pattern_select=pattern_select;
-				button_states[pattern_select+8]=5;
+				button_states[pattern_select+8]=yellow_button;
 				pattern_loop++;}
 
-				button_states[pattern_select+8]=5;
+				button_states[pattern_select+8]=yellow_button;
 				pattern_loop_repeat=0;
 
 			} //end of pattern change

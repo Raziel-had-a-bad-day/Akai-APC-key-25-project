@@ -217,18 +217,33 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 
 		memcpy(last_note_end_count,note_timing,16);
-				} // end of note on generator
+				} // end of note on generator , limited run
 
-				if (pitch_change_flag){   // sends pitch nrpn
+		// everything from here on runs on every seq_pos 8xseq_step
 
-					nrpn_temp[5]=((current_scene&7)*8)&127;  // select part
-					nrpn_temp[15]=9;
+		if (pitch_change_flag){   // sends pitch nrpn section
+
+					nrpn_temp[5]=((current_scene&7)*8)&127;  // select part pitch
+					nrpn_temp[15]=9;// length of send
 					nrpn_temp[8]=(pitch_list_for_drums[(pitch_selected_for_drums[current_scene&7])+(current_scene*8)])&127;  // sets pitch
 					pitch_change_flag=0;
 
 
 				}
 
+
+
+		if (lfo_full_send_enable){   // sends filter nrpn section ,this needs to cycle through 16x
+
+							uint8_t counterb=lfo_full_send_enable-1;
+
+							nrpn_temp[5]=((counterb*8)+2)&127;  // select part filter
+							nrpn_temp[15]=9; // length of send
+							nrpn_temp[8]=loop_lfo_out[counterb+32] &127;  // sets filter
+							if (lfo_full_send_enable<8) lfo_full_send_enable++; else lfo_full_send_enable=0; // cycle through until finish
+
+
+						}
 
 
 				//if(note_midi[0])  memcpy(test_byte, note_midi, 20);
@@ -370,24 +385,25 @@ void nrpn_send(void){			 // all nrpn data goes here ,sends as well on serial
 void loop_lfo(void) {  // 0-64-0
 
 			uint16_t temp_hold=0;
-			uint8_t lfo_out[sound_set*3];
+			int8_t lfo_out[sound_set*3];
 			memcpy(lfo_out,loop_lfo_out,sound_set*3);
 			uint8_t mem;
+			uint8_t lfo_rate=1;
 
 
 			for (i=0;i<sound_set;i++){
-				 mem=i+sound_set;
+				 mem=i+sound_set;  // bytes 16-31 ,tracks lfo info
+				 lfo_rate=lfo_settings_list[(i*2)];
 
+				if ((lfo_out[mem]==0) && (lfo_out[i]>=63))	lfo_out[mem]=2;
+				if (lfo_out[mem]==0) lfo_out[i]= (lfo_out[i]+lfo_rate);
+				if ((lfo_out[mem]==2) && (lfo_out[i]<=0))	lfo_out[mem]=0;
+				if (lfo_out[mem]==2) lfo_out[i]= (lfo_out[i]-lfo_rate);
+				if (lfo_out[i]<0) lfo_out[i]=0;
 
-				if ((lfo_out[mem]==0) && (lfo_out[i]==63))	lfo_out[mem]=2;
-				if (lfo_out[mem]==0) lfo_out[i]= (lfo_out[i]+1)&255;
-				if ((lfo_out[mem]==2) && (lfo_out[i]==0))	lfo_out[mem]=0;
-				if (lfo_out[mem]==2) lfo_out[i]= (lfo_out[i]-1)&255;
+				temp_hold=((lfo_out[i]*lfo_settings_list[(i*2)+1])>>6);   // level  64*lfo level
 
-				temp_hold=((lfo_out[i]*looper_list[(i*4)+2])>>4);
-
-						lfo_out[i+32]=temp_hold;
-
+						lfo_out[i+32]=127-temp_hold;  // bytes 32-48 ,lfo output
 			}
 
 			memcpy(loop_lfo_out,lfo_out,sound_set*3);

@@ -31,15 +31,16 @@ void flash_page_write(uint8_t page_select,uint8_t* data){    // write single pag
 
 }
 
-void settings_storage(void){   // runs to store setting and backh
+void settings_storage(void){   // runs to store setting and read back
 
-			uint8_t *settings[9]={ 	scene_transpose,pot_states,pot_tracking,mute_list,note_accent,midi_channel_list, pitch_list_for_drums,pattern_scale_list,pattern_repeat};
-			uint8_t settings_multi[9]={1,1,4,1,1,1,4,1,1};   // sets length,  sound_set*x
+			uint8_t *settings[10]={scene_transpose,pot_states,pot_tracking,mute_list,note_accent,midi_channel_list, pitch_list_for_drums,pattern_scale_list,lfo_settings_list,single_settings_list};
+			uint8_t settings_multi[10]={1,1,4,1,1,1,4,1,2,1};   // sets length,  sound_set*x
 			uint8_t settings_temp[64];
 			uint8_t settings_total=0;  //adds up position
 			uint8_t length=0;
+			tempo=single_settings_list[1];
 
-			for (i=0;i<9;i++){
+			for (i=0;i<10;i++){
 
 				length=(settings_multi[i]*sound_set);
 				if(settings_write_flag) {		memcpy(settings_temp,settings[i],length);	// copy to temp
@@ -53,7 +54,7 @@ void settings_storage(void){   // runs to store setting and backh
 
 			}
 
-			for (i=0;i<250;i++){if (all_settings[i]>127) all_settings[i]=0;}  // just in case
+			for (i=0;i<511;i++){if (all_settings[i]>127) all_settings[i]=0;}  // reset value just in case
 			settings_write_flag=0;
 
 }
@@ -101,7 +102,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 		//  memcpy  (test_data3+4 ,scene_memory,  256);
 			  flash_page_write(patch_mem,drum_store_one+256);   // bit mixed up
 
-		  	  all_settings[250]=tempo;
+		  	  single_settings_list[1]=tempo;
 
 		  	  settings_write_flag=1;
 			settings_storage();
@@ -109,7 +110,7 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 			//memcpy  (test_data3+4 ,all_settings,  256); // copy
 
 			patch_mem=patch_mem+1;
-			flash_page_write(patch_mem,all_settings);
+			flash_page_write(patch_mem,all_settings);   // needs more
 			patch_mem=patch_mem+1;
 			flash_page_write(patch_mem,drum_store_one);
 			patch_mem=patch_mem+1;
@@ -118,6 +119,12 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 			flash_page_write(patch_mem,drum_store_one+768);
 			patch_mem=patch_mem+1;
 			flash_page_write(patch_mem,alt_pots);
+			patch_mem=patch_mem+1;
+			flash_page_write(patch_mem,all_settings+256); // second half
+
+
+
+
 		//  memcpy  (test_data3+4 ,drum_store_one,  256);  // drums
 
 
@@ -160,6 +167,7 @@ void flash_read(void){     // 1kbyte for now
 	memcpy(drum_store_one,test_data3+516,256);   // next block (+4)
 	memcpy(drum_store_one+512,test_data3+772,512); //
 	memcpy(alt_pots,test_data3+1284,256);
+	memcpy(all_settings+256,test_data3+1540,256); // second half of settings
 	memcpy(program_change_automation,alt_pots+128,32); // program change data
 
 

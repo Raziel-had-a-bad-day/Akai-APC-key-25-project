@@ -256,7 +256,7 @@ int main(void)
 
 
 
-		  if (((seq_pos>>5)&1) && (!pause))   // send cc , off during pause
+		  if (((seq_pos>>5)&1) && (!pause))   // send cc , off during pause , dont disable
 		  {
 			  uint8_t extras=midi_extra_cue[28];
 			  midi_extra_cue[extras]=176+midi_channel_list[12];  // cc ch3
@@ -293,7 +293,7 @@ int main(void)
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
 			  if ((seq_step_long&3)==0) {play_position=(play_position>>2)<<2;} // reset
 
-			  if ((s_temp&7)==7) loop_lfo();
+			  if ((s_temp&15)==14) { loop_lfo();lfo_full_send_enable=1;} // run lfo at end of a bar , 2 notes long to send 16 settings
 
 			  ////
 
@@ -309,8 +309,8 @@ int main(void)
 
 				//  printf(" %d",crap[i] );
 
-				  printf(" %d",pitch_selected_for_drums[i]);
-				  printf(" %d",pitch_list_for_drums[pitch_selected_for_drums[i]+(i*8)]);
+				  printf(" %d",loop_lfo_out[i+32]);
+				//  printf(" %d",pitch_list_for_drums[pitch_selected_for_drums[i]+(i*8)]);
 
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
 				 // printf(" ds=%d ",drum_store_one[i+(scene_buttons[0]*4)] );

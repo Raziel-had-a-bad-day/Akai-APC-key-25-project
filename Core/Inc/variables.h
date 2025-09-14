@@ -6,7 +6,46 @@
 #define sound_set 16   // define selectable sounds for scene_buttons[0]  , important
 #define MIDI_NOTE_OFF 128
 #define MIDI_NOTE_ON 144
+#define up_arrow_button 64
+#define down_arrow_button 65
+#define left_arrow_button 66
+#define right_arrow_button 67
+#define volume_button 68
+#define pan_button 69
+#define send_button 70
+#define device_button 71
+#define play_pause_button 91
+#define clip_stop_button 82
+#define solo_button 83
+#define rec_arm_button 84
+#define mute_button 85
+#define select_button 86
+#define stop_all_clips 81
+#define record_button 93
+#define shift_button 98
 
+#define green_button 1
+#define green_blink_button 2
+#define red_button 3
+#define red_blink_button 4
+#define yellow_button 5
+#define yellow_blink_button 6
+
+#define pot_1 48
+#define pot_2 49
+#define pot_3 50
+#define pot_4 51
+#define pot_5 52
+#define pot_6 53
+#define pot_7 54
+#define pot_8 55
+
+
+
+
+
+
+//1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
 uint16_t bpm_table[256];  // lut values for temp TIM10 ARR
 uint8_t tempo; // tempo value
 uint8_t ppq_count; // ppq_count for seq_pos
@@ -115,7 +154,7 @@ uint8_t send_spi2[260];
 uint8_t write_once; // allow only a single flash write for now
 uint8_t test_data[32]={0,0,0,0,1,0,5,1,1,0,1,5,1,1,0,1,1,3,0,1,1,0,1,0,1,0,1,0,1,0,1};
 uint8_t spi_hold[260]={0,10,0,0};
-uint8_t all_settings[256];  // store all extra settings:  transpose , pots
+uint8_t all_settings[512];  // store all extra settings:  transpose , pots
 uint8_t other_buttons; // update control button lights
 uint8_t other_buttons_hold[100]; // keeps track of buttons
 uint8_t send_buffer_sent;
@@ -246,7 +285,7 @@ uint8_t last_note_end_count[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}; // counts dow
 uint8_t program_change_automation[32];   // record a single pc per bar 4 bit for position from seq_pos and 3 bit for actual pc selected ,can be overwritten ,only 1 per bar
 uint8_t lcd_control=0;  // controls type of lcd menu , used for downcount as well
 uint8_t lcd_downcount=0;
-uint8_t lcd_messages_select=0;//select from lcd_meesages
+uint8_t lcd_messages_select=0;//select from lcd_meesages , do not use [5] or it'll crash
 uint8_t current_accent;// current selected sound accent value
 uint8_t lcd_buffer[32]; // holds outgoing characters
 uint8_t lcd_buffer_mem[32]; // holds outgoing characters
@@ -254,3 +293,6 @@ uint8_t last_solo_selected=0;  // saves last selected solo button
 uint8_t pitch_list_for_drums[64];  // holds 8 pitches per (first page ) 8 notes for drums for automation , used with nrpn data ,separate from pitch data for now
 uint8_t pitch_selected_for_drums[8];  // current selected pitch on first page of drums 1-7 , not actual pitch but just selection
 uint8_t pitch_change_flag; //enabled when pitch data needs to be sent
+uint8_t lfo_settings_list[32]; //holds lfo settings 1 rate , 2 level , testing for now
+uint8_t lfo_full_send_enable=0; // lfo transmit flag
+uint8_t single_settings_list[16]; // holds single variables ie tempo for storage

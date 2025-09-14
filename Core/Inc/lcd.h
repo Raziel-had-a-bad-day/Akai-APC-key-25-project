@@ -163,11 +163,11 @@ void lcd_menu_vars(void){     // grab vars for menu
 
 
 
-void lcd_message(void){    // prints controls being used while being used
+void lcd_message(void){    // prints controls being used while being used, can have memory error ,redo later
 
-	char *lcd_messages[] = {"note_scale  ","note_accent  ","second_bank  ","pitch_sets   ","midi_channel "
+	char *lcd_messages[] = {"Note_scale  ","Note_accent  ","Second_bank  ","Pitch_sets   ","MIDI_channel ","do_not_use   ","LFO_level    ","Drum_pitch   ","LFO_rate     "
 
-	};
+	};  // set to 13 char long, no 5 cause to crash it,rest ok   ?
 
 
 	uint8_t lengthofstring=strlen(lcd_messages[lcd_messages_select])+16;
