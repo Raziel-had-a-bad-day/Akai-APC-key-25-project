@@ -45,7 +45,7 @@ void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_lengt
 
 }
 
-void USB_send(void){    // send to midi controller, clean atm
+void USB_send(void){    // send to midi controller, clean atm , maybe do a full send including led off as well every 8 bars
 
 	  uint8_t seq_step_mod=(seq_pos>>3)&31;
 	  uint8_t send_temp[100];  // need this for temp lights
@@ -57,7 +57,9 @@ void USB_send(void){    // send to midi controller, clean atm
 		send_buffer_sent = 2;
 	}
 	////  temporary lights , not stored
-	if (record) send_temp[square_buttons_list[green_position[0]]]=3; else send_temp[square_buttons_list[green_position[0]]]=1; // add moving green light
+
+	if (!pause)send_temp[square_buttons_list[green_position[0]]]=1;
+	if (record) send_temp[square_buttons_list[green_position[0]]]=3;   // add moving green light  ,off during pause
 
 	counter_a = 0; // clear
 	i=0;
@@ -70,7 +72,7 @@ void USB_send(void){    // send to midi controller, clean atm
 		}  // can be used to reset all these buttons
 	i++;}
 
-	if (counter_a) {
+	if (counter_a) { // one at a time ,but runs often ,might change
 
 		send_buffer[6] = MIDI_NOTE_ON;
 		send_buffer[7] = (counter_a - 1) & 127;
@@ -94,11 +96,11 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 			uint8_t cue_counter;
 			//uint16_t counterb;   // midi_cue position
 			uint8_t note_midi [70] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  // 3*16 ,   seems to get some garbage ?
-			uint8_t nrpn_temp[16]={185,99,5,185,98,0,185,6,0};  // last byte is pitch
+			uint8_t nrpn_temp[21]={185,99,5,185,98,0,185,6,0,185,99,5,185,98,0,185,6,0};  //  byte 9 is pitch
 			uint8_t note_off_midi[50];
 			//uint8_t cc_temp[22];
 			//uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
-
+			uint8_t nrpn_counter=0; //keeps track when sending more then one set of commands
 			uint8_t current_scene=scene_buttons[0];
 			//uint8_t cue_counter2=0;
 			//uint8_t nrpn_chl=185;
@@ -113,7 +115,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 				//counterb=(pattern_select*512) +(offset_pitch*32) ; // pattern=512bytes or 16*32
 				uint16_t drum_byte_select;   // selects a trigger 16 + (i*4) 16*64 ... 0-256
 				uint8_t drum_byte;
-				 uint16_t pattern=pattern_select;
+				 uint16_t pattern=bar_playing; // modified
 				 uint8_t random_list[16]; // random notes for now
 				 memcpy (random_list,alt_pots+(pattern*16),16); // load tones for current pattern
 					//uint8_t pitch_seq=alt_pots[((seq_pos>>3)&7)+(pattern_select*16)]; // loops 0-7 ,steps
@@ -222,11 +224,16 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 		// everything from here on runs on every seq_pos 8xseq_step
 
 		if (pitch_change_flag){   // sends pitch nrpn section
+					uint8_t counterb=pitch_change_flag-1;
 
-					nrpn_temp[5]=((current_scene&7)*8)&127;  // select part pitch
-					nrpn_temp[15]=9;// length of send
-					nrpn_temp[8]=(pitch_list_for_drums[(pitch_selected_for_drums[current_scene&7])+(current_scene*8)])&127;  // sets pitch
-					pitch_change_flag=0;
+					nrpn_temp[5]=((counterb&7)*8)&127;  // select part pitch
+					nrpn_temp[20]=9;// length of send
+					//nrpn_temp[8]=(pitch_list_for_drums[(pitch_selected_for_drums[counterb&7])+(current_scene*8)])&127;  // sets pitch
+					nrpn_temp[8]=pitch_selected_drum_value[counterb];  //prepared elsewhere
+
+					if (pitch_change_flag<8) pitch_change_flag++; else pitch_change_flag=0;
+
+					nrpn_counter=8;
 
 
 				}
@@ -235,11 +242,12 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 		if (lfo_full_send_enable){   // sends filter nrpn section ,this needs to cycle through 16x
 
+
 							uint8_t counterb=lfo_full_send_enable-1;
 
-							nrpn_temp[5]=((counterb*8)+2)&127;  // select part filter
-							nrpn_temp[15]=9; // length of send
-							nrpn_temp[8]=loop_lfo_out[counterb+32] &127;  // sets filter
+							nrpn_temp[nrpn_counter+5]=((counterb*8)+2)&127;  // select part filter
+							nrpn_temp[20]=nrpn_counter+9; // length of send
+							nrpn_temp[nrpn_counter+8]=loop_lfo_out[counterb+32] &127;  // sets filter
 							if (lfo_full_send_enable<8) lfo_full_send_enable++; else lfo_full_send_enable=0; // cycle through until finish
 
 
@@ -279,9 +287,9 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 			 memcpy(serial_out + midi_extra_cue[28], send_temp, serial_len);
 			 serial_len = serial_len + midi_extra_cue[28];
 			 midi_extra_cue[28] = 0;  // reset
-			 memcpy(serial_out + serial_len, nrpn_temp, nrpn_temp[15]); // temp only !  add nrpn
-			 serial_len = serial_len + nrpn_temp[15];
-			 nrpn_temp[15] = 0;
+			 memcpy(serial_out + serial_len, nrpn_temp, nrpn_temp[20]); // temp only !  add nrpn
+			 serial_len = serial_len + nrpn_temp[20];
+			 nrpn_temp[20] = 0;
 			 if (pause)
 				 pause = 2;
 

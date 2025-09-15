@@ -12,11 +12,12 @@ Pot 1 + Shift =program change only for non drum channels
 Pot 4 = set musical scale type ,
 pot5=LFO rate  sends nrpn only for filter
 pot6= LFO level
-pot 7=  
+pot 7=  +shift selects mid channel for current sound 
 pot8=velocity/accent   
 
-pause =  shift + clip_stop : clear program changes on drums 
+pause =  shift + clip_stop : clear program changes on drums , also enter pitch info for bars on selected sound 
 select=enables program change 1-8 for drums saved when set to record every 8 notes , might change this 
+arm_rec = records pitch change selections 
 
 Hold Shift to enter accented notes.
 Down arrow = copy , not used

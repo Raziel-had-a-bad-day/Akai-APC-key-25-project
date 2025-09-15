@@ -101,7 +101,7 @@ uint16_t s_temp;
 uint16_t seq_pos_mem=1;
 uint16_t mtc_tick=0;  // incoming realtime clock counter
 uint8_t seq_enable=1;  // start stop sequencer
-uint8_t seq_step; // 0-15 steps
+uint8_t seq_step; // 0-15 steps,paused
 uint8_t realtime;
 
 
@@ -138,6 +138,11 @@ uint32_t sys_cnt[3];
 uint8_t note_off_enable;
 uint8_t settings_write_flag=0;
 uint8_t cdc_start=0;  // checks for extra messages
+//bar section
+uint8_t bar_selector; // select bar for editing
+uint8_t bar_playing; // currently playing bar , 16 notes per bar
+uint8_t punch_in[8]; // allow instant response for certain buttons
+
 
 
 uint8_t counter_a;
@@ -145,7 +150,7 @@ uint8_t counter_a;
 uint8_t spi_send[10];
 uint8_t status_reg[2];
 uint8_t first_message=0; // flag to clear once a button is pressed
-
+uint8_t rec_arm=0;
 uint8_t last_note_played[16]; // stores note for note off
 
 uint8_t flash_flag=0;
@@ -270,7 +275,7 @@ uint16_t midi_cue_count=0; //tracks the number of notes recorded
 uint8_t last_pattern_select;
 uint8_t pattern_rewind;  // +1
 uint8_t new_pattern_select;
-uint8_t pattern_select=0; // was 16 now 8
+uint8_t pattern_select=0; // disabled for now , will have 2
 uint8_t pattern_offset_list[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};   // list of offset for a single part (keys only ) on each pattern , handy
 uint8_t pattern_offset; // for lcd
 uint8_t pattern_copy[32];  // buf for copypasta
@@ -290,9 +295,13 @@ uint8_t current_accent;// current selected sound accent value
 uint8_t lcd_buffer[32]; // holds outgoing characters
 uint8_t lcd_buffer_mem[32]; // holds outgoing characters
 uint8_t last_solo_selected=0;  // saves last selected solo button
+
 uint8_t pitch_list_for_drums[64];  // holds 8 pitches per (first page ) 8 notes for drums for automation , used with nrpn data ,separate from pitch data for now
-uint8_t pitch_selected_for_drums[8];  // current selected pitch on first page of drums 1-7 , not actual pitch but just selection
+uint8_t pitch_selected_for_drums[8];  // current selected pitch on first page of drums 1-7 , not actual pitch but just selection, useless
 uint8_t pitch_change_flag; //enabled when pitch data needs to be sent
+uint8_t pitch_change_store[64];  //stores pitch changes 0-7 per bar ,per sound , 8bytes(per bar) *8 sounds ,holds presets for pitch_list_for drums for now
+uint8_t pitch_selected_drum_value[8]; // holds outgoing drum value
+
 uint8_t lfo_settings_list[32]; //holds lfo settings 1 rate , 2 level , testing for now
 uint8_t lfo_full_send_enable=0; // lfo transmit flag
 uint8_t single_settings_list[16]; // holds single variables ie tempo for storage

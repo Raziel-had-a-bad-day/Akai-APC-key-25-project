@@ -110,7 +110,7 @@ void lcd_menu_vars(void){     // grab vars for menu
 
 	uint8_t *lcd_page1 []={
 
-			&pattern_offset,
+			&bar_playing,
 			&seq_step_long,
 			&seq_current_step,
 			&current_midi,

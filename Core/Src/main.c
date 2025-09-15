@@ -221,7 +221,8 @@ int main(void)
 		  green_position[0]=seq_step; green_position[1]=seq_step;
 		  cdc_send(); // all midi compiled for send  8/per note
 
-		  if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info, sent seq_pos
+		  if (serial_len)   HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send disable if no info, sent seq_pos,
+		  //maybe dma if needed for now ok (2ms total for send )
 
 		  // USB_send();
 
@@ -287,7 +288,7 @@ int main(void)
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
 
 			  seq_step_mod=seq_pos>>3;
-			  seq_current_step=seq_step_mod;
+			 // seq_current_step=seq_step_mod;
 
 			  play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
@@ -309,7 +310,7 @@ int main(void)
 
 				//  printf(" %d",crap[i] );
 
-				  printf(" %d",loop_lfo_out[i+32]);
+				  printf(" %d",pitch_selected_drum_value[i]);
 				//  printf(" %d",pitch_list_for_drums[pitch_selected_for_drums[i]+(i*8)]);
 
 				 // printf(" %d",loop_screen_note_on[(selected_scene*32)+i] );
