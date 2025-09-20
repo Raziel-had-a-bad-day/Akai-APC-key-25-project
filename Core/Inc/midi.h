@@ -1,8 +1,9 @@
 
-uint8_t pattern_scale_process(uint8_t value ) {    // scale notes from list
+uint8_t pattern_scale_process(uint8_t value, uint8_t selected_sound ) {    // scale incoming notes from list
 
 	uint8_t note=0;
 	uint8_t count=0;
+
 
 	uint8_t octave=0;
 	uint8_t note_countup=0;
@@ -12,8 +13,8 @@ uint8_t pattern_scale_process(uint8_t value ) {    // scale notes from list
 
 	while (count<value){
 
-		note=pattern_scale_data[note_countup+(pattern_scale_list[pattern_select]*8)];  // pattern scale with selected scale
-		//note=pattern_scale_data[note_countup];  // pattern scale with selected scale  , might skip this and do only during playback
+		note=pattern_scale_data[note_countup+(pattern_scale_list[selected_sound]*8)];  // works only on selected sound no good
+
 
 	if ((note_countup) && (note==0)) {octave++;note_countup=0;}  else  note_countup=(note_countup+1)&7; // reset counter or count up
 
@@ -94,18 +95,14 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 			uint8_t send_temp[256];
 			uint8_t len1;  // note off
 			uint8_t cue_counter;
-			//uint16_t counterb;   // midi_cue position
+
 			uint8_t note_midi [70] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  // 3*16 ,   seems to get some garbage ?
 			uint8_t nrpn_temp[21]={185,99,5,185,98,0,185,6,0,185,99,5,185,98,0,185,6,0};  //  byte 9 is pitch
 			uint8_t note_off_midi[50];
-			//uint8_t cc_temp[22];
-			//uint8_t seq_step_mod=seq_step_list[scene_buttons[0]]&31;
+
 			uint8_t nrpn_counter=0; //keeps track when sending more then one set of commands
 			uint8_t current_scene=scene_buttons[0];
-			//uint8_t cue_counter2=0;
-			//uint8_t nrpn_chl=185;
-			//cc_temp[20]=0;
-			//memcpy(cue_temp,midi_cue,25);
+
 			cue_counter=0;
 
 			i=0;
@@ -116,16 +113,23 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 				uint16_t drum_byte_select;   // selects a trigger 16 + (i*4) 16*64 ... 0-256
 				uint8_t drum_byte;
 				 uint16_t pattern=bar_playing; // modified
-				 uint8_t random_list[16]; // random notes for now
-				 memcpy (random_list,alt_pots+(pattern*16),16); // load tones for current pattern
-					//uint8_t pitch_seq=alt_pots[((seq_pos>>3)&7)+(pattern_select*16)]; // loops 0-7 ,steps
-						uint8_t	pitch_seq=pattern_scale_process(random_list[(offset_pitch&7)]);  // change pitch from pots , maybe run always and ignore original pitch
+				 uint8_t random_list[16]; // alt pots
+				uint8_t note_velocities[16];  // holds temp velocities ,can be modified
+				 // memcpy (random_list,alt_pots+(pattern*16),16); // load tones for current pattern  , might do it with pitch change selector
+				 memcpy (random_list,alt_pots+(alt_pots_selector*8),16); // load tones for current pattern
+				 memcpy (note_velocities,note_accent,16);
+				 //uint8_t pitch_seq=alt_pots[((seq_pos>>3)&7)+(pattern_select*16)]; // loops 0-7 ,steps
+						uint8_t pitch_counter; // keeps track of pitch count up
+
+						uint8_t	pitch_seq;
+						//=pattern_scale_process(random_list[(pitch_counter)]);  // change pitch from pots , maybe run always and ignore original pitch
 
 						uint8_t button_states_temp[16]={1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
 						uint8_t high_row_enable=0; // select second sounds scene ,default on
 
 						uint8_t high_row=0;
-
+						 uint8_t first_step=0;
+						if ((!seq_pos)&& (!bar_playing)) first_step=1;
 
 						//memcpy(button_states_temp,button_states,8); // transfer bottom row data for blinky lights
 
@@ -162,11 +166,11 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 			}
 
 
-			if (drum_byte & (1 << ((((offset_pitch) & 3) * 2)+1)) ) current_velocity=note_accent[i]; else current_velocity=96;   // get accent info
+			if (drum_byte & (1 << ((((offset_pitch) & 3) * 2)+1)) ) current_velocity=96; else current_velocity=note_velocities[i];   // get accent info
 
 			if (mute_list[i] || pause) {current_velocity=0;} // mutes sound also sound button button goes dark
 
-			if ((midi_channel_select == 9)&&(current_velocity)) {
+			if ((midi_channel_select == 9)&&(current_velocity)) {			//drums playing
 
 				if (drum_byte & (1 << (((offset_pitch) & 3) * 2))) { // ok , drums
 					if (high_row)
@@ -180,17 +184,23 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 				}
 			}
-			if ((midi_channel_select != 9)&&(current_velocity)) {
+			if ((midi_channel_select != 9)&&(current_velocity)) {			// not drums playing
 
 				if (drum_byte & (1 << (((offset_pitch) & 3) * 2))) { // ok , notes
+
+					if (first_step) pitch_counter=0; else pitch_counter=last_pitch_count[i];  // resets pitch sequence on start or reads last count step
+					current_velocity=(loop_lfo_out[i+32]+current_velocity)&127; //modify velocity with lfo , only temp
+
+				  pitch_seq=pattern_scale_process(random_list[(pitch_counter)],i);  // note from alt_pots+scale
+
 					if (high_row)
 						button_states_temp[i] = 0; // button dark
-					note_midi[cue_counter] = midi_channel_select + MIDI_NOTE_ON; // add note on
+					note_midi[cue_counter] = midi_channel_select + MIDI_NOTE_ON; // add Note_on
 					note_midi[(cue_counter) + 1] = pitch_seq; // only first pitch set for now
 					note_midi[(cue_counter) + 2] = current_velocity;
 					cue_counter = cue_counter + 3;
 
-					if (note_timing[i]>1 ){    // in case old note hasnt finished
+					if (note_timing[i]>1 ){    // in case old note hasnt finished ,Note_off
 						note_midi[cue_counter] =midi_channel_select+ MIDI_NOTE_OFF; // note off
 						note_midi[(cue_counter) + 1] =last_note_on_channel[i];
 						note_midi[(cue_counter) + 2] = 0;
@@ -198,7 +208,10 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 					}
 
-					last_note_on_channel[i] = pitch_seq; // saves last pitch
+					last_note_on_channel[i] = pitch_seq; // saves last pitch step
+
+					pitch_counter=(pitch_counter+1)&7;
+					last_pitch_count[i]=pitch_counter;
 					note_timing[i] = 4; // resets counter
 				}
 			}
@@ -222,7 +235,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 				} // end of note on generator , limited run
 
 		// everything from here on runs on every seq_pos 8xseq_step
-
+/////////////////////NRPN////////////
 		if (pitch_change_flag){   // sends pitch nrpn section
 					uint8_t counterb=pitch_change_flag-1;
 
@@ -240,7 +253,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 
 
 
-		if (lfo_full_send_enable){   // sends filter nrpn section ,this needs to cycle through 16x
+		if (lfo_full_send_enable){   // sends filter nrpn section ,this needs to cycle through 8x
 
 
 							uint8_t counterb=lfo_full_send_enable-1;
@@ -293,22 +306,6 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 			 if (pause)
 				 pause = 2;
 
-					// empty
-//					memcpy(serial_out+serial_len,cc_temp,cc_temp[20]);    // cc send
-//
-//
-//
-//					serial_len=serial_len+cc_temp[20];
-					//cc_temp[20]=0;
-			// end of serial send
-
-			//  only for midi controller
-
-// NRPN
-
-
-		//	nrpn_cue[50]=0;
-//
 
 	if (cdc_len == 0) {	// only process after cdc send and only cdc send stuff , only  controller now
 
@@ -321,14 +318,7 @@ void cdc_send(void){     // all midi runs often , need to separate  , will go ba
 		cdc_len = len;
 	} // end of cdc_len
 
-
-
-
 //send all if possible , after each step midi notes first  // might change
-			//HAL_UART_Transmit(&huart1,serial_out,serial_len,100); // uart send
-//			if (midi_cc) midi_cue[50]= midi_cue[50]- midi_cc_list[12];   // remove cc
-//			midi_cc_list[12]=0;
-//			midi_cc=0;   // disable cc
 
 
 
@@ -390,7 +380,7 @@ void nrpn_send(void){			 // all nrpn data goes here ,sends as well on serial
 
 }
 
-void loop_lfo(void) {  // 0-64-0
+void loop_lfo(void) {  // 0-64-0(default)  >>  127-(lfo*gain)
 
 			uint16_t temp_hold=0;
 			int8_t lfo_out[sound_set*3];
@@ -426,4 +416,38 @@ void midi_send_control(void){   // 16notes 1/8 res , 16 pattern , for one patter
 
 
 		}
+
+void midi_extras(void){    // extra midi data added here , program change , cc
+
+	  if (((seq_pos>>5)&1) && (!pause))   // send cc , off during pause , dont disable
+	  {
+		  uint8_t extras=midi_extra_cue[28];
+		  midi_extra_cue[extras]=176+midi_channel_list[12];  // cc ch3
+		  midi_extra_cue[extras+1]=74;  // filter cutoff ,correct
+		  midi_extra_cue[extras+2]=(((loop_lfo_out[44]*2)+32)+pot_states[0])&127;  // lfo out , use pot 0 for offset
+		  // midi_extra_cue[extras+2]=64;
+		  midi_extra_cue[28]=extras+3;
+
+
+		  { midi_extra_cue[extras+3]=192+midi_channel_list[0];     // program change data,always runs,  mainly used only for changing program on es1
+		  midi_extra_cue[extras+4]=program_change[0];
+		  midi_extra_cue[extras+5]=program_change[0];
+		  midi_extra_cue[28]=extras+6;}
+
+		  if (program_change[2]){midi_extra_cue[extras+6]=192+midi_channel_list[scene_buttons[0]];   // program change for non drums
+		  midi_extra_cue[extras+7]=program_change[1];
+		  midi_extra_cue[extras+8]=program_change[1];
+		  midi_extra_cue[28]=extras+9;
+		  program_change[2]=0; //clear
+
+		  }
+
+
+	  }
+
+
+		}
+
+
+
 

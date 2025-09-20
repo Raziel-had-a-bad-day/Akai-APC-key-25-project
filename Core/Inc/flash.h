@@ -132,8 +132,8 @@ void flash_write(void){					// too much crap needs to simplify , easy mistakes
 
 		  //  write_once=1;
 		  send=0;
-		  button_states[70]=0;
-		  button_states[69]=0;
+		  button_states[send_button]=0;
+		  button_states[pan_button]=0;
 		  pan=0;
 		 //scene_buttons[0]=0;
 		 all_update=1;
@@ -207,8 +207,8 @@ void flash_read(void){     // 1kbyte for now
 		  	{pitch_selected_for_drums[d]=pitch_list_for_drums[pitch_selected_for_drums[d]*8]&127;}  // pitch nrpn data*/
 
 		  	send=0;
-				  button_states[70]=0;
-				  button_states[69]=0;
+				  button_states[send_button]=0;
+				  button_states[pan_button]=0;
 				  pan=0;
 				// scene_buttons[0]=0;
 				 all_update=1;

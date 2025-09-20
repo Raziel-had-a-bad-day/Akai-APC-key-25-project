@@ -122,7 +122,7 @@ uint8_t lfo; // temp storage
 // velocity  															1 is default or green, 2= default or green blink, 5=is yellow, 6 =yellow blink , 4 =red blink, 3=red,
 const uint8_t square_buttons_list [100]= {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99}; // just reads buttons in top.down order
 const uint8_t button_convert[41]=		  {32,33,34,35,36,37,38,39,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7};
-uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed
+uint8_t scene_buttons[10];  // scene select buttons , bottom square row , also [0] is last button pressed , somehow Palpatine returned
 
 uint8_t button_states[100]={1,1,1,1,1,1,1,1} ; // storage for incoming data on button presses , 8-40 (0-32)  is out of order to make it easier on operations ,bad idea -reversed
 
@@ -167,14 +167,14 @@ uint8_t button_states_save[100]; // reference for button changes for controller 
 
 
 
-uint16_t loop_note_list[sound_set]; //tracks currently playing note position
+//uint16_t loop_note_list[sound_set]; //tracks currently playing note position
 
 uint8_t loop_note_count[sound_set];  // keeps track of number of notes in a loop
 uint8_t loop_current_speed;
 uint8_t loop_lfo_out[sound_set*3];  // used for some level of lfo using pot7 for now 0-255
 // uint8_t lfo_settings[sound_set*3];  // lfo 0-8   rate , gain,offset, target
-uint8_t alt_pots[sound_set*16]; // stores a set of alt pot settings , 2 sets*8 pattern  for now ,use rest for other data
-
+uint8_t alt_pots[sound_set*16]; // stores a set of alt pot settings , 8 bytes per bank , 8 banks , also holds extra data > 128
+uint8_t alt_pots_selector=0; // changes alt_pots banks (8bytes each )
 
 
 uint8_t seq_step_mem;  // mem for looper
@@ -214,7 +214,7 @@ uint8_t es_filter_cue[20];   // hold filter data for nrpn
 uint8_t midi_cc[sound_set]; // enabled if sending midi cc
 uint8_t midi_cc_cue[20];  //  0=part+1 ,1 is value
 uint8_t midi_extra_cue[30] ; // extra stuff to be sent that ins't regular [28] is length
-uint8_t current_midi; // holds selected channel
+uint8_t current_midi; // holds selected channel 1-16
 uint8_t note_accent[sound_set]={127,127,127,127,127,127,127,127,127};  // stores accent data for tracks on/off
 
 uint8_t play_list[257]={15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15};  // holds playback muting order 0-7,8-15,16-23,24-31  for 8x 4 bars  on all parts maybe the 4 bit LSB ,only needs 8 bytes per part, change to hold transpose
@@ -305,3 +305,4 @@ uint8_t pitch_selected_drum_value[8]; // holds outgoing drum value
 uint8_t lfo_settings_list[32]; //holds lfo settings 1 rate , 2 level , testing for now
 uint8_t lfo_full_send_enable=0; // lfo transmit flag
 uint8_t single_settings_list[16]; // holds single variables ie tempo for storage
+uint8_t last_pitch_count[16];

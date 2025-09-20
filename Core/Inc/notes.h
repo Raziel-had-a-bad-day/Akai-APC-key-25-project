@@ -18,10 +18,6 @@ void midi_cue_fill(void){
 }
 
 
-
-
-
-
 void play_muting(void){    // all muting stuff here , sometimes it loses data , disable
 
 
@@ -53,7 +49,7 @@ void loop_screen(void){  // always on now ,produces lights for notes,  16 notes 
 	uint8_t drum_byte;
 
 	drums=1;    //always
-
+	if(device) drums=0;  // disables loop screen
 
 		if (drums){  // for all sounds now
 
@@ -130,7 +126,9 @@ void note_buttons(void){  // always running only on notes though
 								//uint8_t pattern=pattern_select;
 					memset(button_states+16, 0, 8);
 
-					program_change[0]=last_press-16; button_states[square_buttons_list[last_press]]=red_button;  // pc light
+					 button_states[square_buttons_list[last_press]]=red_button;  // single program change select
+					if (selected_scene<12) program_change[0]=last_press-16;  else alt_pots_selector=last_press-16;
+
 
 					if(record){   // only save on record
 				//	uint8_t pc_set= program_change_automation[seq_step_long];
@@ -192,7 +190,7 @@ void buttons_store(void){    // incoming data from controller
 	uint8_t incoming_message[3];
 	//uint16_t drum_byte_select;   // selects a trigger 16 + (i*4) 16*64 ... 0-256
 	//uint8_t drum_byte;
-	 uint16_t pattern=bar_playing;
+	// uint16_t pattern=bar_playing;
 	 //uint8_t offset_pitch=seq_pos>>3;
 
 	memcpy(incoming_message,cdc_buffer+cdc_start, 3); // works off only receiving buffer
@@ -205,7 +203,7 @@ void buttons_store(void){    // incoming data from controller
 	uint8_t current_scene=scene_buttons[0];
 
 	uint16_t drum_store_select=(current_scene*4)+(bar_playing*drum_store);
-
+	incoming_message[2]=(incoming_message[2]&127);
 	//drum_byte_select = (offset_pitch >> 2) + (i * 4) + (pattern * drum_store); //based on time,  selects a trigger 16 + (i*4) 16*64 ... 0-256 (64bytes per pattern, 4 bytes per per )
 	//drum_byte = drum_store_one[drum_byte_select]; // this could be smaller
 
@@ -284,10 +282,11 @@ void buttons_store(void){    // incoming data from controller
 
 		if (button_states[volume_button])  volume=1; else volume=0;
 		if (button_states[pan_button])  { pan=1; patch_screen()  ;   }   else pan=0;
-		if (button_states[send_button])  send=1; else send=0;
+		if (button_states[send_button])  send=1; else send=0; // flash write or read  ,not working during pause ?
 		if (button_states[rec_arm_button])  rec_arm=1; else rec_arm=0;
-		if (button_states[device_button])  {device=1;  }else {device=0; }
-		if (button_states[play_pause_button])  {button_states[91]=5;memcpy(loop_note_list,clear,16); pause=1; seq_step=0;seq_step_long=0;play_position=0;button_states[81]=0; }     // stop all clips, pause and reset to start
+		if (button_states[device_button])  {device=1;memset(button_states+24,0,16);button_states[31+(current_midi&7)-((current_midi>>3)<<3)]=yellow_blink_button;  }else {device=0; } // shows midi channel , for now
+		if (button_states[stop_all_clips])  {button_states[play_pause_button]=3;pause=5; seq_step=0;seq_step_long=0;play_position=0;bar_selector=0;button_states[stop_all_clips]=0; }// stop all clips, pause and reset to start
+		if (button_states[play_pause_button]) pause=5; else {pause=0;button_states[stop_all_clips]=0;}
 
 		if ((button_states[clip_stop_button])  )    {clip_stop=1; lcd_downcount=10;lcd_messages_select=3;scene_solo=0;button_states[83]=0;  } else clip_stop=0;
 		if (shift && pause && clip_stop) { 			// clear all program change info on drums , needs to be saved though
@@ -310,9 +309,7 @@ void buttons_store(void){    // incoming data from controller
 	if ((status == 176) && (clip_stop)){   // with clip stop on
 
 
-	//alt_pots[(incoming_data1  - 48)+(pattern_select*16)] =pattern_scale_process(incoming_message[2]&127);   // writes note pots when clip stop but only to first set , need something the copy to first though
-	alt_pots[(incoming_data1  - 48)+(pattern*16)] =((incoming_message[2])&127); 		// just store pot data 0-31 +32 , only use half
-
+	alt_pots[(incoming_data1  - 48)+(alt_pots_selector*8)] =((incoming_message[2])); // sounds 0-7
 
 	// maybe 16 values or about 2 octaves in scales
 
@@ -332,7 +329,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 
-		pot_states[incoming_data1  - 48] = (incoming_message[2]&127); // store pot all  // not always ok
+		pot_states[incoming_data1  - 48] = (incoming_message[2]); // store pot all  // not always ok
 
 
 		if (pan) {
@@ -360,7 +357,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 		if ((incoming_data1==pot_4) )
-					{pattern_scale_list[pattern]=(pot_states[3]>>3)&15;lcd_downcount=3;lcd_messages_select=0;}
+					{pattern_scale_list[current_scene]=(pot_states[3]>>3)&15;lcd_downcount=3;lcd_messages_select=0;}
 
 
 		if ((incoming_data1==pot_1) &&(select) && (current_scene>3))  //  cc function
@@ -374,14 +371,12 @@ void buttons_store(void){    // incoming data from controller
 			}
 
 
-	//	if ((incoming_data1==50) &&(!keyboard[0]) )  pattern_repeat=((pot_states[1]>>5))&7; // scene_velocity[seq_step_mod+current_scene]=  (((pot_states[1]>>5)<<5)+31)&112;   // update velocity live while pressing shift
-	//	if ((incoming_data1==pot_4) && (!keyboard[0]) )  pattern_count=(pot_states[2]>>5)&7;
-
 
 
 		if ((shift) && (device)){   // pots alt functions set , tempo , midi
 
-			if (incoming_data1==pot_7)   {midi_channel_list[current_scene]=(incoming_message[2]>>3);current_midi=midi_channel_list[current_scene];}   // set midi
+			if (incoming_data1==pot_7)   {midi_channel_list[current_scene]=(incoming_message[2]>>3);current_midi=midi_channel_list[current_scene]+1;
+			memset(button_states+24,0,16);button_states[31+(current_midi&7)-((current_midi>>3)<<3)]=yellow_blink_button;}   // sets midi channel on selected sound
 
 			if (incoming_data1==pot_8) {timer_value=bpm_table[incoming_message[2]+64]; tempo=incoming_message[2]+64;} //tempo
 
@@ -395,10 +390,7 @@ void buttons_store(void){    // incoming data from controller
 
 		if ((incoming_data1==pot_6) && (!clip_stop))   {lfo_settings_list[(current_scene*2)+1]=incoming_message[2] ;lcd_downcount=3;lcd_messages_select=6;}   // lfo level
 
-
-
-		//if (incoming_data1==pot_7) looper_list[(current_scene*4)+2]=(pot_states[6]>>4)&7; //  lfo gain
-		if ((incoming_data1==pot_8)&&(!shift)) {note_accent[current_scene]=pot_states[7];rand_velocities[current_scene]=pot_states[7];     // accent input
+		if ((incoming_data1==pot_8)&&(!shift)) {note_accent[current_scene]=incoming_message[2];rand_velocities[current_scene]=incoming_message[2];     // accent input
 
 		//if  (record) {drum_byte=(drum_byte & (1<<(((i&3)*2)+1)));   } // get accent info
 
@@ -411,7 +403,7 @@ void buttons_store(void){    // incoming data from controller
 
 
 			if ((incoming_data1==pot_1) && (shift)){     // program change for channels other than drums  pot 1
-				if (midi_channel_list[current_scene]!=9)  {program_change[1]=pot_states[0]>>3; program_change[2]=1;}}
+				if (midi_channel_list[current_scene]!=9)  {program_change[1]=incoming_message[2]; program_change[2]=1;}}
 
 
 
@@ -447,7 +439,7 @@ void buttons_store(void){    // incoming data from controller
 		}
 
 			scene_buttons[0]=scene_select;
-			 current_midi=midi_channel_list[scene_buttons[0]];
+			 current_midi=midi_channel_list[scene_buttons[0]]+1;
 
 			 //loop_selector=1; // redraw
 	
@@ -455,7 +447,7 @@ void buttons_store(void){    // incoming data from controller
 
 	}// end of scene select
 	buffer_clear = 1;
-	loop_screen();  // always run
+	loop_screen();  // always run except when device on
 	if (buffer_clear)
 		memcpy(cdc_buffer+cdc_start, clear, 3);
 
@@ -496,7 +488,12 @@ void pattern_settings(void){     // pattern change function , also program chang
 
 	if (select)	{memset(button_states + 16, 0, 8);   // sets lights for program change but only if select is on
 
-		button_states[program_change[0] + 16] = red_button;  //sets selected program change light
+		if (current_scene<12) button_states[program_change[0] + 16] = red_button;
+		else button_states[alt_pots_selector + 16] = red_button;  //sets selected program change light
+
+
+
+
 	}
 	/*else {memset(button_states + 16, 0, 8);
 	button_states[pitch_selected_for_drums[scene_buttons[0]&7] + 16] = yellow_button;
@@ -529,7 +526,7 @@ void pattern_settings(void){     // pattern change function , also program chang
 
 /////////////pitch section
 
-	if ((seq_pos==0) || pause  || punch_in[0] ){     // apply pitch to drum notes
+	if (((seq_pos==0) || pause  || punch_in[0] ) && (!select)){     // apply pitch to drum notes
 
 		for(i=0;i<8;i++){   // loads up pitch values
 		uint8_t pitch_byte_select=bar_playing+(i*8);	// 0-3 + 0-28

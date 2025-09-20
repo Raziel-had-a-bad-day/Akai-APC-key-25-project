@@ -122,9 +122,9 @@ void settings_storage(void);
 void pattern_settings(void);
 void USBD_MIDI_DataInHandler(uint8_t *usb_rx_buffer, uint8_t usb_rx_buffer_length);
 void midi_send_control(void); // runs midi send when needed
-
+void midi_extras(void);
 void flash_page_write(uint8_t page_select,uint8_t* data);
-uint8_t pattern_scale_process(uint8_t value ); // midi in to scaled note
+uint8_t pattern_scale_process(uint8_t value, uint8_t selected_sound ); // midi in to scaled note
 
 /* USER CODE END PFP */
 
@@ -211,8 +211,8 @@ int main(void)
 
 	 // HAL_GPIO_WritePin(PPQ_GPIO_Port, PPQ_Pin, (ppq_send|1));
 
-	  uint16_t step_temp=0;
-	  uint8_t seq_step_mod=(seq_pos>>3)&31;
+	 // uint16_t step_temp=0;
+	 // uint8_t seq_step_mod;
 	  uint8_t selected_scene=scene_buttons[0];
 
 
@@ -239,7 +239,6 @@ int main(void)
 
 			  midi_extra_cue[1]=(drum_list[selected_scene]);midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;   // send midi
 
-			  //{	nrpn_cue[selected_scene*3]=selected_scene+1; nrpn_cue[(selected_scene*3)+1]=((keyboard[0])+scene_transpose[selected_scene])&127 ;  } // pitch data
 			  keyboard[0]=0;}
 			  else  {midi_extra_cue[0]=note_flag+midi_channel_list[selected_scene];  midi_extra_cue[1]=((last_key+32))&127 ;
 			  midi_extra_cue[2]=127; midi_extra_cue[28]=midi_extra_cue[28]+3;keyboard[0]=0;}  // send normal then keyboard off
@@ -253,42 +252,13 @@ int main(void)
 
 
 
-	  if ((s_temp) != (seq_pos>>3)) {			// normal sending , very slow atm , only 16 count now, most stuff done that's not too accuarate
+	  if ((s_temp) != (seq_pos>>3)) {			// runs on note steps 0-15
 
 
-
-		  if (((seq_pos>>5)&1) && (!pause))   // send cc , off during pause , dont disable
-		  {
-			  uint8_t extras=midi_extra_cue[28];
-			  midi_extra_cue[extras]=176+midi_channel_list[12];  // cc ch3
-			  midi_extra_cue[extras+1]=74;  // filter cutoff ,correct
-			  midi_extra_cue[extras+2]=(((loop_lfo_out[44]*2)+32)+pot_states[0])&127;  // lfo out , use pot 0 for offset
-			  // midi_extra_cue[extras+2]=64;
-			  midi_extra_cue[28]=extras+3;
-
-
-			  { midi_extra_cue[extras+3]=192+midi_channel_list[0];     // program change data,always runs,  mainly used only for changing program on es1
-			  midi_extra_cue[extras+4]=program_change[0];
-			  midi_extra_cue[extras+5]=program_change[0];
-			  midi_extra_cue[28]=extras+6;}
-
-			  if (program_change[2]){midi_extra_cue[extras+3]=192+midi_channel_list[12];   // program change for non drums
-			  midi_extra_cue[extras+4]=program_change[1];
-			  midi_extra_cue[extras+5]=program_change[1];
-			  midi_extra_cue[28]=extras+6;
-			  program_change[2]=0; //clear
-
-			  }
-
-
-		  }
-
+		  	  midi_extras();
 			  pattern_settings();
 
 			  if ((!seq_pos)&& (!pause)) seq_step_long=(seq_step_long+1)&31;    // this needs to be main clock
-
-			  seq_step_mod=seq_pos>>3;
-			 // seq_current_step=seq_step_mod;
 
 			  play_position=seq_step_long;
 			  if ((seq_step_long&31)==0)   play_position=(play_position+1)&31;  // normal screen leave alone ,too fast
@@ -299,13 +269,13 @@ int main(void)
 			  ////
 
 
-			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[70]=0; send=0; }   // reload everything from flash
+			  if ((send) && shift) {  all_notes_off(); flash_read();  button_states[send_button]=0; send=0; }   // reload everything from flash
 
 
 			  uint8_t crap[64];
 			  memcpy (crap,cdc_buffer,12);
 
-			  //	 uint16_t pattern_set=pattern_select*128;
+		//////////////PRINT///////////////////
 			  for (i=0;i<8;i++){  // i=scene
 
 				//  printf(" %d",crap[i] );
@@ -344,15 +314,15 @@ int main(void)
  				  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin,led_blink);
  				  led_blink=!led_blink;
 
- 				  flash_write(); // works only if button pressed
+ 				  flash_write(); // works only if button pressed , not during pause ?
  				  note_off_enable=1;
  				//  arrows();
  				  if (!pause) seq_step = seq_pos>> 3; else seq_step=seq_step;
 
 
  				  s_temp = seq_pos>>3;
- 				//  trigger_mem=button_send_trigger>>3;
- 			}   // blink steps , end of send trigger
+
+ 			}   // blink steps , end of s_temp
 
 
 
@@ -430,7 +400,7 @@ int main(void)
  		  buttons_store();   // only runs after receive
 
 
- 		  if (button_states[91] ) {pause=1;all_notes_off(); } else pause=0;
+ 		  if (pause==5)  { all_notes_off();}    // runs only once during pause
 
 
  	  }  // end of cdc message
@@ -785,6 +755,7 @@ void all_notes_off(void){
 	}
 	 HAL_UART_Transmit(&huart1,data,48,100); //   send all notes off on serial
 	 HAL_Delay(100);
+	 pause=1;
 	 //CDC_Transmit_FS(data+3, 45);
 
 }
